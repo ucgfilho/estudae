@@ -7,9 +7,10 @@ import {
   replaceUserWorkspaceInApi,
   syncBatchMutationsToApi,
   TEST_BYPASS_TOKEN,
+  waitForPendingSync,
   type RemoteTableMutation,
 } from '../services/auth';
-import { DEFAULT_DISCIPLINES, DEFAULT_SETTINGS } from './seed';
+import { DEFAULT_DISCIPLINES, DEFAULT_SETTINGS, DEFAULT_TOPICS } from './seed';
 import {
   DATA_TABLES,
   SETTINGS_ID,
@@ -269,16 +270,19 @@ export class AppDatabase {
   private txDepth = 0;
   private pendingMutations: RemoteTableMutation[] = [];
   private versionCounter = 0;
+  private explicitlyClearedTables: Partial<Record<DataTableName, boolean>> = {};
+  private deletedIds: Partial<Record<DataTableName, Set<string>>> = {};
 
   constructor() {
     const handleMutation = (mutation: RemoteTableMutation) => {
+      this.recordMutationMetadata(mutation);
       this.versionCounter++;
       if (this.txDepth > 0) {
         this.pendingMutations.push(mutation);
       } else {
         this.persistLocalWorkspaceCache();
         this.notifyListeners();
-        void syncBatchMutationsToApi([mutation]);
+        void syncBatchMutationsToApi([mutation], () => this.exportWorkspaceSnapshot());
       }
     };
 
@@ -301,6 +305,56 @@ export class AppDatabase {
     this.settings.replaceAllSilent([
       { ...DEFAULT_SETTINGS, distribution: { ...DEFAULT_SETTINGS.distribution } },
     ]);
+  }
+
+  private recordMutationMetadata(mutation: RemoteTableMutation): void {
+    const table = mutation.table;
+    if (mutation.action === 'clear') {
+      this.explicitlyClearedTables[table] = true;
+      this.deletedIds[table] = new Set();
+      return;
+    }
+    if (mutation.action === 'delete') {
+      const set = this.deletedIds[table] ?? new Set<string>();
+      for (const id of mutation.ids) {
+        set.add(id);
+      }
+      this.deletedIds[table] = set;
+      if (this.table(table).toArraySync().length === 0) {
+        this.explicitlyClearedTables[table] = true;
+      }
+      return;
+    }
+    if (mutation.action === 'upsert' && mutation.records.length > 0) {
+      delete this.explicitlyClearedTables[table];
+      const set = this.deletedIds[table];
+      if (set) {
+        for (const r of mutation.records) {
+          const id = (r as { id?: string })?.id;
+          if (id) set.delete(id);
+        }
+      }
+    }
+  }
+
+  public isTableExplicitlyCleared(table: DataTableName): boolean {
+    return Boolean(this.explicitlyClearedTables[table]);
+  }
+
+  public setSyncMetadata(
+    explicitlyClearedTables?: Partial<Record<DataTableName, boolean>>,
+    deletedIds?: Partial<Record<DataTableName, string[]>>,
+  ): void {
+    this.explicitlyClearedTables = { ...(explicitlyClearedTables ?? {}) };
+    this.deletedIds = {};
+    if (deletedIds) {
+      for (const table of DATA_TABLES) {
+        const list = deletedIds[table];
+        if (Array.isArray(list) && list.length > 0) {
+          this.deletedIds[table] = new Set(list);
+        }
+      }
+    }
   }
 
   public table(name: DataTableName): MemoryTable<{ id: string }> {
@@ -345,11 +399,21 @@ export class AppDatabase {
       return;
     }
     try {
+      const serializedDeleted: Partial<Record<DataTableName, string[]>> = {};
+      for (const table of DATA_TABLES) {
+        const set = this.deletedIds[table];
+        if (set && set.size > 0) {
+          serializedDeleted[table] = Array.from(set);
+        }
+      }
       const key = `bnb_workspace_cache_v1:${session.user.email.toLowerCase()}`;
       window.localStorage.setItem(
         key,
         JSON.stringify({
+          schemaRevision: 2,
           savedAt: Date.now(),
+          explicitlyClearedTables: this.explicitlyClearedTables,
+          deletedIds: serializedDeleted,
           data: this.exportWorkspaceSnapshot(),
         }),
       );
@@ -363,6 +427,9 @@ export class AppDatabase {
       const rows = workspace[tableName];
       if (Array.isArray(rows)) {
         this.table(tableName).replaceAllSilent(rows as { id: string }[]);
+        if (rows.length > 0) {
+          delete this.explicitlyClearedTables[tableName];
+        }
       } else {
         this.table(tableName).clearSilent();
       }
@@ -372,7 +439,26 @@ export class AppDatabase {
     this.notifyListeners();
   }
 
+  public replaceAllFromBackup(workspace: Partial<Record<DataTableName, unknown[]>>): void {
+    this.deletedIds = {};
+    this.explicitlyClearedTables = {};
+    for (const tableName of DATA_TABLES) {
+      const rows = workspace[tableName];
+      if (Array.isArray(rows) && rows.length > 0) {
+        this.table(tableName).replaceAllSilent(rows as { id: string }[]);
+      } else {
+        this.table(tableName).clearSilent();
+        this.explicitlyClearedTables[tableName] = true;
+      }
+    }
+    this.persistLocalWorkspaceCache();
+    this.versionCounter++;
+    this.notifyListeners();
+  }
+
   public clearMemory(): void {
+    this.explicitlyClearedTables = {};
+    this.deletedIds = {};
     for (const tableName of DATA_TABLES) {
       this.table(tableName).clearSilent();
     }
@@ -420,7 +506,7 @@ export class AppDatabase {
         this.pendingMutations = [];
         this.persistLocalWorkspaceCache();
         this.notifyListeners();
-        void syncBatchMutationsToApi(batch);
+        void syncBatchMutationsToApi(batch, () => this.exportWorkspaceSnapshot());
       }
     }
   }
@@ -440,7 +526,15 @@ export function createDatabase(): AppDatabase {
 
 export const db = createDatabase();
 
-function loadLocalWorkspaceCache(): Record<DataTableName, unknown[]> | null {
+export interface LocalWorkspaceCacheEnvelope {
+  schemaRevision?: number;
+  savedAt?: number;
+  explicitlyClearedTables?: Partial<Record<DataTableName, boolean>>;
+  deletedIds?: Partial<Record<DataTableName, string[]>>;
+  data: Record<DataTableName, unknown[]>;
+}
+
+function loadLocalWorkspaceCacheEnvelope(): LocalWorkspaceCacheEnvelope | null {
   const token = getAuthToken();
   const session = getAuthSession();
   if (
@@ -456,29 +550,91 @@ function loadLocalWorkspaceCache(): Record<DataTableName, unknown[]> | null {
     const key = `bnb_workspace_cache_v1:${session.user.email.toLowerCase()}`;
     const raw = window.localStorage.getItem(key);
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as { data?: Record<DataTableName, unknown[]> };
-    return parsed?.data ?? null;
+    const parsed = JSON.parse(raw) as LocalWorkspaceCacheEnvelope;
+    if (!parsed || typeof parsed !== 'object' || !parsed.data) return null;
+    return parsed;
   } catch {
     return null;
   }
 }
 
-function shouldRecoverFromLocalCache(
+export function reconcileWorkspaces(
+  remote: Record<DataTableName, unknown[]>,
+  localEnvelope: LocalWorkspaceCacheEnvelope,
+): { workspace: Record<DataTableName, unknown[]>; needsRemoteHeal: boolean } {
+  const out = {} as Record<DataTableName, unknown[]>;
+  let needsRemoteHeal = false;
+  const isAuthoritativeLocal = localEnvelope.schemaRevision === 2;
+
+  for (const tableName of DATA_TABLES) {
+    const localRows = Array.isArray(localEnvelope.data[tableName])
+      ? (localEnvelope.data[tableName] as { id: string; weekIndex?: number }[])
+      : [];
+    const remoteRows = Array.isArray(remote[tableName])
+      ? (remote[tableName] as { id: string; weekIndex?: number }[])
+      : [];
+    const isCleared = Boolean(localEnvelope.explicitlyClearedTables?.[tableName]);
+    const deletedSet = new Set(localEnvelope.deletedIds?.[tableName] ?? []);
+    const validRemoteRows = isCleared ? [] : remoteRows.filter((r) => !deletedSet.has(r.id));
+
+    let merged: unknown[];
+    if (isCleared && localRows.length === 0) {
+      merged = [];
+    } else if (localRows.length === 0) {
+      merged = validRemoteRows;
+    } else if (validRemoteRows.length === 0 || isAuthoritativeLocal) {
+      merged = localRows;
+    } else {
+      // Cache legado (anterior a schemaRevision 2): preserva registros locais e recupera registros remotos ausentes
+      const seenIds = new Set(localRows.map((r) => r.id));
+      const seenWeekIndices =
+        tableName === 'weeklyPlans'
+          ? new Set(localRows.map((r) => r.weekIndex).filter((w) => w !== undefined))
+          : null;
+      merged = [...localRows];
+      for (const r of validRemoteRows) {
+        if (seenIds.has(r.id)) continue;
+        if (seenWeekIndices && r.weekIndex !== undefined && seenWeekIndices.has(r.weekIndex)) {
+          continue;
+        }
+        merged.push(r);
+      }
+    }
+
+    out[tableName] = merged;
+    if (
+      merged.length !== remoteRows.length ||
+      JSON.stringify(merged) !== JSON.stringify(remoteRows)
+    ) {
+      needsRemoteHeal = true;
+    }
+  }
+
+  return { workspace: out, needsRemoteHeal };
+}
+
+export function shouldRecoverFromLocalCache(
   remote: Record<DataTableName, unknown[]>,
   local: Record<DataTableName, unknown[]>,
 ): boolean {
-  const remoteEmpty =
-    (remote.topics?.length ?? 0) === 0 &&
-    (remote.sessions?.length ?? 0) === 0 &&
-    (remote.weeklyPlans?.length ?? 0) === 0;
-  const localHasData =
-    (local.topics?.length ?? 0) > 0 ||
-    (local.sessions?.length ?? 0) > 0 ||
-    (local.weeklyPlans?.length ?? 0) > 0 ||
-    (local.timer?.length ?? 0) > 0;
-  if (remoteEmpty && localHasData) return true;
-
-  if ((remote.timer?.length ?? 0) === 0 && (local.timer?.length ?? 0) > 0) {
+  const tablesToCompare: DataTableName[] = [
+    'topics',
+    'sessions',
+    'weeklyPlans',
+    'questionLogs',
+    'errorNotes',
+    'reviews',
+    'mockExams',
+    'timer',
+  ];
+  for (const table of tablesToCompare) {
+    if ((local[table]?.length ?? 0) > (remote[table]?.length ?? 0)) {
+      return true;
+    }
+  }
+  const localSettings = (local.settings?.[0] ?? null) as Partial<Settings> | null;
+  const remoteSettings = (remote.settings?.[0] ?? null) as Partial<Settings> | null;
+  if (localSettings?.scheduleStartDate && !remoteSettings?.scheduleStartDate) {
     return true;
   }
   return false;
@@ -501,36 +657,11 @@ export async function ensureSeed(database: AppDatabase = db): Promise<void> {
   return runEnsureSeed(database);
 }
 
-async function runEnsureSeed(database: AppDatabase): Promise<void> {
-  if (database === db && getAuthToken()) {
-    const localCache = loadLocalWorkspaceCache();
-    try {
-      const remoteWorkspace = await fetchUserWorkspaceFromApi();
-      if (remoteWorkspace) {
-        if (localCache && hasUnsyncedChanges()) {
-          // Alterações locais não chegaram ao servidor: reenvia antes de descartá-las.
-          if (await replaceUserWorkspaceInApi(localCache)) {
-            database.hydrateFromWorkspace(localCache);
-          } else {
-            database.hydrateFromWorkspace(remoteWorkspace);
-          }
-        } else if (localCache && shouldRecoverFromLocalCache(remoteWorkspace, localCache)) {
-          database.hydrateFromWorkspace(localCache);
-          void replaceUserWorkspaceInApi(localCache);
-        } else {
-          database.hydrateFromWorkspace(remoteWorkspace);
-        }
-      } else if (localCache) {
-        database.hydrateFromWorkspace(localCache);
-      }
-    } catch (err) {
-      if (localCache) {
-        database.hydrateFromWorkspace(localCache);
-      }
-      console.error('Erro ao carregar dados do servidor:', err);
-    }
-  }
-
+/**
+ * Garante as 8 disciplinas padrão, configurações mescladas e alinhamento de semanas
+ * localmente sem consultar ou sobrescrever a partir do servidor remoto.
+ */
+export async function ensureLocalDefaults(database: AppDatabase = db): Promise<void> {
   await database.transaction(
     'rw',
     database.disciplines,
@@ -597,6 +728,64 @@ async function runEnsureSeed(database: AppDatabase): Promise<void> {
   );
 }
 
+async function runEnsureSeed(database: AppDatabase): Promise<void> {
+  const token = getAuthToken();
+  const isRealAuthenticatedDb =
+    database === db && Boolean(token) && token !== TEST_BYPASS_TOKEN;
+  let needsRemoteHeal = false;
+
+  if (database === db && token) {
+    await waitForPendingSync();
+    const localEnvelope = loadLocalWorkspaceCacheEnvelope();
+    if (localEnvelope) {
+      database.setSyncMetadata(
+        localEnvelope.explicitlyClearedTables,
+        localEnvelope.deletedIds,
+      );
+    }
+    try {
+      const remoteWorkspace = await fetchUserWorkspaceFromApi();
+      if (remoteWorkspace) {
+        if (localEnvelope) {
+          const reconciled = reconcileWorkspaces(remoteWorkspace, localEnvelope);
+          database.hydrateFromWorkspace(reconciled.workspace);
+          needsRemoteHeal = reconciled.needsRemoteHeal || hasUnsyncedChanges();
+        } else {
+          database.hydrateFromWorkspace(remoteWorkspace);
+        }
+      } else if (localEnvelope) {
+        database.hydrateFromWorkspace(localEnvelope.data);
+      }
+    } catch (err) {
+      if (localEnvelope) {
+        database.hydrateFromWorkspace(localEnvelope.data);
+      }
+      console.error('Erro ao carregar dados do servidor:', err);
+    }
+  }
+
+  // Em produção/conta autenticada, se a lista de tópicos estiver vazia e não tiver sido
+  // explicitamente excluída pelo usuário, semeia os 148 tópicos oficiais do Edital Verticalizado BNB 2022.
+  if (
+    isRealAuthenticatedDb &&
+    database.topics.toArraySync().length === 0 &&
+    !database.isTableExplicitlyCleared('topics')
+  ) {
+    database.topics.replaceAllSilent(DEFAULT_TOPICS);
+    needsRemoteHeal = true;
+  }
+
+  await ensureLocalDefaults(database);
+
+  if (isRealAuthenticatedDb) {
+    database.persistLocalWorkspaceCache();
+    if (needsRemoteHeal || hasUnsyncedChanges()) {
+      await replaceUserWorkspaceInApi(database.exportWorkspaceSnapshot());
+    }
+  }
+  await waitForPendingSync();
+}
+
 /** Apaga todos os dados do usuário e recria o estado inicial. */
 export async function resetDatabase(database: AppDatabase = db): Promise<void> {
   await database.transaction(
@@ -606,5 +795,10 @@ export async function resetDatabase(database: AppDatabase = db): Promise<void> {
       for (const t of DATA_TABLES) await database.table(t).clear();
     },
   );
-  await ensureSeed(database);
+  await ensureLocalDefaults(database);
+  if (database === db) {
+    database.persistLocalWorkspaceCache();
+    await replaceUserWorkspaceInApi(database.exportWorkspaceSnapshot());
+    await waitForPendingSync();
+  }
 }

@@ -3,8 +3,15 @@
  * estratégia de migração por `schemaVersion`.
  */
 import { z } from 'zod';
-import { DATA_TABLES, db, ensureSeed, SCHEMA_VERSION, type DataTableName } from '../db/db';
+import {
+  DATA_TABLES,
+  db,
+  ensureLocalDefaults,
+  SCHEMA_VERSION,
+  type DataTableName,
+} from '../db/db';
 import { isValidDateKey, isValidTime } from '../lib/dates';
+import { replaceUserWorkspaceInApi, waitForPendingSync } from './auth';
 
 export type { DataTableName };
 
@@ -61,6 +68,8 @@ const sessionSchema = z.object({
   ),
   createdAt: iso,
   updatedAt: iso,
+  isManual: z.boolean().optional(),
+  order: z.number().int().optional(),
 });
 
 const timerSchema = z.object({
@@ -149,6 +158,8 @@ const settingsSchema = z.object({
   scheduleStartDate: nullableDateKey,
   scheduleWeeks: z.number().int().positive(),
   distribution: z.record(z.string(), nonNegInt),
+  geminiApiKey: z.string().optional(),
+  aiProvider: z.enum(['builtin', 'gemini']).optional(),
 });
 
 const mockExamSchema = z.object({
@@ -253,14 +264,22 @@ export function validateBackup(text: string): BackupValidation {
 
 /** Substitui todos os dados pelo conteúdo do backup (em uma única transação). */
 export async function restoreBackup(backup: BackupFile): Promise<void> {
-  await db.transaction('rw', DATA_TABLES.map((t) => db.table(t)), async () => {
-    for (const t of DATA_TABLES) {
-      await db.table(t).clear();
-      const rows = backup.data[t];
-      if (rows.length > 0) await db.table(t).bulkAdd(rows);
-    }
-  });
-  await ensureSeed();
+  await waitForPendingSync();
+  const previousSettings = await db.settings.get('settings');
+  const restoredData: Record<DataTableName, unknown[]> = {
+    ...backup.data,
+    settings: backup.data.settings.map((s) => ({
+      ...s,
+      geminiApiKey: s.geminiApiKey ?? previousSettings?.geminiApiKey,
+      aiProvider: s.aiProvider ?? previousSettings?.aiProvider,
+    })),
+  };
+
+  db.replaceAllFromBackup(restoredData);
+  await ensureLocalDefaults(db);
+  db.persistLocalWorkspaceCache();
+  await replaceUserWorkspaceInApi(db.exportWorkspaceSnapshot());
+  await waitForPendingSync();
 }
 
 /* ------------------------- Exportação em CSV ------------------------- */

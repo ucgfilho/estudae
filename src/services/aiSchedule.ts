@@ -3202,7 +3202,8 @@ Responda apenas com o JSON {"weeks":[...]} contendo ${to - from + 1} semanas.${e
       for (let sIdx = 0; sIdx < (day.sessions || []).length; sIdx++) {
         const s = day.sessions[sIdx];
         if (dayMinutes >= 120) break;
-        const allocatedMinutes = Math.min(s.plannedMinutes || 60, 120 - dayMinutes);
+        const rawMinutes = Math.max(1, Math.round(Number(s.plannedMinutes) || 60));
+        const allocatedMinutes = Math.min(rawMinutes, 120 - dayMinutes);
         if (allocatedMinutes <= 0) continue;
 
         const discId = isSaturday
@@ -3319,25 +3320,25 @@ export function filterAndAdjustAiSessions(
   aiSessions: StudySession[],
   preservedSessions: StudySession[],
 ): StudySession[] {
-  // Mapeia minutos e disciplinas já alocadas por data nas sessões preservadas
-  const preservedDayMap = new Map<DateKey, { totalMinutes: number; disciplines: Set<string> }>();
+  // Mapeia minutos e disciplinas já alocadas por data nas sessões preservadas (manuais ou executadas)
+  const dayMap = new Map<DateKey, { totalMinutes: number; preservedDisciplines: Set<string> }>();
   for (const s of preservedSessions) {
-    const entry = preservedDayMap.get(s.date) ?? { totalMinutes: 0, disciplines: new Set<string>() };
+    const entry = dayMap.get(s.date) ?? { totalMinutes: 0, preservedDisciplines: new Set<string>() };
     entry.totalMinutes += s.plannedMinutes;
-    entry.disciplines.add(s.disciplineId);
-    preservedDayMap.set(s.date, entry);
+    entry.preservedDisciplines.add(s.disciplineId);
+    dayMap.set(s.date, entry);
   }
 
   const finalSessions: StudySession[] = [];
 
   for (const session of aiSessions) {
-    const existing = preservedDayMap.get(session.date);
+    const existing = dayMap.get(session.date);
     if (existing) {
-      // Se o dia já estiver com a cota de 2h (120m) preenchida por manuais/executadas, não adiciona mais
+      // Se o dia já estiver com a cota de 2h (120m) preenchida, não adiciona mais
       if (existing.totalMinutes >= 120) continue;
 
-      // Se a mesma disciplina já foi criada manualmente no mesmo dia, evita duplicação
-      if (existing.disciplines.has(session.disciplineId)) continue;
+      // Se a mesma disciplina já foi criada manualmente/executada no mesmo dia, evita duplicação
+      if (existing.preservedDisciplines.has(session.disciplineId)) continue;
 
       // Ajusta minutos para nunca exceder o limite de 2h
       const remainingMinutes = 120 - existing.totalMinutes;
@@ -3348,11 +3349,10 @@ export function filterAndAdjustAiSessions(
       }
 
       existing.totalMinutes += session.plannedMinutes;
-      existing.disciplines.add(session.disciplineId);
     } else {
-      preservedDayMap.set(session.date, {
+      dayMap.set(session.date, {
         totalMinutes: session.plannedMinutes,
-        disciplines: new Set([session.disciplineId]),
+        preservedDisciplines: new Set<string>(),
       });
     }
 

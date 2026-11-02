@@ -1,5 +1,6 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { db, ensureSeed, resetDatabase } from '../../db/db';
+import { setAuthSession } from '../../services/auth';
 import {
   createSession,
   updateSession,
@@ -635,5 +636,299 @@ describe('services/persistence & workflows', () => {
     const planFinal = (await db.weeklyPlans.orderBy('weekIndex').toArray())[0];
     expect(planFinal.plannedMinutes).toBe(expectedTotalMinutes);
     expect(planFinal.status).toBe('concluida');
+  });
+
+  it('preserves all 24-week schedule sessions across page reload on Vercel even when serverless instance has only partial sessions on 03/11', async () => {
+    const originalFetch = globalThis.fetch;
+    const putWorkspacePayloads: Record<string, unknown[]>[] = [];
+
+    try {
+      setAuthSession({
+        token: 'real-vercel-jwt-token',
+        tokenType: 'Bearer',
+        expiresIn: 604800,
+        user: {
+          id: 'user-vercel-1',
+          name: 'Usuário BNB',
+          email: 'usuario.bnb@exemplo.com',
+          createdAt: '2026-11-02T00:00:00.000Z',
+        },
+      });
+
+      // Mock fetch during schedule generation
+      globalThis.fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        if (url.endsWith('/api/study-data/workspace') && init?.method === 'PUT') {
+          const payload = JSON.parse(String(init.body)) as Record<string, unknown[]>;
+          putWorkspacePayloads.push(payload);
+          return new Response(JSON.stringify({ ok: true, data: payload }), { status: 200 });
+        }
+        if (url.endsWith('/api/study-data/batch') && init?.method === 'POST') {
+          return new Response(JSON.stringify({ ok: true, data: db.exportWorkspaceSnapshot() }), {
+            status: 200,
+          });
+        }
+        return new Response(JSON.stringify({ data: db.exportWorkspaceSnapshot() }), { status: 200 });
+      }) as typeof fetch;
+
+      // 1. Pre-existing manual sessions on Tuesday 03/11 (as in the screenshot)
+      const sArq = await createSession({
+        date: '2026-11-03',
+        disciplineId: 'arquitetura',
+        topicId: null,
+        plannedStart: null,
+        plannedMinutes: 60,
+        objective: 'Arquitetura de software.',
+        notes: '',
+      });
+      const sLog = await createSession({
+        date: '2026-11-03',
+        disciplineId: 'logica-programacao',
+        topicId: null,
+        plannedStart: null,
+        plannedMinutes: 60,
+        objective: 'Construção de algoritmos.',
+        notes: '',
+      });
+
+      // 2. Generate 24-week schedule starting on 2026-11-03
+      await generateSchedule('2026-11-03', '2026-11-02');
+
+      const allBeforeReload = await db.sessions.toArray();
+      expect(allBeforeReload.length).toBeGreaterThan(200);
+      const subsequentDaysBefore = allBeforeReload.filter((s) => s.date > '2026-11-03');
+      expect(subsequentDaysBefore.length).toBeGreaterThan(200);
+
+      // 3. Simulate Vercel page reload hitting a serverless instance that only has the 2 sessions on 03/11
+      const partialRemoteWorkspace = {
+        ...db.exportWorkspaceSnapshot(),
+        sessions: [sArq, sLog],
+      };
+
+      globalThis.fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        if (url.endsWith('/api/study-data') && (!init?.method || init.method === 'GET')) {
+          return new Response(JSON.stringify({ data: partialRemoteWorkspace }), { status: 200 });
+        }
+        if (url.endsWith('/api/study-data/workspace') && init?.method === 'PUT') {
+          const payload = JSON.parse(String(init.body)) as Record<string, unknown[]>;
+          putWorkspacePayloads.push(payload);
+          return new Response(JSON.stringify({ ok: true, data: payload }), { status: 200 });
+        }
+        return new Response(JSON.stringify({ ok: true }), { status: 200 });
+      }) as typeof fetch;
+
+      // Clear in-memory DB to simulate fresh browser reload reading from localStorage + API
+      db.clearMemory();
+      await ensureSeed(db);
+
+      const allAfterReload = await db.sessions.toArray();
+      expect(allAfterReload.length).toBe(allBeforeReload.length);
+      const subsequentDaysAfter = allAfterReload.filter((s) => s.date > '2026-11-03');
+      expect(subsequentDaysAfter.length).toBe(subsequentDaysBefore.length);
+
+      // Verify Wednesday 04/11, Thursday 05/11, Friday 06/11, Saturday 07/11 all have their sessions intact
+      expect(allAfterReload.some((s) => s.date === '2026-11-04')).toBe(true);
+      expect(allAfterReload.some((s) => s.date === '2026-11-05')).toBe(true);
+      expect(allAfterReload.some((s) => s.date === '2026-11-06')).toBe(true);
+      expect(allAfterReload.some((s) => s.date === '2026-11-07')).toBe(true);
+
+      // Verify server was healed with the full session list
+      const lastPut = putWorkspacePayloads[putWorkspacePayloads.length - 1];
+      expect(lastPut).toBeDefined();
+      expect(lastPut.sessions.length).toBe(allBeforeReload.length);
+    } finally {
+      setAuthSession(null);
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it('restores JSON backup preserving all schedule sessions, isManual, and order without being overwritten on Vercel', async () => {
+    const originalFetch = globalThis.fetch;
+
+    try {
+      // 1. Build a full schedule + manual session and export backup JSON
+      const manual = await createSession({
+        date: '2026-11-03',
+        disciplineId: 'arquitetura',
+        topicId: null,
+        plannedStart: null,
+        plannedMinutes: 60,
+        objective: 'Arquitetura de software.',
+        notes: '',
+      });
+      await moveSession(manual.id, '2026-11-03', 0);
+      await generateSchedule('2026-11-03', '2026-11-02');
+
+      const backup = await createBackup();
+      const backupJson = JSON.stringify(backup);
+      const expectedSessionCount = backup.data.sessions.length;
+      expect(expectedSessionCount).toBeGreaterThan(200);
+
+      // 2. Validate backup keeps isManual and order fields
+      const validated = validateBackup(backupJson);
+      expect(validated.ok).toBe(true);
+      if (!validated.ok) return;
+
+      const validatedManual = validated.backup.data.sessions.find((s) => s.id === manual.id);
+      expect(validatedManual?.isManual).toBe(true);
+      expect(validatedManual?.order).toBe(0);
+
+      // 3. Authenticate as Vercel user where GET /api/study-data returns 0 sessions (stale server state)
+      setAuthSession({
+        token: 'real-vercel-jwt-token',
+        tokenType: 'Bearer',
+        expiresIn: 604800,
+        user: {
+          id: 'user-vercel-2',
+          name: 'Usuário Backup',
+          email: 'backup.bnb@exemplo.com',
+          createdAt: '2026-11-02T00:00:00.000Z',
+        },
+      });
+
+      await resetDatabase(db);
+      expect(await db.sessions.count()).toBe(0);
+
+      let serverWorkspace: Record<string, unknown[]> = {
+        ...db.exportWorkspaceSnapshot(),
+        sessions: [],
+        weeklyPlans: [],
+      };
+
+      globalThis.fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        if (url.endsWith('/api/study-data') && (!init?.method || init.method === 'GET')) {
+          return new Response(JSON.stringify({ data: serverWorkspace }), { status: 200 });
+        }
+        if (url.endsWith('/api/study-data/workspace') && init?.method === 'PUT') {
+          serverWorkspace = JSON.parse(String(init.body)) as Record<string, unknown[]>;
+          return new Response(JSON.stringify({ ok: true, data: serverWorkspace }), { status: 200 });
+        }
+        return new Response(JSON.stringify({ ok: true, data: serverWorkspace }), { status: 200 });
+      }) as typeof fetch;
+
+      // 4. Restore backup and verify sessions are preserved both before and after reload
+      await restoreBackup(validated.backup);
+
+      const restoredSessions = await db.sessions.toArray();
+      expect(restoredSessions.length).toBe(expectedSessionCount);
+      expect(serverWorkspace.sessions.length).toBe(expectedSessionCount);
+
+      // Simulate page reload after backup import
+      db.clearMemory();
+      await ensureSeed(db);
+
+      const afterReloadSessions = await db.sessions.toArray();
+      expect(afterReloadSessions.length).toBe(expectedSessionCount);
+      const afterReloadPlans = await db.weeklyPlans.toArray();
+      expect(afterReloadPlans.length).toBe(24);
+    } finally {
+      setAuthSession(null);
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it('preserves discipline topics, edits, and deletions across page reloads on Vercel even when server returns empty or stale topics', async () => {
+    const originalFetch = globalThis.fetch;
+
+    try {
+      setAuthSession({
+        token: 'real-vercel-jwt-token',
+        tokenType: 'Bearer',
+        expiresIn: 604800,
+        user: {
+          id: 'user-vercel-topics',
+          name: 'Usuário Tópicos',
+          email: 'topicos.bnb@exemplo.com',
+          createdAt: '2026-11-02T00:00:00.000Z',
+        },
+      });
+
+      window.localStorage.removeItem('bnb_workspace_cache_v1:topicos.bnb@exemplo.com');
+
+      let serverWorkspace: Record<string, unknown[]> = {
+        disciplines: [],
+        topics: [],
+        sessions: [
+          {
+            id: 'partial-session-1',
+            date: '2026-11-03',
+            disciplineId: 'arquitetura',
+            topicId: null,
+            plannedStart: null,
+            plannedMinutes: 60,
+            actualSeconds: 0,
+            status: 'planejada',
+            objective: 'Arquitetura de software.',
+            notes: '',
+            origin: 'planejada',
+            startedAt: null,
+            endedAt: null,
+            recoveredFromId: null,
+            isManual: true,
+            history: [],
+            createdAt: '2026-11-02T00:00:00.000Z',
+            updatedAt: '2026-11-02T00:00:00.000Z',
+          },
+        ],
+        timer: [],
+        questionLogs: [],
+        errorNotes: [],
+        reviews: [],
+        weeklyPlans: [],
+        settings: [],
+        mockExams: [],
+      };
+
+      globalThis.fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        if (url.endsWith('/api/study-data') && (!init?.method || init.method === 'GET')) {
+          return new Response(JSON.stringify({ data: serverWorkspace }), { status: 200 });
+        }
+        if (url.endsWith('/api/study-data/workspace') && init?.method === 'PUT') {
+          serverWorkspace = JSON.parse(String(init.body)) as Record<string, unknown[]>;
+          return new Response(JSON.stringify({ ok: true, data: serverWorkspace }), { status: 200 });
+        }
+        return new Response(JSON.stringify({ ok: true, data: serverWorkspace }), { status: 200 });
+      }) as typeof fetch;
+
+      // 1. First load: server has 1 session and 0 topics -> should auto-seed the 148 official topics and keep the session
+      db.clearMemory();
+      await ensureSeed(db);
+
+      const initialTopics = await db.topics.toArray();
+      expect(initialTopics.length).toBe(148);
+      expect(await db.sessions.count()).toBe(1);
+
+      // 2. User marks a topic as concluido and adds a custom topic, then server cold-starts (returns 0 topics on reload)
+      await db.topics.update(initialTopics[0].id, { status: 'concluido' });
+      const customTopic = await createTopic('arquitetura', null, {
+        title: 'Event Sourcing Avançado',
+        status: 'em-andamento',
+        notes: 'Revisar CQRS',
+      });
+      expect(await db.topics.count()).toBe(149);
+
+      // Simulate server cold start losing all topics while keeping only 1 session
+      serverWorkspace = {
+        ...serverWorkspace,
+        topics: [],
+      };
+
+      db.clearMemory();
+      await ensureSeed(db);
+
+      const topicsAfterReload = await db.topics.toArray();
+      expect(topicsAfterReload.length).toBe(149);
+      expect(topicsAfterReload.find((t) => t.id === initialTopics[0].id)?.status).toBe('concluido');
+      expect(topicsAfterReload.find((t) => t.id === customTopic.id)?.title).toBe(
+        'Event Sourcing Avançado',
+      );
+      expect(serverWorkspace.topics.length).toBe(149);
+    } finally {
+      setAuthSession(null);
+      globalThis.fetch = originalFetch;
+    }
   });
 });

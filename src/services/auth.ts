@@ -177,7 +177,7 @@ export async function fetchUserWorkspaceFromApi(): Promise<Record<DataTableName,
 
 const UNSYNCED_KEY = 'bnb_unsynced_changes_v1';
 
-/** Indica que alguma alteração local não chegou ao servidor (ex.: lote rejeitado). */
+/** Indica que alguma alteração local não chegou ao servidor (ex.: lote rejeitado ou em trânsito). */
 export function hasUnsyncedChanges(): boolean {
   try {
     return typeof window !== 'undefined' && window.localStorage?.getItem(UNSYNCED_KEY) === '1';
@@ -186,7 +186,7 @@ export function hasUnsyncedChanges(): boolean {
   }
 }
 
-function setUnsyncedChanges(value: boolean): void {
+export function setUnsyncedChanges(value: boolean): void {
   try {
     if (typeof window === 'undefined' || !window.localStorage) return;
     if (value) window.localStorage.setItem(UNSYNCED_KEY, '1');
@@ -196,49 +196,132 @@ function setUnsyncedChanges(value: boolean): void {
   }
 }
 
+let syncQueue: Promise<void> = Promise.resolve();
+let pendingSyncCount = 0;
+let hasSyncFailure = false;
+
+function enqueueSyncTask<T>(task: () => Promise<T>): Promise<T> {
+  pendingSyncCount++;
+  setUnsyncedChanges(true);
+  const run = syncQueue.then(task, task);
+  syncQueue = run.then(
+    () => {
+      pendingSyncCount--;
+      if (pendingSyncCount === 0 && !hasSyncFailure) {
+        setUnsyncedChanges(false);
+      }
+    },
+    () => {
+      pendingSyncCount--;
+    },
+  );
+  return run;
+}
+
+/** Aguarda todas as sincronizações em andamento na fila terminarem. */
+export async function waitForPendingSync(): Promise<void> {
+  await syncQueue;
+}
+
+function isRemoteMissingLocalRecords(
+  remote: Record<DataTableName, unknown[]>,
+  local: Record<DataTableName, unknown[]>,
+): boolean {
+  const tables: DataTableName[] = [
+    'topics',
+    'sessions',
+    'weeklyPlans',
+    'questionLogs',
+    'errorNotes',
+    'reviews',
+    'mockExams',
+    'timer',
+  ];
+  for (const table of tables) {
+    if ((local[table]?.length ?? 0) !== (remote[table]?.length ?? 0)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+async function putWorkspaceDirect(workspace: Record<DataTableName, unknown[]>): Promise<boolean> {
+  const res = await fetch('/api/study-data/workspace', {
+    method: 'PUT',
+    headers: buildBearerHeaders(),
+    body: JSON.stringify(workspace),
+  });
+  return res.ok;
+}
+
 export async function replaceUserWorkspaceInApi(
   workspace: Record<DataTableName, unknown[]>,
 ): Promise<boolean> {
   const token = getAuthToken();
   if (!token || token === TEST_BYPASS_TOKEN) return false;
-  try {
-    const res = await fetch('/api/study-data/workspace', {
-      method: 'PUT',
-      headers: buildBearerHeaders(),
-      body: JSON.stringify(workspace),
-    });
-    if (res.ok) setUnsyncedChanges(false);
-    return res.ok;
-  } catch (err) {
-    console.error('Falha ao restaurar workspace no servidor:', err);
-    return false;
-  }
+  return enqueueSyncTask(async () => {
+    try {
+      const ok = await putWorkspaceDirect(workspace);
+      hasSyncFailure = !ok;
+      if (!ok) {
+        setUnsyncedChanges(true);
+      }
+      return ok;
+    } catch (err) {
+      hasSyncFailure = true;
+      setUnsyncedChanges(true);
+      console.error('Falha ao restaurar workspace no servidor:', err);
+      return false;
+    }
+  });
 }
 
-export async function syncBatchMutationsToApi(operations: readonly RemoteTableMutation[]): Promise<void> {
+export async function syncBatchMutationsToApi(
+  operations: readonly RemoteTableMutation[],
+  getLocalSnapshot?: () => Record<DataTableName, unknown[]>,
+): Promise<void> {
   const token = getAuthToken();
   if (!token || token === TEST_BYPASS_TOKEN || operations.length === 0) return;
-  try {
-    const res = await fetch('/api/study-data/batch', {
-      method: 'POST',
-      headers: buildBearerHeaders(),
-      body: JSON.stringify({ operations }),
-    });
-    if (!res.ok && res.status !== 401) {
-      setUnsyncedChanges(true);
-      console.error('Servidor rejeitou alterações; serão reenviadas ao recarregar.', res.status);
-    }
-    if (res.status === 401) {
-      const meRes = await fetch('/api/auth/me', {
-        method: 'GET',
+  return enqueueSyncTask(async () => {
+    try {
+      const res = await fetch('/api/study-data/batch', {
+        method: 'POST',
         headers: buildBearerHeaders(),
-      }).catch(() => null);
-      if (meRes && meRes.status === 401) {
-        setAuthSession(null);
+        body: JSON.stringify({ operations }),
+      });
+      if (!res.ok && res.status !== 401) {
+        hasSyncFailure = true;
+        setUnsyncedChanges(true);
+        console.error('Servidor rejeitou alterações; serão reenviadas ao recarregar.', res.status);
+        return;
       }
+      if (res.status === 401) {
+        const meRes = await fetch('/api/auth/me', {
+          method: 'GET',
+          headers: buildBearerHeaders(),
+        }).catch(() => null);
+        if (meRes && meRes.status === 401) {
+          setAuthSession(null);
+        }
+        return;
+      }
+      if (res.ok && getLocalSnapshot) {
+        const body = (await res.json().catch(() => null)) as {
+          data?: Record<DataTableName, unknown[]>;
+        } | null;
+        const localSnapshot = getLocalSnapshot();
+        if (body?.data && isRemoteMissingLocalRecords(body.data, localSnapshot)) {
+          const healed = await putWorkspaceDirect(localSnapshot);
+          hasSyncFailure = !healed;
+          if (!healed) setUnsyncedChanges(true);
+          return;
+        }
+      }
+      hasSyncFailure = false;
+    } catch (err) {
+      hasSyncFailure = true;
+      setUnsyncedChanges(true);
+      console.error('Falha ao sincronizar alterações com o banco de dados:', err);
     }
-  } catch (err) {
-    setUnsyncedChanges(true);
-    console.error('Falha ao sincronizar alterações com o banco de dados:', err);
-  }
+  });
 }

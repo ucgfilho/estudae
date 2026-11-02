@@ -7,6 +7,7 @@ import {
   isManualSession,
 } from '../domain/schedule';
 import { addDays, isValidDateKey, todayKey, type DateKey } from '../lib/dates';
+import { replaceUserWorkspaceInApi, waitForPendingSync } from './auth';
 import { getSettings, updateSettings } from './settings';
 import { ValidationError, syncWeeklyPlansWithSessions } from './sessions';
 import {
@@ -72,6 +73,10 @@ export async function generateSchedule(
     await syncWeeklyPlansWithSessions();
     await db.settings.update('settings', { scheduleStartDate: startDate });
   });
+
+  db.persistLocalWorkspaceCache();
+  await replaceUserWorkspaceInApi(db.exportWorkspaceSnapshot());
+  await waitForPendingSync();
 
   return {
     weekCount: aiResult.weeklyPlans.length,
@@ -148,4 +153,7 @@ export async function clearSchedule(): Promise<void> {
     await db.weeklyPlans.clear();
     await db.settings.update('settings', { scheduleStartDate: null });
   });
+  db.persistLocalWorkspaceCache();
+  await replaceUserWorkspaceInApi(db.exportWorkspaceSnapshot());
+  await waitForPendingSync();
 }
