@@ -16,6 +16,7 @@ describe('Backend SOLID Architecture, DTOs, JWT Bearer & LGPD Compliance', () =>
   beforeEach(async () => {
     container = createAppContainer({
       dbPath: ':memory:',
+      mongoUri: '',
       seedFilePath: '__non_existent_seed__.json',
       jwtSecret: 'test-secret-key-for-jwt-signing-and-aes256gcm-2026',
       defaultUserEmail: TEST_USER.email,
@@ -26,11 +27,11 @@ describe('Backend SOLID Architecture, DTOs, JWT Bearer & LGPD Compliance', () =>
   });
 
   afterEach(() => {
-    container.dbClient.close();
+    container.dbClient?.close();
   });
 
   it('provisions user with Scrypt-hashed password and authenticates via JWT Bearer', async () => {
-    const dbUser = container.userRepository.findByEmail(TEST_USER.email);
+    const dbUser = await container.userRepository.findByEmail(TEST_USER.email);
     expect(dbUser).not.toBeNull();
     expect(dbUser!.email).toBe(TEST_USER.email);
     expect(dbUser!.passwordHash).not.toBe(TEST_USER.password);
@@ -49,13 +50,13 @@ describe('Backend SOLID Architecture, DTOs, JWT Bearer & LGPD Compliance', () =>
     expect(loginRes.data.user.email).toBe(TEST_USER.email);
     expect('passwordHash' in loginRes.data.user).toBe(false);
 
-    const authUser = container.authGuard.authenticate({
+    const authUser = await container.authGuard.authenticate({
       authorization: `Bearer ${loginRes.data.token}`,
     });
     expect(authUser.id).toBe(dbUser!.id);
     expect(authUser.email).toBe(TEST_USER.email);
 
-    const workspaceRes = container.studyDataController.getWorkspace(authUser);
+    const workspaceRes = await container.studyDataController.getWorkspace(authUser);
     expect(workspaceRes.status).toBe(200);
     expect(workspaceRes.data.data.disciplines).toHaveLength(8);
     expect(workspaceRes.data.data.settings).toHaveLength(1);
@@ -66,12 +67,12 @@ describe('Backend SOLID Architecture, DTOs, JWT Bearer & LGPD Compliance', () =>
       email: TEST_USER.email,
       password: TEST_USER.password,
     });
-    const authUser = container.authGuard.authenticate({
+    const authUser = await container.authGuard.authenticate({
       authorization: `Bearer ${loginRes.data.token}`,
     });
 
     const sampleSensitiveKey = 'test-sensitive-api-key-value-do-not-store-plaintext';
-    container.studyDataController.mutateTable(authUser, 'settings', {
+    await container.studyDataController.mutateTable(authUser, 'settings', {
       action: 'upsert',
       records: [
         {
@@ -84,7 +85,7 @@ describe('Backend SOLID Architecture, DTOs, JWT Bearer & LGPD Compliance', () =>
     });
 
     // Inspect raw SQLite row to prove key is encrypted at rest and NOT stored in plaintext
-    const rawRow = container.dbClient.get<{ gemini_api_key: string }>(
+    const rawRow = container.dbClient!.get<{ gemini_api_key: string }>(
       `SELECT gemini_api_key FROM user_settings WHERE user_id = ?`,
       [authUser.id],
     );
@@ -93,18 +94,18 @@ describe('Backend SOLID Architecture, DTOs, JWT Bearer & LGPD Compliance', () =>
     expect(rawRow!.gemini_api_key).toMatch(/^\$aes256gcm\$/);
 
     // Verify transparent decryption when read back by the authenticated owner
-    const ws = container.studyDataController.getWorkspace(authUser).data.data;
+    const ws = (await container.studyDataController.getWorkspace(authUser)).data.data;
     expect(ws.settings[0].geminiApiKey).toBe(sampleSensitiveKey);
   });
 
   it('enforces JWT Bearer authentication, isolates data per user, and supports permanent LGPD account deletion (Art. 18, VI)', async () => {
-    expect(() => container.authGuard.authenticate({})).toThrow(UnauthorizedError);
-    expect(() =>
+    await expect(container.authGuard.authenticate({})).rejects.toThrow(UnauthorizedError);
+    await expect(
       container.authGuard.authenticate({ authorization: 'Basic abc123' }),
-    ).toThrow(UnauthorizedError);
-    expect(() =>
+    ).rejects.toThrow(UnauthorizedError);
+    await expect(
       container.authGuard.authenticate({ authorization: 'Bearer invalid.jwt.token' }),
-    ).toThrow(UnauthorizedError);
+    ).rejects.toThrow(UnauthorizedError);
 
     const regRes = await container.authController.register({
       name: 'Maria Analista',
@@ -123,12 +124,12 @@ describe('Backend SOLID Architecture, DTOs, JWT Bearer & LGPD Compliance', () =>
       }),
     ).rejects.toThrow(ConflictError);
 
-    const mariaAuth = container.authGuard.authenticate({
+    const mariaAuth = await container.authGuard.authenticate({
       authorization: `Bearer ${regRes.data.token}`,
     });
 
     // Add a topic to Maria's workspace
-    container.studyDataController.mutateTable(mariaAuth, 'topics', {
+    await container.studyDataController.mutateTable(mariaAuth, 'topics', {
       action: 'upsert',
       records: [
         {
@@ -145,7 +146,7 @@ describe('Backend SOLID Architecture, DTOs, JWT Bearer & LGPD Compliance', () =>
         },
       ],
     });
-    expect(container.studyDataController.getWorkspace(mariaAuth).data.data.topics).toHaveLength(1);
+    expect((await container.studyDataController.getWorkspace(mariaAuth)).data.data.topics).toHaveLength(1);
 
     // LGPD Art. 18, VI: Permanent deletion of Maria's account and cascading elimination of all her records
     const delRes = await container.authController.deleteAccount(mariaAuth);
@@ -153,14 +154,14 @@ describe('Backend SOLID Architecture, DTOs, JWT Bearer & LGPD Compliance', () =>
     expect(delRes.data.deleted).toBe(true);
 
     // Token for deleted user must now be rejected
-    expect(() =>
+    await expect(
       container.authGuard.authenticate({
         authorization: `Bearer ${regRes.data.token}`,
       }),
-    ).toThrow(UnauthorizedError);
+    ).rejects.toThrow(UnauthorizedError);
 
     // Verify cascading deletion in SQLite
-    const remainingTopics = container.dbClient.all(
+    const remainingTopics = container.dbClient!.all(
       `SELECT id FROM topics WHERE user_id = ?`,
       [mariaAuth.id],
     );
@@ -196,6 +197,7 @@ describe('Backend SOLID Architecture, DTOs, JWT Bearer & LGPD Compliance', () =>
     // Simulate a second serverless instance cold-starting with a fresh ephemeral SQLite DB
     const secondInstance = createAppContainer({
       dbPath: ':memory:',
+      mongoUri: '',
       seedFilePath: '__non_existent_seed__.json',
       jwtSecret: 'test-secret-key-for-jwt-signing-and-aes256gcm-2026',
       defaultUserEmail: TEST_USER.email,
@@ -205,12 +207,12 @@ describe('Backend SOLID Architecture, DTOs, JWT Bearer & LGPD Compliance', () =>
     await secondInstance.seedReady;
 
     try {
-      const authUser = secondInstance.authGuard.authenticate({
+      const authUser = await secondInstance.authGuard.authenticate({
         authorization: `Bearer ${loginRes.data.token}`,
       });
       expect(authUser.id).toBe(loginRes.data.user.id);
 
-      const batchRes = secondInstance.studyDataController.executeBatch(authUser, {
+      const batchRes = await secondInstance.studyDataController.executeBatch(authUser, {
         operations: [
           {
             table: 'timer',
@@ -238,7 +240,7 @@ describe('Backend SOLID Architecture, DTOs, JWT Bearer & LGPD Compliance', () =>
       expect(batchRes.data.data.timer).toHaveLength(1);
       expect(batchRes.data.data.timer[0].status).toBe('running');
     } finally {
-      secondInstance.dbClient.close();
+      secondInstance.dbClient?.close();
     }
   });
 });

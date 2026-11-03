@@ -423,7 +423,7 @@ export function SettingsScreen() {
             <span>Persistência, Privacidade e Backup</span>
           </div>
         }
-        description="Seus dados ficam 100% armazenados no seu navegador via IndexedDB. Faça backups periódicos para segurança."
+        description="Seus dados ficam 100% sincronizados na nuvem do MongoDB. Você pode acessar de qualquer dispositivo."
       >
         <div className="space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-lg border border-border bg-surface-muted/30 p-4">

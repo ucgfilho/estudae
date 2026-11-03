@@ -1,7 +1,7 @@
 import type { DateKey } from '../lib/dates';
 
 /**
- * Modelo de dados persistido em IndexedDB.
+ * Modelo de dados da aplicação sincronizado com o banco de dados na nuvem (MongoDB).
  * Baseado no modelo sugerido na especificação, com ajustes documentados:
  * - `order` em disciplinas/tópicos para reorganização;
  * - `kind` em disciplinas para separar técnicas/gerais na distribuição;

@@ -1,6 +1,7 @@
 import { getServerEnv, type ServerEnv } from './config/env';
 import { AuthController } from './controllers/AuthController';
 import { StudyDataController } from './controllers/StudyDataController';
+import { getMongoDb } from './database/mongoClient';
 import { ensureDefaultUserAndFirefoxData } from './database/seedFirefoxData';
 import { SqliteDatabaseClient } from './database/SqliteDatabaseClient';
 import type { IAuthService } from './interfaces/IAuthService';
@@ -12,6 +13,8 @@ import type { IStudyDataService } from './interfaces/IStudyDataService';
 import type { ITokenService } from './interfaces/ITokenService';
 import type { IUserRepository } from './interfaces/IUserRepository';
 import { BearerAuthGuard } from './middlewares/authMiddleware';
+import { MongoStudyDataRepository } from './repositories/MongoStudyDataRepository';
+import { MongoUserRepository } from './repositories/MongoUserRepository';
 import { SqlStudyDataRepository } from './repositories/SqlStudyDataRepository';
 import { SqlUserRepository } from './repositories/SqlUserRepository';
 import { JwtTokenService } from './security/JwtTokenService';
@@ -22,7 +25,7 @@ import { StudyDataService } from './services/StudyDataService';
 
 export interface AppContainer {
   env: ServerEnv;
-  dbClient: IDatabaseClient;
+  dbClient?: IDatabaseClient;
   passwordHasher: IPasswordHasher;
   sensitiveDataCipher: ISensitiveDataCipher;
   tokenService: ITokenService;
@@ -37,7 +40,9 @@ export interface AppContainer {
 }
 
 /**
- * Composition Root (DIP): instancia e injeta todas as dependências do backend.
+ * Composition Root (DIP): instancia e injeta as dependências do backend.
+ * Suporta MongoDB nativo na nuvem quando MONGODB_URI estiver configurado,
+ * com fallback para SQLite local em ambientes de desenvolvimento sem rede.
  */
 export function createAppContainer(overrides: Partial<ServerEnv> = {}): AppContainer {
   const env: ServerEnv = {
@@ -45,7 +50,6 @@ export function createAppContainer(overrides: Partial<ServerEnv> = {}): AppConta
     ...overrides,
   };
 
-  const dbClient = new SqliteDatabaseClient(env.dbPath);
   const passwordHasher = new PasswordHasher();
   const sensitiveDataCipher = new SensitiveDataCipher(env.jwtSecret);
   const tokenService = new JwtTokenService({
@@ -55,8 +59,90 @@ export function createAppContainer(overrides: Partial<ServerEnv> = {}): AppConta
     expiresInSeconds: env.jwtExpiresInSeconds,
   });
 
-  const userRepository = new SqlUserRepository(dbClient);
-  const studyDataRepository = new SqlStudyDataRepository(dbClient, sensitiveDataCipher);
+  let userRepository: IUserRepository;
+  let studyDataRepository: IStudyDataRepository;
+  let dbClient: IDatabaseClient | undefined;
+
+  let resolveDbReady: () => void = () => {};
+  const dbReadyPromise = new Promise<void>((resolve) => {
+    resolveDbReady = resolve;
+  });
+
+  if (env.mongoUri) {
+    // Modo MongoDB Cloud (Atlas)
+    const initMongo = async () => {
+      const db = await getMongoDb({ uri: env.mongoUri });
+      const mongoUserRepo = new MongoUserRepository(db);
+      const mongoStudyRepo = new MongoStudyDataRepository(db, sensitiveDataCipher);
+      await Promise.all([mongoUserRepo.initIndexes(), mongoStudyRepo.initIndexes()]);
+      return { mongoUserRepo, mongoStudyRepo };
+    };
+
+    const mongoInitPromise = initMongo();
+
+    // Repositório proxy que aguarda conexão
+    userRepository = {
+      async findByEmail(email: string) {
+        const { mongoUserRepo } = await mongoInitPromise;
+        return mongoUserRepo.findByEmail(email);
+      },
+      async findById(id: string) {
+        const { mongoUserRepo } = await mongoInitPromise;
+        return mongoUserRepo.findById(id);
+      },
+      async create(user) {
+        const { mongoUserRepo } = await mongoInitPromise;
+        return mongoUserRepo.create(user);
+      },
+      async deleteById(id: string) {
+        const { mongoUserRepo } = await mongoInitPromise;
+        return mongoUserRepo.deleteById(id);
+      },
+    };
+
+    studyDataRepository = {
+      async ensureUserSeed(userId: string) {
+        const { mongoStudyRepo } = await mongoInitPromise;
+        return mongoStudyRepo.ensureUserSeed(userId);
+      },
+      async getWorkspace(userId: string) {
+        const { mongoStudyRepo } = await mongoInitPromise;
+        return mongoStudyRepo.getWorkspace(userId);
+      },
+      async replaceWorkspace(userId, ws) {
+        const { mongoStudyRepo } = await mongoInitPromise;
+        return mongoStudyRepo.replaceWorkspace(userId, ws);
+      },
+      async resetWorkspace(userId) {
+        const { mongoStudyRepo } = await mongoInitPromise;
+        return mongoStudyRepo.resetWorkspace(userId);
+      },
+      async applyBatch(userId, ops) {
+        const { mongoStudyRepo } = await mongoInitPromise;
+        return mongoStudyRepo.applyBatch(userId, ops);
+      },
+      async upsertTable(userId, table, recs) {
+        const { mongoStudyRepo } = await mongoInitPromise;
+        return mongoStudyRepo.upsertTable(userId, table, recs);
+      },
+      async deleteFromTable(userId, table, ids) {
+        const { mongoStudyRepo } = await mongoInitPromise;
+        return mongoStudyRepo.deleteFromTable(userId, table, ids);
+      },
+      async clearTable(userId, table) {
+        const { mongoStudyRepo } = await mongoInitPromise;
+        return mongoStudyRepo.clearTable(userId, table);
+      },
+    };
+
+    mongoInitPromise.then(() => resolveDbReady());
+  } else {
+    // Fallback SQLite local
+    dbClient = new SqliteDatabaseClient(env.dbPath);
+    userRepository = new SqlUserRepository(dbClient);
+    studyDataRepository = new SqlStudyDataRepository(dbClient, sensitiveDataCipher);
+    resolveDbReady();
+  }
 
   const authService = new AuthService(
     userRepository,
@@ -70,15 +156,17 @@ export function createAppContainer(overrides: Partial<ServerEnv> = {}): AppConta
   const authController = new AuthController(authService);
   const studyDataController = new StudyDataController(studyDataService);
 
-  const seedReady = ensureDefaultUserAndFirefoxData({
-    userRepository,
-    studyDataRepository,
-    passwordHasher,
-    email: env.defaultUserEmail,
-    password: env.defaultUserPassword,
-    name: env.defaultUserName,
-    seedFilePath: env.seedFilePath,
-  });
+  const seedReady = dbReadyPromise.then(() =>
+    ensureDefaultUserAndFirefoxData({
+      userRepository,
+      studyDataRepository,
+      passwordHasher,
+      email: env.defaultUserEmail,
+      password: env.defaultUserPassword,
+      name: env.defaultUserName,
+      seedFilePath: env.seedFilePath,
+    }),
+  );
 
   return {
     env,

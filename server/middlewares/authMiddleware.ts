@@ -28,7 +28,7 @@ export class BearerAuthGuard {
     this.allowStatelessRecovery = allowStatelessRecovery;
   }
 
-  public authenticate(headers: IncomingHttpHeaders): AuthenticatedUser {
+  public async authenticate(headers: IncomingHttpHeaders): Promise<AuthenticatedUser> {
     const authHeader = headers.authorization ?? headers.Authorization;
     const rawHeader = Array.isArray(authHeader) ? authHeader[0] : authHeader;
     if (!rawHeader || typeof rawHeader !== 'string') {
@@ -42,12 +42,12 @@ export class BearerAuthGuard {
 
     const payload: TokenPayloadDto = this.tokenService.verifyToken(match[1].trim());
     let user =
-      this.userRepository.findById(payload.sub) ??
-      this.userRepository.findByEmail(payload.email);
+      (await this.userRepository.findById(payload.sub)) ??
+      (await this.userRepository.findByEmail(payload.email));
 
     if (!user && this.allowStatelessRecovery) {
       const now = new Date().toISOString();
-      user = this.userRepository.create({
+      user = await this.userRepository.create({
         id: payload.sub,
         name: payload.name || payload.email.split('@')[0] || 'Titular da Conta',
         email: payload.email,

@@ -37,6 +37,7 @@ export interface ServerEnv {
   port: number;
   nodeEnv: string;
   dbPath: string;
+  mongoUri: string;
   seedFilePath: string;
   jwtSecret: string;
   jwtIssuer: string;
@@ -62,6 +63,7 @@ export function getServerEnv(): ServerEnv {
     port: Number(process.env.PORT ?? 3000),
     nodeEnv: process.env.NODE_ENV ?? 'development',
     dbPath: process.env.DB_PATH ?? defaultDbPath,
+    mongoUri: (process.env.MONGODB_URI ?? '').trim(),
     seedFilePath:
       process.env.SEED_FILE_PATH ??
       resolve(process.cwd(), 'data', 'initial-workspace.seed.json'),

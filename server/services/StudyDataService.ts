@@ -28,29 +28,29 @@ export class StudyDataService implements IStudyDataService {
     return parsed.data;
   }
 
-  public getWorkspace(userId: string): StudyWorkspaceDto {
+  public async getWorkspace(userId: string): Promise<StudyWorkspaceDto> {
     return this.repository.getWorkspace(userId);
   }
 
-  public executeBatch(userId: string, rawBody: unknown): StudyWorkspaceDto {
+  public async executeBatch(userId: string, rawBody: unknown): Promise<StudyWorkspaceDto> {
     const dto = parseBatchRequestDto(rawBody);
-    this.repository.applyBatch(userId, dto.operations);
+    await this.repository.applyBatch(userId, dto.operations);
     return this.repository.getWorkspace(userId);
   }
 
-  public mutateTable(userId: string, tableParam: string, rawBody: unknown): void {
+  public async mutateTable(userId: string, tableParam: string, rawBody: unknown): Promise<void> {
     const table = this.parseTableName(tableParam);
     const dto = parseSingleTableMutationDto(rawBody);
     if (dto.action === 'clear') {
-      this.repository.clearTable(userId, table);
+      await this.repository.clearTable(userId, table);
     } else if (dto.action === 'delete') {
-      this.repository.deleteFromTable(userId, table, dto.ids);
+      await this.repository.deleteFromTable(userId, table, dto.ids);
     } else {
-      this.repository.upsertTable(userId, table, dto.records);
+      await this.repository.upsertTable(userId, table, dto.records);
     }
   }
 
-  public replaceWorkspace(userId: string, rawBody: unknown): StudyWorkspaceDto {
+  public async replaceWorkspace(userId: string, rawBody: unknown): Promise<StudyWorkspaceDto> {
     const payload =
       rawBody && typeof rawBody === 'object' && 'data' in rawBody
         ? (rawBody as { data: unknown }).data
@@ -59,7 +59,7 @@ export class StudyDataService implements IStudyDataService {
     return this.repository.replaceWorkspace(userId, dto);
   }
 
-  public resetWorkspace(userId: string): StudyWorkspaceDto {
+  public async resetWorkspace(userId: string): Promise<StudyWorkspaceDto> {
     return this.repository.resetWorkspace(userId);
   }
 }

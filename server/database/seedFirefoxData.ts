@@ -69,12 +69,12 @@ export async function ensureDefaultUserAndFirefoxData(
 
   const { userRepository, studyDataRepository, passwordHasher } = options;
 
-  let user = userRepository.findByEmail(email);
+  let user = await userRepository.findByEmail(email);
   const now = new Date().toISOString();
 
   if (!user) {
     const passwordHash = await passwordHasher.hash(password);
-    user = userRepository.create({
+    user = await userRepository.create({
       id: deterministicUserIdFromEmail(email),
       name,
       email,
@@ -84,7 +84,7 @@ export async function ensureDefaultUserAndFirefoxData(
     });
   }
 
-  const currentWorkspace = studyDataRepository.getWorkspace(user.id);
+  const currentWorkspace = await studyDataRepository.getWorkspace(user.id);
   const isUnpopulated =
     currentWorkspace.topics.length === 0 &&
     currentWorkspace.sessions.length === 0 &&
@@ -94,9 +94,9 @@ export async function ensureDefaultUserAndFirefoxData(
   if (isUnpopulated) {
     const seedWorkspace = loadFirefoxSeedWorkspace(options.seedFilePath);
     if (seedWorkspace) {
-      studyDataRepository.replaceWorkspace(user.id, seedWorkspace);
+      await studyDataRepository.replaceWorkspace(user.id, seedWorkspace);
     } else {
-      studyDataRepository.ensureUserSeed(user.id);
+      await studyDataRepository.ensureUserSeed(user.id);
     }
   }
 

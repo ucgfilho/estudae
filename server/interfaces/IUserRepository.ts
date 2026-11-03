@@ -20,8 +20,8 @@ export interface CreateUserRecord {
  * Contrato de persistência da entidade Usuário (ISP & DIP).
  */
 export interface IUserRepository {
-  findByEmail(email: string): UserEntity | null;
-  findById(id: string): UserEntity | null;
-  create(user: CreateUserRecord): UserEntity;
-  deleteById(id: string): boolean;
+  findByEmail(email: string): Promise<UserEntity | null> | UserEntity | null;
+  findById(id: string): Promise<UserEntity | null> | UserEntity | null;
+  create(user: CreateUserRecord): Promise<UserEntity> | UserEntity;
+  deleteById(id: string): Promise<boolean> | boolean;
 }

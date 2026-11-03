@@ -103,7 +103,7 @@ export async function handleApiRequest(
     }
 
     // Todas as rotas abaixo exigem autenticação JWT Bearer
-    const user = container.authGuard.authenticate(req.headers);
+    const user = await container.authGuard.authenticate(req.headers);
 
     if (method === 'GET' && pathname === '/api/auth/me') {
       const result = await container.authController.me(user);
@@ -118,27 +118,27 @@ export async function handleApiRequest(
     }
 
     if (method === 'GET' && pathname === '/api/study-data') {
-      const result = container.studyDataController.getWorkspace(user);
+      const result = await container.studyDataController.getWorkspace(user);
       sendJson(res, result.status, result.data);
       return true;
     }
 
     if (method === 'POST' && pathname === '/api/study-data/batch') {
       const body = await readJsonBody(req);
-      const result = container.studyDataController.executeBatch(user, body);
+      const result = await container.studyDataController.executeBatch(user, body);
       sendJson(res, result.status, result.data);
       return true;
     }
 
     if (method === 'PUT' && pathname === '/api/study-data/workspace') {
       const body = await readJsonBody(req);
-      const result = container.studyDataController.replaceWorkspace(user, body);
+      const result = await container.studyDataController.replaceWorkspace(user, body);
       sendJson(res, result.status, result.data);
       return true;
     }
 
     if (method === 'POST' && pathname === '/api/study-data/reset') {
-      const result = container.studyDataController.resetWorkspace(user);
+      const result = await container.studyDataController.resetWorkspace(user);
       sendJson(res, result.status, result.data);
       return true;
     }
@@ -146,7 +146,7 @@ export async function handleApiRequest(
     const tableMatch = /^\/api\/study-data\/table\/([a-zA-Z0-9_-]+)$/.exec(pathname);
     if (method === 'POST' && tableMatch) {
       const body = await readJsonBody(req);
-      const result = container.studyDataController.mutateTable(user, tableMatch[1], body);
+      const result = await container.studyDataController.mutateTable(user, tableMatch[1], body);
       sendJson(res, result.status, result.data);
       return true;
     }

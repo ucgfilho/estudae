@@ -48,14 +48,14 @@ export class AuthService implements IAuthService {
 
   public async register(input: unknown): Promise<AuthResponseDto> {
     const dto = this.validateRegisterDto(input);
-    const existing = this.userRepository.findByEmail(dto.email);
+    const existing = await this.userRepository.findByEmail(dto.email);
     if (existing) {
       throw new ConflictError('Já existe uma conta cadastrada com este e-mail.');
     }
 
     const passwordHash = await this.passwordHasher.hash(dto.password);
     const now = new Date().toISOString();
-    const user = this.userRepository.create({
+    const user = await this.userRepository.create({
       id: deterministicUserIdFromEmail(dto.email),
       name: dto.name,
       email: dto.email,
@@ -65,7 +65,7 @@ export class AuthService implements IAuthService {
     });
 
     // Inicializa as 8 disciplinas padrão e configurações do usuário recém-cadastrado
-    this.studyDataRepository.ensureUserSeed(user.id);
+    await this.studyDataRepository.ensureUserSeed(user.id);
 
     const { token, expiresIn } = this.tokenService.generateToken({
       sub: user.id,
@@ -78,7 +78,7 @@ export class AuthService implements IAuthService {
 
   public async login(input: unknown): Promise<AuthResponseDto> {
     const dto = this.validateLoginDto(input);
-    const user = this.userRepository.findByEmail(dto.email);
+    const user = await this.userRepository.findByEmail(dto.email);
     if (!user) {
       throw new UnauthorizedError('E-mail ou senha inválidos.');
     }
@@ -88,7 +88,7 @@ export class AuthService implements IAuthService {
       throw new UnauthorizedError('E-mail ou senha inválidos.');
     }
 
-    this.studyDataRepository.ensureUserSeed(user.id);
+    await this.studyDataRepository.ensureUserSeed(user.id);
 
     const { token, expiresIn } = this.tokenService.generateToken({
       sub: user.id,
@@ -100,7 +100,7 @@ export class AuthService implements IAuthService {
   }
 
   public async getProfile(userId: string): Promise<UserResponseDto> {
-    const user = this.userRepository.findById(userId);
+    const user = await this.userRepository.findById(userId);
     if (!user) {
       throw new NotFoundError('Usuário não encontrado.');
     }
@@ -108,7 +108,7 @@ export class AuthService implements IAuthService {
   }
 
   public async deleteAccount(userId: string): Promise<void> {
-    const deleted = this.userRepository.deleteById(userId);
+    const deleted = await this.userRepository.deleteById(userId);
     if (!deleted) {
       throw new NotFoundError('Usuário não encontrado.');
     }

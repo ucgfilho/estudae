@@ -235,7 +235,7 @@ export function AiScheduleModal({
                 <Field
                   label="Chave de API Gemini (API Key)"
                   required
-                  hint="Sua chave fica armazenada com segurança apenas no seu navegador (IndexedDB local)."
+                  hint="Sua chave fica armazenada com segurança e criptografia no seu perfil na nuvem."
                 >
                   <Input
                     type="password"

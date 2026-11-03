@@ -13,40 +13,40 @@ export class StudyDataController {
     this.studyDataService = studyDataService;
   }
 
-  public getWorkspace(user: AuthenticatedUser): { status: number; data: { data: StudyWorkspaceDto } } {
-    const workspace = this.studyDataService.getWorkspace(user.id);
+  public async getWorkspace(user: AuthenticatedUser): Promise<{ status: number; data: { data: StudyWorkspaceDto } }> {
+    const workspace = await this.studyDataService.getWorkspace(user.id);
     return { status: 200, data: { data: workspace } };
   }
 
-  public executeBatch(
+  public async executeBatch(
     user: AuthenticatedUser,
     body: unknown,
-  ): { status: number; data: { ok: true; data: StudyWorkspaceDto } } {
-    const workspace = this.studyDataService.executeBatch(user.id, body);
+  ): Promise<{ status: number; data: { ok: true; data: StudyWorkspaceDto } }> {
+    const workspace = await this.studyDataService.executeBatch(user.id, body);
     return { status: 200, data: { ok: true, data: workspace } };
   }
 
-  public mutateTable(
+  public async mutateTable(
     user: AuthenticatedUser,
     table: string,
     body: unknown,
-  ): { status: number; data: { ok: true } } {
-    this.studyDataService.mutateTable(user.id, table, body);
+  ): Promise<{ status: number; data: { ok: true } }> {
+    await this.studyDataService.mutateTable(user.id, table, body);
     return { status: 200, data: { ok: true } };
   }
 
-  public replaceWorkspace(
+  public async replaceWorkspace(
     user: AuthenticatedUser,
     body: unknown,
-  ): { status: number; data: { ok: true; data: StudyWorkspaceDto } } {
-    const workspace = this.studyDataService.replaceWorkspace(user.id, body);
+  ): Promise<{ status: number; data: { ok: true; data: StudyWorkspaceDto } }> {
+    const workspace = await this.studyDataService.replaceWorkspace(user.id, body);
     return { status: 200, data: { ok: true, data: workspace } };
   }
 
-  public resetWorkspace(
+  public async resetWorkspace(
     user: AuthenticatedUser,
-  ): { status: number; data: { ok: true; data: StudyWorkspaceDto } } {
-    const workspace = this.studyDataService.resetWorkspace(user.id);
+  ): Promise<{ status: number; data: { ok: true; data: StudyWorkspaceDto } }> {
+    const workspace = await this.studyDataService.resetWorkspace(user.id);
     return { status: 200, data: { ok: true, data: workspace } };
   }
 }
