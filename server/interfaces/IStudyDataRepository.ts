@@ -10,6 +10,7 @@ export interface IStudyDataRepository {
   getWorkspace(userId: string): Promise<StudyWorkspaceDto> | StudyWorkspaceDto;
   replaceWorkspace(userId: string, workspace: StudyWorkspaceDto): Promise<StudyWorkspaceDto> | StudyWorkspaceDto;
   resetWorkspace(userId: string): Promise<StudyWorkspaceDto> | StudyWorkspaceDto;
+  deleteUserWorkspace(userId: string): Promise<void> | void;
   applyBatch(userId: string, operations: readonly TableMutationOperationDto[]): Promise<void> | void;
   upsertTable(userId: string, table: DataTableName, records: readonly unknown[]): Promise<void> | void;
   deleteFromTable(userId: string, table: DataTableName, ids: readonly string[]): Promise<void> | void;

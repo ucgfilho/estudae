@@ -108,6 +108,7 @@ export class AuthService implements IAuthService {
   }
 
   public async deleteAccount(userId: string): Promise<void> {
+    await this.studyDataRepository.deleteUserWorkspace(userId);
     const deleted = await this.userRepository.deleteById(userId);
     if (!deleted) {
       throw new NotFoundError('Usuário não encontrado.');

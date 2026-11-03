@@ -112,6 +112,14 @@ export class SqlStudyDataRepository implements IStudyDataRepository {
     return this.getWorkspace(userId);
   }
 
+  public deleteUserWorkspace(userId: string): void {
+    this.db.transaction(() => {
+      for (const table of DATA_TABLES) {
+        this.clearTableInternal(userId, table);
+      }
+    });
+  }
+
   public applyBatch(userId: string, operations: readonly TableMutationOperationDto[]): void {
     this.db.transaction(() => {
       for (const op of operations) {

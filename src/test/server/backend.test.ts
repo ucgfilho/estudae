@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { createAppContainer, type AppContainer } from '../../../server/container';
 import { UnauthorizedError, ConflictError, DtoValidationError, NotFoundError } from '../../../server/errors/AppError';
 import { SETTINGS_ID } from '../../db/types';
@@ -149,9 +149,11 @@ describe('Backend SOLID Architecture, DTOs, JWT Bearer & LGPD Compliance', () =>
     expect((await container.studyDataController.getWorkspace(mariaAuth)).data.data.topics).toHaveLength(1);
 
     // LGPD Art. 18, VI: Permanent deletion of Maria's account and cascading elimination of all her records
+    const deleteWorkspaceSpy = vi.spyOn(container.studyDataRepository, 'deleteUserWorkspace');
     const delRes = await container.authController.deleteAccount(mariaAuth);
     expect(delRes.status).toBe(200);
     expect(delRes.data.deleted).toBe(true);
+    expect(deleteWorkspaceSpy).toHaveBeenCalledWith(mariaAuth.id);
 
     // Token for deleted user must now be rejected
     await expect(

@@ -72,6 +72,7 @@ export function getAuthToken(): string | null {
 }
 
 export function setAuthSession(session: AuthSessionDto | null): void {
+  const previousEmail = cachedSession?.user?.email?.toLowerCase();
   cachedSession = session;
   if (typeof window !== 'undefined' && window.localStorage) {
     try {
@@ -79,6 +80,10 @@ export function setAuthSession(session: AuthSessionDto | null): void {
         window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(session));
       } else {
         window.localStorage.removeItem(AUTH_STORAGE_KEY);
+        window.localStorage.removeItem('bnb_unsynced_changes_v1');
+        if (previousEmail) {
+          window.localStorage.removeItem(`bnb_workspace_cache_v1:${previousEmail}`);
+        }
       }
     } catch {
       // Ignore storage quota errors

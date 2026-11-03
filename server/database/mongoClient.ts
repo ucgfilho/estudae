@@ -30,10 +30,18 @@ export async function getMongoDb(config: MongoConfig): Promise<Db> {
       serverSelectionTimeoutMS: 5000,
       connectTimeoutMS: 10000,
     });
-    clientPromise = client.connect().then((c) => {
-      cachedClient = c;
-      return c;
-    });
+    clientPromise = client
+      .connect()
+      .then((c) => {
+        cachedClient = c;
+        return c;
+      })
+      .catch((err) => {
+        clientPromise = null;
+        cachedClient = null;
+        cachedDb = null;
+        throw err;
+      });
   }
 
   const client = await clientPromise;

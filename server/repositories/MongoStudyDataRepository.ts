@@ -1,6 +1,7 @@
 import type { Db } from 'mongodb';
 import { DEFAULT_DISCIPLINES, DEFAULT_SETTINGS } from '../../src/db/seed';
 import {
+  SETTINGS_ID,
   type DataTableName,
   type Discipline,
   type ErrorNote,
@@ -115,8 +116,8 @@ export class MongoStudyDataRepository implements IStudyDataRepository {
       };
     }
 
-    // Decripta chaves se necessário
-    const settings = (doc.settings || []).map((s) => {
+    // Decripta chaves se necessário e garante id normalizado
+    const settings: Settings[] = (doc.settings || []).map((s) => {
       let key = s.geminiApiKey ?? '';
       if (key && this.cipher) {
         try {
@@ -125,7 +126,7 @@ export class MongoStudyDataRepository implements IStudyDataRepository {
           // mantém caso não esteja criptografado
         }
       }
-      return { ...s, geminiApiKey: key };
+      return { ...s, id: SETTINGS_ID as 'settings', geminiApiKey: key };
     });
 
     return {
@@ -146,8 +147,9 @@ export class MongoStudyDataRepository implements IStudyDataRepository {
     userId: string,
     workspace: StudyWorkspaceDto,
   ): Promise<StudyWorkspaceDto> {
-    const encryptedSettings = (workspace.settings || []).map((s) => ({
+    const encryptedSettings: Settings[] = (workspace.settings || []).map((s) => ({
       ...s,
+      id: SETTINGS_ID as 'settings',
       geminiApiKey: this.cipher && s.geminiApiKey ? this.cipher.encrypt(s.geminiApiKey) : (s.geminiApiKey ?? ''),
     }));
 
@@ -198,6 +200,10 @@ export class MongoStudyDataRepository implements IStudyDataRepository {
     );
 
     return this.getWorkspace(userId);
+  }
+
+  public async deleteUserWorkspace(userId: string): Promise<void> {
+    await this.collection().deleteOne({ _id: userId });
   }
 
   public async applyBatch(

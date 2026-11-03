@@ -30622,6 +30622,10 @@ async function getMongoDb(config) {
 		connectTimeoutMS: 1e4
 	}).connect().then((c) => {
 		return c;
+	}).catch((err) => {
+		clientPromise = null;
+		cachedDb = null;
+		throw err;
 	});
 	cachedDb = (await clientPromise).db(config.dbName || "bnb_estudos");
 	return cachedDb;
@@ -36289,6 +36293,11 @@ var ConflictError = class extends AppError {
 		super(message, 409, "CONFLICT");
 	}
 };
+var TooManyRequestsError = class extends AppError {
+	constructor(message = "Muitas tentativas seguidas. Aguarde alguns instantes e tente novamente.") {
+		super(message, 429, "TOO_MANY_REQUESTS");
+	}
+};
 //#endregion
 //#region server/dtos/study-data.dto.ts
 var dateKey = string().refine(isValidDateKey, "Data inválida (esperado AAAA-MM-DD).");
@@ -37304,6 +37313,7 @@ var MongoStudyDataRepository = class {
 			} catch {}
 			return {
 				...s,
+				id: SETTINGS_ID,
 				geminiApiKey: key
 			};
 		});
@@ -37323,6 +37333,7 @@ var MongoStudyDataRepository = class {
 	async replaceWorkspace(userId, workspace) {
 		const encryptedSettings = (workspace.settings || []).map((s) => ({
 			...s,
+			id: SETTINGS_ID,
 			geminiApiKey: this.cipher && s.geminiApiKey ? this.cipher.encrypt(s.geminiApiKey) : s.geminiApiKey ?? ""
 		}));
 		const doc = {
@@ -37362,6 +37373,9 @@ var MongoStudyDataRepository = class {
 		};
 		await this.collection().updateOne({ _id: userId }, { $set: fresh }, { upsert: true });
 		return this.getWorkspace(userId);
+	}
+	async deleteUserWorkspace(userId) {
+		await this.collection().deleteOne({ _id: userId });
 	}
 	async applyBatch(userId, operations) {
 		const workspace = await this.getWorkspace(userId);
@@ -37529,6 +37543,11 @@ var SqlStudyDataRepository = class {
 			this.ensureUserSeed(userId);
 		});
 		return this.getWorkspace(userId);
+	}
+	deleteUserWorkspace(userId) {
+		this.db.transaction(() => {
+			for (const table of DATA_TABLES) this.clearTableInternal(userId, table);
+		});
 	}
 	applyBatch(userId, operations) {
 		this.db.transaction(() => {
@@ -38492,6 +38511,7 @@ var AuthService = class {
 		return toUserResponseDto(user);
 	}
 	async deleteAccount(userId) {
+		await this.studyDataRepository.deleteUserWorkspace(userId);
 		if (!await this.userRepository.deleteById(userId)) throw new NotFoundError("Usuário não encontrado.");
 	}
 };
@@ -38607,6 +38627,10 @@ function createAppContainer(overrides = {}) {
 				const { mongoStudyRepo } = await mongoInitPromise;
 				return mongoStudyRepo.resetWorkspace(userId);
 			},
+			async deleteUserWorkspace(userId) {
+				const { mongoStudyRepo } = await mongoInitPromise;
+				return mongoStudyRepo.deleteUserWorkspace(userId);
+			},
 			async applyBatch(userId, ops) {
 				const { mongoStudyRepo } = await mongoInitPromise;
 				return mongoStudyRepo.applyBatch(userId, ops);
@@ -38624,7 +38648,9 @@ function createAppContainer(overrides = {}) {
 				return mongoStudyRepo.clearTable(userId, table);
 			}
 		};
-		mongoInitPromise.then(() => resolveDbReady());
+		mongoInitPromise.then(() => resolveDbReady()).catch(() => {
+			resolveDbReady();
+		});
 	} else {
 		dbClient = new SqliteDatabaseClient(env.dbPath);
 		userRepository = new SqlUserRepository(dbClient);
@@ -38664,11 +38690,31 @@ function createAppContainer(overrides = {}) {
 //#endregion
 //#region server/app.ts
 var MAX_BODY_BYTES = 10485760;
+var AUTH_RATE_LIMIT_WINDOW_MS = 6e4;
+var AUTH_RATE_LIMIT_MAX_ATTEMPTS = 25;
+var authRateMap = /* @__PURE__ */ new Map();
+function checkAuthRateLimit(req) {
+	const forwarded = req.headers["x-forwarded-for"];
+	const rawIp = (Array.isArray(forwarded) ? forwarded[0] : forwarded?.split(",")[0])?.trim() || req.socket?.remoteAddress || "local";
+	const now = Date.now();
+	const entry = authRateMap.get(rawIp);
+	if (!entry || now > entry.resetAt) {
+		authRateMap.set(rawIp, {
+			count: 1,
+			resetAt: now + AUTH_RATE_LIMIT_WINDOW_MS
+		});
+		return;
+	}
+	entry.count += 1;
+	if (entry.count > AUTH_RATE_LIMIT_MAX_ATTEMPTS) throw new TooManyRequestsError();
+}
 function setSecurityHeaders(res) {
 	res.setHeader("X-Content-Type-Options", "nosniff");
 	res.setHeader("X-Frame-Options", "DENY");
 	res.setHeader("Referrer-Policy", "no-referrer");
 	res.setHeader("Permissions-Policy", "geolocation=(), microphone=(), camera=()");
+	res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
+	res.setHeader("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload");
 }
 function sendJson(res, statusCode, payload) {
 	setSecurityHeaders(res);
@@ -38732,12 +38778,14 @@ async function handleApiRequest(container, req, res) {
 			return true;
 		}
 		if (method === "POST" && pathname === "/api/auth/register") {
+			checkAuthRateLimit(req);
 			const body = await readJsonBody(req);
 			const result = await container.authController.register(body);
 			sendJson(res, result.status, result.data);
 			return true;
 		}
 		if (method === "POST" && pathname === "/api/auth/login") {
+			checkAuthRateLimit(req);
 			const body = await readJsonBody(req);
 			const result = await container.authController.login(body);
 			sendJson(res, result.status, result.data);

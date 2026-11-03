@@ -1,14 +1,42 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { AppContainer } from './container';
-import { AppError, DtoValidationError, NotFoundError } from './errors/AppError';
+import { AppError, DtoValidationError, NotFoundError, TooManyRequestsError } from './errors/AppError';
 
 const MAX_BODY_BYTES = 10 * 1024 * 1024; // 10 MB
+
+const AUTH_RATE_LIMIT_WINDOW_MS = 60_000;
+const AUTH_RATE_LIMIT_MAX_ATTEMPTS = 25;
+const authRateMap = new Map<string, { count: number; resetAt: number }>();
+
+function checkAuthRateLimit(req: IncomingMessage): void {
+  const forwarded = req.headers['x-forwarded-for'];
+  const rawIp =
+    (Array.isArray(forwarded) ? forwarded[0] : forwarded?.split(',')[0])?.trim() ||
+    req.socket?.remoteAddress ||
+    'local';
+  const now = Date.now();
+  const entry = authRateMap.get(rawIp);
+  if (!entry || now > entry.resetAt) {
+    authRateMap.set(rawIp, { count: 1, resetAt: now + AUTH_RATE_LIMIT_WINDOW_MS });
+    return;
+  }
+  entry.count += 1;
+  if (entry.count > AUTH_RATE_LIMIT_MAX_ATTEMPTS) {
+    throw new TooManyRequestsError();
+  }
+}
+
+export function resetAuthRateLimiter(): void {
+  authRateMap.clear();
+}
 
 function setSecurityHeaders(res: ServerResponse): void {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('Referrer-Policy', 'no-referrer');
   res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+  res.setHeader('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
 }
 
 function sendJson(res: ServerResponse, statusCode: number, payload: unknown): void {
@@ -89,6 +117,7 @@ export async function handleApiRequest(
 
     // Rotas públicas de Autenticação
     if (method === 'POST' && pathname === '/api/auth/register') {
+      checkAuthRateLimit(req);
       const body = await readJsonBody(req);
       const result = await container.authController.register(body);
       sendJson(res, result.status, result.data);
@@ -96,6 +125,7 @@ export async function handleApiRequest(
     }
 
     if (method === 'POST' && pathname === '/api/auth/login') {
+      checkAuthRateLimit(req);
       const body = await readJsonBody(req);
       const result = await container.authController.login(body);
       sendJson(res, result.status, result.data);

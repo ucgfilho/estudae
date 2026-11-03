@@ -117,6 +117,10 @@ export function createAppContainer(overrides: Partial<ServerEnv> = {}): AppConta
         const { mongoStudyRepo } = await mongoInitPromise;
         return mongoStudyRepo.resetWorkspace(userId);
       },
+      async deleteUserWorkspace(userId) {
+        const { mongoStudyRepo } = await mongoInitPromise;
+        return mongoStudyRepo.deleteUserWorkspace(userId);
+      },
       async applyBatch(userId, ops) {
         const { mongoStudyRepo } = await mongoInitPromise;
         return mongoStudyRepo.applyBatch(userId, ops);
@@ -135,7 +139,12 @@ export function createAppContainer(overrides: Partial<ServerEnv> = {}): AppConta
       },
     };
 
-    mongoInitPromise.then(() => resolveDbReady());
+    mongoInitPromise
+      .then(() => resolveDbReady())
+      .catch(() => {
+        // Resolve readiness so request handlers can surface a clean error instead of hanging
+        resolveDbReady();
+      });
   } else {
     // Fallback SQLite local
     dbClient = new SqliteDatabaseClient(env.dbPath);

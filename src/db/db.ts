@@ -406,6 +406,14 @@ export class AppDatabase {
           serializedDeleted[table] = Array.from(set);
         }
       }
+      const snapshot = this.exportWorkspaceSnapshot();
+      // LGPD / Proteção de Segredos: nunca persistir chaves de API em texto puro no localStorage
+      if (Array.isArray(snapshot.settings)) {
+        snapshot.settings = (snapshot.settings as Settings[]).map((s) => ({
+          ...s,
+          geminiApiKey: '',
+        }));
+      }
       const key = `bnb_workspace_cache_v1:${session.user.email.toLowerCase()}`;
       window.localStorage.setItem(
         key,
@@ -414,7 +422,7 @@ export class AppDatabase {
           savedAt: Date.now(),
           explicitlyClearedTables: this.explicitlyClearedTables,
           deletedIds: serializedDeleted,
-          data: this.exportWorkspaceSnapshot(),
+          data: snapshot,
         }),
       );
     } catch {
@@ -578,7 +586,16 @@ export function reconcileWorkspaces(
     const validRemoteRows = isCleared ? [] : remoteRows.filter((r) => !deletedSet.has(r.id));
 
     let merged: unknown[];
-    if (isCleared && localRows.length === 0) {
+    if (tableName === 'settings' && validRemoteRows.length > 0 && localRows.length > 0) {
+      const remoteSettings = validRemoteRows[0] as unknown as Settings;
+      const localSettings = localRows[0] as unknown as Settings;
+      merged = [
+        {
+          ...(isAuthoritativeLocal ? localSettings : remoteSettings),
+          geminiApiKey: localSettings.geminiApiKey || remoteSettings.geminiApiKey || '',
+        },
+      ];
+    } else if (isCleared && localRows.length === 0) {
       merged = [];
     } else if (localRows.length === 0) {
       merged = validRemoteRows;
