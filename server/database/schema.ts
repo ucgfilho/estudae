@@ -195,6 +195,10 @@ CREATE TABLE IF NOT EXISTS user_settings (
   distribution_json TEXT NOT NULL,
   gemini_api_key TEXT NULL,
   ai_provider TEXT NOT NULL DEFAULT 'builtin' CHECK (ai_provider IN ('builtin', 'gemini')),
+  contest_id TEXT NULL,
+  contest_name TEXT NULL,
+  contest_role TEXT NULL,
+  edital_file_name TEXT NULL,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 

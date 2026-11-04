@@ -36463,7 +36463,11 @@ var settingsDtoSchema = object({
 	scheduleWeeks: number().int().positive(),
 	distribution: record(string(), nonNegInt),
 	geminiApiKey: string().optional(),
-	aiProvider: _enum(["builtin", "gemini"]).optional()
+	aiProvider: _enum(["builtin", "gemini"]).optional(),
+	contestId: string().optional(),
+	contestName: string().optional(),
+	contestRole: string().optional(),
+	editalFileName: string().nullable().optional()
 });
 var mockExamDtoSchema = object({
 	id: string().min(1),
@@ -36829,6 +36833,10 @@ CREATE TABLE IF NOT EXISTS user_settings (
   distribution_json TEXT NOT NULL,
   gemini_api_key TEXT NULL,
   ai_provider TEXT NOT NULL DEFAULT 'builtin' CHECK (ai_provider IN ('builtin', 'gemini')),
+  contest_id TEXT NULL,
+  contest_name TEXT NULL,
+  contest_role TEXT NULL,
+  edital_file_name TEXT NULL,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
@@ -36869,6 +36877,14 @@ var SqliteDatabaseClient = class {
 			this.db.exec("PRAGMA synchronous = NORMAL;");
 		}
 		this.db.exec(RELATIONAL_SCHEMA_SQL);
+		for (const col of [
+			"contest_id",
+			"contest_name",
+			"contest_role",
+			"edital_file_name"
+		]) try {
+			this.db.exec(`ALTER TABLE user_settings ADD COLUMN ${col} TEXT NULL;`);
+		} catch {}
 	}
 	exec(sql) {
 		this.db.exec(sql);
@@ -37495,10 +37511,17 @@ var SqlStudyDataRepository = class {
 	}
 	ensureUserSeed(userId) {
 		this.db.transaction(() => {
-			const existingDiscs = this.db.all(`SELECT id FROM disciplines WHERE user_id = ?`, [userId]);
-			const existingSet = new Set(existingDiscs.map((d) => d.id));
-			const missing = DEFAULT_DISCIPLINES.filter((d) => !existingSet.has(d.id));
-			if (missing.length > 0) this.upsertDisciplines(userId, missing);
+			if (userId.includes("::contest::")) {
+				const now = (/* @__PURE__ */ new Date()).toISOString();
+				this.db.run(`INSERT OR IGNORE INTO users (id, name, email, password_hash, created_at, updated_at)
+           VALUES (?, 'Contest Scope', ?, 'scope', ?, ?)`, [
+					userId,
+					`${userId}@contest.local`,
+					now,
+					now
+				]);
+			}
+			if (this.db.all(`SELECT id FROM disciplines WHERE user_id = ?`, [userId]).length === 0) this.upsertDisciplines(userId, DEFAULT_DISCIPLINES);
 			if (!this.db.get(`SELECT user_id FROM user_settings WHERE user_id = ?`, [userId])) this.upsertSettings(userId, [{
 				...DEFAULT_SETTINGS,
 				distribution: { ...DEFAULT_SETTINGS.distribution }
@@ -37547,6 +37570,7 @@ var SqlStudyDataRepository = class {
 	deleteUserWorkspace(userId) {
 		this.db.transaction(() => {
 			for (const table of DATA_TABLES) this.clearTableInternal(userId, table);
+			this.db.run(`DELETE FROM users WHERE id LIKE ?`, [`${userId}::contest::%`]);
 		});
 	}
 	applyBatch(userId, operations) {
@@ -37901,8 +37925,9 @@ var SqlStudyDataRepository = class {
            user_id, id, daily_goal_minutes, weekly_goal_minutes,
            daily_question_goal, accuracy_goal, topic_completion_goal,
            review_intervals_json, theme, exam_date, schedule_start_date,
-           schedule_weeks, distribution_json, gemini_api_key, ai_provider
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           schedule_weeks, distribution_json, gemini_api_key, ai_provider,
+           contest_id, contest_name, contest_role, edital_file_name
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(user_id) DO UPDATE SET
            id = excluded.id,
            daily_goal_minutes = excluded.daily_goal_minutes,
@@ -37917,7 +37942,11 @@ var SqlStudyDataRepository = class {
            schedule_weeks = excluded.schedule_weeks,
            distribution_json = excluded.distribution_json,
            gemini_api_key = excluded.gemini_api_key,
-           ai_provider = excluded.ai_provider`, [
+           ai_provider = excluded.ai_provider,
+           contest_id = excluded.contest_id,
+           contest_name = excluded.contest_name,
+           contest_role = excluded.contest_role,
+           edital_file_name = excluded.edital_file_name`, [
 			userId,
 			SETTINGS_ID,
 			s.dailyGoalMinutes,
@@ -37932,7 +37961,11 @@ var SqlStudyDataRepository = class {
 			s.scheduleWeeks,
 			JSON.stringify(s.distribution),
 			this.cipher ? this.cipher.encrypt(s.geminiApiKey ?? "") : s.geminiApiKey ?? "",
-			s.aiProvider ?? "builtin"
+			s.aiProvider ?? "builtin",
+			s.contestId ?? null,
+			s.contestName ?? null,
+			s.contestRole ?? null,
+			s.editalFileName ?? null
 		]);
 	}
 	upsertMockExams(userId, items) {
@@ -38147,11 +38180,14 @@ var SqlStudyDataRepository = class {
 		const row = this.db.get(`SELECT daily_goal_minutes, weekly_goal_minutes, daily_question_goal,
               accuracy_goal, topic_completion_goal, review_intervals_json,
               theme, exam_date, schedule_start_date, schedule_weeks,
-              distribution_json, gemini_api_key, ai_provider
+              distribution_json, gemini_api_key, ai_provider,
+              contest_id, contest_name, contest_role, edital_file_name
        FROM user_settings
        WHERE user_id = ?`, [userId]);
 		if (!row) return [];
-		return [{
+		const parsedDist = JSON.parse(row.distribution_json);
+		const hasCustomContest = Boolean(row.contest_id && row.contest_id !== "bnb-ti");
+		const settingsObj = {
 			id: SETTINGS_ID,
 			dailyGoalMinutes: row.daily_goal_minutes,
 			weeklyGoalMinutes: row.weekly_goal_minutes,
@@ -38163,13 +38199,18 @@ var SqlStudyDataRepository = class {
 			examDate: row.exam_date,
 			scheduleStartDate: row.schedule_start_date,
 			scheduleWeeks: row.schedule_weeks,
-			distribution: {
+			distribution: hasCustomContest ? parsedDist : {
 				...DEFAULT_SETTINGS.distribution,
-				...JSON.parse(row.distribution_json)
+				...parsedDist
 			},
 			geminiApiKey: this.cipher ? this.cipher.decrypt(row.gemini_api_key ?? "") : row.gemini_api_key ?? "",
 			aiProvider: row.ai_provider ?? "builtin"
-		}];
+		};
+		if (row.contest_id) settingsObj.contestId = row.contest_id;
+		if (row.contest_name) settingsObj.contestName = row.contest_name;
+		if (row.contest_role) settingsObj.contestRole = row.contest_role;
+		if (row.edital_file_name !== null && row.edital_file_name !== void 0) settingsObj.editalFileName = row.edital_file_name;
+		return [settingsObj];
 	}
 	getMockExams(userId) {
 		return this.db.all(`SELECT id, title, exam_file_name, key_file_name, question_count, option_count,
@@ -38802,32 +38843,38 @@ async function handleApiRequest(container, req, res) {
 			sendJson(res, result.status, result.data);
 			return true;
 		}
+		const rawContestHeader = req.headers["x-contest-id"];
+		const contestIdHeader = (Array.isArray(rawContestHeader) ? rawContestHeader[0] : rawContestHeader)?.trim();
+		const studyUser = contestIdHeader && contestIdHeader !== "default" && /^[a-zA-Z0-9_-]{1,64}$/.test(contestIdHeader) ? {
+			...user,
+			id: `${user.id}::contest::${contestIdHeader}`
+		} : user;
 		if (method === "GET" && pathname === "/api/study-data") {
-			const result = await container.studyDataController.getWorkspace(user);
+			const result = await container.studyDataController.getWorkspace(studyUser);
 			sendJson(res, result.status, result.data);
 			return true;
 		}
 		if (method === "POST" && pathname === "/api/study-data/batch") {
 			const body = await readJsonBody(req);
-			const result = await container.studyDataController.executeBatch(user, body);
+			const result = await container.studyDataController.executeBatch(studyUser, body);
 			sendJson(res, result.status, result.data);
 			return true;
 		}
 		if (method === "PUT" && pathname === "/api/study-data/workspace") {
 			const body = await readJsonBody(req);
-			const result = await container.studyDataController.replaceWorkspace(user, body);
+			const result = await container.studyDataController.replaceWorkspace(studyUser, body);
 			sendJson(res, result.status, result.data);
 			return true;
 		}
 		if (method === "POST" && pathname === "/api/study-data/reset") {
-			const result = await container.studyDataController.resetWorkspace(user);
+			const result = await container.studyDataController.resetWorkspace(studyUser);
 			sendJson(res, result.status, result.data);
 			return true;
 		}
 		const tableMatch = /^\/api\/study-data\/table\/([a-zA-Z0-9_-]+)$/.exec(pathname);
 		if (method === "POST" && tableMatch) {
 			const body = await readJsonBody(req);
-			const result = await container.studyDataController.mutateTable(user, tableMatch[1], body);
+			const result = await container.studyDataController.mutateTable(studyUser, tableMatch[1], body);
 			sendJson(res, result.status, result.data);
 			return true;
 		}

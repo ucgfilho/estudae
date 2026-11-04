@@ -31,11 +31,46 @@ export type RemoteTableMutation =
   | { table: DataTableName; action: 'clear' };
 
 const AUTH_STORAGE_KEY = 'bnb_auth_session_v1';
+const ACTIVE_CONTEST_SCOPE_KEY = 'estudae_active_contest_scope_v1';
 
 type AuthListener = () => void;
 const authListeners = new Set<AuthListener>();
 
 let cachedSession: AuthSessionDto | null = loadStoredSession();
+let activeContestScopeId: string = loadStoredContestScope();
+
+function loadStoredContestScope(): string {
+  if (typeof window === 'undefined' || !window.localStorage) return 'default';
+  try {
+    return window.localStorage.getItem(ACTIVE_CONTEST_SCOPE_KEY) || 'default';
+  } catch {
+    return 'default';
+  }
+}
+
+export function getActiveContestScopeId(): string {
+  return activeContestScopeId || 'default';
+}
+
+export function setActiveContestScopeId(scopeId: string): void {
+  const normalized = scopeId?.trim() || 'default';
+  activeContestScopeId = normalized;
+  if (typeof window !== 'undefined' && window.localStorage) {
+    try {
+      window.localStorage.setItem(ACTIVE_CONTEST_SCOPE_KEY, normalized);
+    } catch {
+      // Ignore storage errors
+    }
+  }
+}
+
+export function getWorkspaceCacheKey(email: string, scopeId = getActiveContestScopeId()): string {
+  const cleanEmail = email.toLowerCase();
+  if (!scopeId || scopeId === 'default') {
+    return `bnb_workspace_cache_v1:${cleanEmail}`;
+  }
+  return `bnb_workspace_cache_v1:${cleanEmail}::${scopeId}`;
+}
 
 function loadStoredSession(): AuthSessionDto | null {
   if (typeof window === 'undefined' || !window.localStorage) return null;
@@ -79,7 +114,9 @@ export function setAuthSession(session: AuthSessionDto | null): void {
       if (session) {
         window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(session));
       } else {
+        activeContestScopeId = 'default';
         window.localStorage.removeItem(AUTH_STORAGE_KEY);
+        window.localStorage.removeItem(ACTIVE_CONTEST_SCOPE_KEY);
         window.localStorage.removeItem('bnb_unsynced_changes_v1');
         if (previousEmail) {
           window.localStorage.removeItem(`bnb_workspace_cache_v1:${previousEmail}`);
@@ -100,6 +137,9 @@ export function buildBearerHeaders(extra: Record<string, string> = {}): Record<s
   };
   if (token) {
     headers.Authorization = `Bearer ${token}`;
+  }
+  if (activeContestScopeId && activeContestScopeId !== 'default' && !headers['X-Contest-Id']) {
+    headers['X-Contest-Id'] = activeContestScopeId;
   }
   return headers;
 }

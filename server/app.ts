@@ -147,28 +147,36 @@ export async function handleApiRequest(
       return true;
     }
 
+    // Suporte a múltiplos concursos por usuário via cabeçalho X-Contest-Id
+    const rawContestHeader = req.headers['x-contest-id'];
+    const contestIdHeader = (Array.isArray(rawContestHeader) ? rawContestHeader[0] : rawContestHeader)?.trim();
+    const studyUser =
+      contestIdHeader && contestIdHeader !== 'default' && /^[a-zA-Z0-9_-]{1,64}$/.test(contestIdHeader)
+        ? { ...user, id: `${user.id}::contest::${contestIdHeader}` }
+        : user;
+
     if (method === 'GET' && pathname === '/api/study-data') {
-      const result = await container.studyDataController.getWorkspace(user);
+      const result = await container.studyDataController.getWorkspace(studyUser);
       sendJson(res, result.status, result.data);
       return true;
     }
 
     if (method === 'POST' && pathname === '/api/study-data/batch') {
       const body = await readJsonBody(req);
-      const result = await container.studyDataController.executeBatch(user, body);
+      const result = await container.studyDataController.executeBatch(studyUser, body);
       sendJson(res, result.status, result.data);
       return true;
     }
 
     if (method === 'PUT' && pathname === '/api/study-data/workspace') {
       const body = await readJsonBody(req);
-      const result = await container.studyDataController.replaceWorkspace(user, body);
+      const result = await container.studyDataController.replaceWorkspace(studyUser, body);
       sendJson(res, result.status, result.data);
       return true;
     }
 
     if (method === 'POST' && pathname === '/api/study-data/reset') {
-      const result = await container.studyDataController.resetWorkspace(user);
+      const result = await container.studyDataController.resetWorkspace(studyUser);
       sendJson(res, result.status, result.data);
       return true;
     }
@@ -176,7 +184,7 @@ export async function handleApiRequest(
     const tableMatch = /^\/api\/study-data\/table\/([a-zA-Z0-9_-]+)$/.exec(pathname);
     if (method === 'POST' && tableMatch) {
       const body = await readJsonBody(req);
-      const result = await container.studyDataController.mutateTable(user, tableMatch[1], body);
+      const result = await container.studyDataController.mutateTable(studyUser, tableMatch[1], body);
       sendJson(res, result.status, result.data);
       return true;
     }

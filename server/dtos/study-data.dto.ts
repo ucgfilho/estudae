@@ -157,6 +157,10 @@ export const settingsDtoSchema = z.object({
   distribution: z.record(z.string(), nonNegInt),
   geminiApiKey: z.string().optional(),
   aiProvider: z.enum(['builtin', 'gemini']).optional(),
+  contestId: z.string().optional(),
+  contestName: z.string().optional(),
+  contestRole: z.string().optional(),
+  editalFileName: z.string().nullable().optional(),
 });
 
 export const mockExamDtoSchema = z.object({

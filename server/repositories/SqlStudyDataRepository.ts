@@ -41,14 +41,21 @@ export class SqlStudyDataRepository implements IStudyDataRepository {
 
   public ensureUserSeed(userId: string): void {
     this.db.transaction(() => {
+      if (userId.includes('::contest::')) {
+        const now = new Date().toISOString();
+        this.db.run(
+          `INSERT OR IGNORE INTO users (id, name, email, password_hash, created_at, updated_at)
+           VALUES (?, 'Contest Scope', ?, 'scope', ?, ?)`,
+          [userId, `${userId}@contest.local`, now, now],
+        );
+      }
+
       const existingDiscs = this.db.all<{ id: string }>(
         `SELECT id FROM disciplines WHERE user_id = ?`,
         [userId],
       );
-      const existingSet = new Set(existingDiscs.map((d) => d.id));
-      const missing = DEFAULT_DISCIPLINES.filter((d) => !existingSet.has(d.id));
-      if (missing.length > 0) {
-        this.upsertDisciplines(userId, missing);
+      if (existingDiscs.length === 0) {
+        this.upsertDisciplines(userId, DEFAULT_DISCIPLINES);
       }
 
       const settingsRow = this.db.get<{ user_id: string }>(
@@ -117,6 +124,7 @@ export class SqlStudyDataRepository implements IStudyDataRepository {
       for (const table of DATA_TABLES) {
         this.clearTableInternal(userId, table);
       }
+      this.db.run(`DELETE FROM users WHERE id LIKE ?`, [`${userId}::contest::%`]);
     });
   }
 
@@ -538,8 +546,9 @@ export class SqlStudyDataRepository implements IStudyDataRepository {
            user_id, id, daily_goal_minutes, weekly_goal_minutes,
            daily_question_goal, accuracy_goal, topic_completion_goal,
            review_intervals_json, theme, exam_date, schedule_start_date,
-           schedule_weeks, distribution_json, gemini_api_key, ai_provider
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           schedule_weeks, distribution_json, gemini_api_key, ai_provider,
+           contest_id, contest_name, contest_role, edital_file_name
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(user_id) DO UPDATE SET
            id = excluded.id,
            daily_goal_minutes = excluded.daily_goal_minutes,
@@ -554,7 +563,11 @@ export class SqlStudyDataRepository implements IStudyDataRepository {
            schedule_weeks = excluded.schedule_weeks,
            distribution_json = excluded.distribution_json,
            gemini_api_key = excluded.gemini_api_key,
-           ai_provider = excluded.ai_provider`,
+           ai_provider = excluded.ai_provider,
+           contest_id = excluded.contest_id,
+           contest_name = excluded.contest_name,
+           contest_role = excluded.contest_role,
+           edital_file_name = excluded.edital_file_name`,
         [
           userId,
           SETTINGS_ID,
@@ -571,6 +584,10 @@ export class SqlStudyDataRepository implements IStudyDataRepository {
           JSON.stringify(s.distribution),
           this.cipher ? this.cipher.encrypt(s.geminiApiKey ?? '') : (s.geminiApiKey ?? ''),
           s.aiProvider ?? 'builtin',
+          s.contestId ?? null,
+          s.contestName ?? null,
+          s.contestRole ?? null,
+          s.editalFileName ?? null,
         ],
       );
     }
@@ -958,39 +975,53 @@ export class SqlStudyDataRepository implements IStudyDataRepository {
       distribution_json: string;
       gemini_api_key: string | null;
       ai_provider: 'builtin' | 'gemini';
+      contest_id: string | null;
+      contest_name: string | null;
+      contest_role: string | null;
+      edital_file_name: string | null;
     }>(
       `SELECT daily_goal_minutes, weekly_goal_minutes, daily_question_goal,
               accuracy_goal, topic_completion_goal, review_intervals_json,
               theme, exam_date, schedule_start_date, schedule_weeks,
-              distribution_json, gemini_api_key, ai_provider
+              distribution_json, gemini_api_key, ai_provider,
+              contest_id, contest_name, contest_role, edital_file_name
        FROM user_settings
        WHERE user_id = ?`,
       [userId],
     );
     if (!row) return [];
-    return [
-      {
-        id: SETTINGS_ID,
-        dailyGoalMinutes: row.daily_goal_minutes,
-        weeklyGoalMinutes: row.weekly_goal_minutes,
-        dailyQuestionGoal: row.daily_question_goal,
-        accuracyGoal: row.accuracy_goal,
-        topicCompletionGoal: row.topic_completion_goal,
-        reviewIntervals: JSON.parse(row.review_intervals_json) as number[],
-        theme: row.theme,
-        examDate: row.exam_date,
-        scheduleStartDate: row.schedule_start_date,
-        scheduleWeeks: row.schedule_weeks,
-        distribution: {
-          ...DEFAULT_SETTINGS.distribution,
-          ...(JSON.parse(row.distribution_json) as Record<string, number>),
-        },
-        geminiApiKey: this.cipher
-          ? this.cipher.decrypt(row.gemini_api_key ?? '')
-          : (row.gemini_api_key ?? ''),
-        aiProvider: row.ai_provider ?? 'builtin',
-      },
-    ];
+    const parsedDist = JSON.parse(row.distribution_json) as Record<string, number>;
+    const hasCustomContest = Boolean(row.contest_id && row.contest_id !== 'bnb-ti');
+    const settingsObj: Settings = {
+      id: SETTINGS_ID,
+      dailyGoalMinutes: row.daily_goal_minutes,
+      weeklyGoalMinutes: row.weekly_goal_minutes,
+      dailyQuestionGoal: row.daily_question_goal,
+      accuracyGoal: row.accuracy_goal,
+      topicCompletionGoal: row.topic_completion_goal,
+      reviewIntervals: JSON.parse(row.review_intervals_json) as number[],
+      theme: row.theme,
+      examDate: row.exam_date,
+      scheduleStartDate: row.schedule_start_date,
+      scheduleWeeks: row.schedule_weeks,
+      distribution: hasCustomContest
+        ? parsedDist
+        : {
+            ...DEFAULT_SETTINGS.distribution,
+            ...parsedDist,
+          },
+      geminiApiKey: this.cipher
+        ? this.cipher.decrypt(row.gemini_api_key ?? '')
+        : (row.gemini_api_key ?? ''),
+      aiProvider: row.ai_provider ?? 'builtin',
+    };
+    if (row.contest_id) settingsObj.contestId = row.contest_id;
+    if (row.contest_name) settingsObj.contestName = row.contest_name;
+    if (row.contest_role) settingsObj.contestRole = row.contest_role;
+    if (row.edital_file_name !== null && row.edital_file_name !== undefined) {
+      settingsObj.editalFileName = row.edital_file_name;
+    }
+    return [settingsObj];
   }
 
   private getMockExams(userId: string): MockExam[] {

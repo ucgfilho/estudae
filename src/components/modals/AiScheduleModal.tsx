@@ -138,19 +138,39 @@ export function AiScheduleModal({
       }
     >
       <div className="space-y-4">
-        {/* Banner de Especificação do BNB */}
+        {/* Banner de Especificação Dinâmica do Concurso / Edital Verticalizado */}
         <div className="rounded-xl border border-primary/30 bg-primary-soft/15 p-4 text-xs space-y-2">
-          <div className="flex items-center gap-2 font-semibold text-primary text-sm">
-            <BrainCircuit className="size-4.5 shrink-0" />
-            <span>Geração Exclusiva por Inteligência Artificial — Edital Verticalizado BNB 2022 (Perfil 1)</span>
+          <div className="flex flex-wrap items-center justify-between gap-2 font-semibold text-primary text-sm">
+            <div className="flex items-center gap-2">
+              <BrainCircuit className="size-4.5 shrink-0" />
+              <span>
+                {settings?.contestName
+                  ? `Geração Exclusiva por IA — Edital Verticalizado: ${settings.contestName} (${settings.contestRole || 'Cargo Selecionado'})`
+                  : 'Geração Exclusiva por Inteligência Artificial — Edital Verticalizado BNB 2022 (Perfil 1)'}
+              </span>
+            </div>
+            {settings?.editalFileName && (
+              <span className="inline-flex items-center rounded-full bg-primary/15 px-2.5 py-0.5 text-[11px] font-medium text-primary">
+                Edital: {settings.editalFileName}
+              </span>
+            )}
           </div>
           <p className="text-fg-muted leading-relaxed">
-            A IA gera seu planejamento de 24 semanas seguindo <strong>rigorosamente 100% dos tópicos do PDF do Edital Verticalizado BNB 2022</strong> (Especialista Técnico — Analista de Sistemas — Perfil 1: Desenvolvimento de Sistemas, itens 14.2.1.1 e 14.2.2), sem fugir do edital:
+            A IA adapta o prompt e gera seu planejamento de 24 semanas seguindo{' '}
+            <strong>
+              rigorosamente 100% dos tópicos do{' '}
+              {settings?.contestName
+                ? `Edital Verticalizado enviado para ${settings.contestName}`
+                : 'PDF do Edital Verticalizado BNB 2022'}
+            </strong>
+            , sem fugir do edital:
           </p>
           <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-fg font-medium pt-1">
             <li className="flex items-start gap-1.5">
               <CheckCircle2 className="size-3.5 text-primary shrink-0 mt-0.5" />
-              <span><strong>Foco em TI (Maior Peso):</strong> Cobertura integral de Lógica de Programação, Arquitetura, Engenharia, Linguagens, Bancos de Dados e Nuvem (80% dos dias úteis) + Português e Raciocínio Lógico (20%).</span>
+              <span>
+                <strong>Foco em TI (Maior Peso):</strong> Priorização inteligente das disciplinas específicas do edital (80% dos dias úteis) + Conhecimentos Gerais (20%).
+              </span>
             </li>
             <li className="flex items-start gap-1.5">
               <CheckCircle2 className="size-3.5 text-primary shrink-0 mt-0.5" />

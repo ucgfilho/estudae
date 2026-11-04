@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppLayout } from './components/layout/AppLayout';
 import { AuthScreen } from './screens/AuthScreen';
+import { ContestSelectorScreen } from './screens/ContestSelectorScreen';
 import { OverviewScreen } from './screens/OverviewScreen';
 import { CalendarScreen } from './screens/CalendarScreen';
 import { ScheduleScreen } from './screens/ScheduleScreen';
@@ -17,18 +18,28 @@ import { ensureSeed } from './db/db';
 import {
   getAuthSession,
   subscribeAuth,
+  TEST_BYPASS_TOKEN,
   type AuthSessionDto,
 } from './services/auth';
+import { syncActiveContestMetadataFromDb } from './services/contests';
 import { LoadingState } from './components/ui/Display';
 import { ToastProvider } from './components/ui/Toast';
 
 export function App() {
   const [session, setSession] = useState<AuthSessionDto | null>(() => getAuthSession());
   const [initialized, setInitialized] = useState(false);
+  const [showContestSelector, setShowContestSelector] = useState<boolean>(() => {
+    const initial = getAuthSession();
+    return Boolean(initial && initial.token !== TEST_BYPASS_TOKEN);
+  });
 
   useEffect(() => {
     return subscribeAuth(() => {
-      setSession(getAuthSession());
+      const next = getAuthSession();
+      setSession(next);
+      if (next && next.token !== TEST_BYPASS_TOKEN) {
+        setShowContestSelector(true);
+      }
     });
   }, []);
 
@@ -41,7 +52,10 @@ export function App() {
     }
     setInitialized(false);
     ensureSeed()
-      .then(() => setInitialized(true))
+      .then(() => {
+        syncActiveContestMetadataFromDb();
+        setInitialized(true);
+      })
       .catch((err) => {
         console.error('Falha ao inicializar os dados do usuário:', err);
         setInitialized(true);
@@ -52,8 +66,9 @@ export function App() {
     return (
       <ToastProvider>
         <AuthScreen
-          onAuthenticated={(nextSession) => {
-            setSession(nextSession);
+          onAuthenticated={() => {
+            setSession(getAuthSession());
+            setShowContestSelector(true);
           }}
         />
       </ToastProvider>
@@ -63,8 +78,20 @@ export function App() {
   if (!initialized) {
     return (
       <div className="flex h-dvh items-center justify-center bg-canvas text-fg">
-        <LoadingState label="Carregando ambiente de estudos do seu usuário..." />
+        <LoadingState label="Carregando ambiente de estudos do estudaê..." />
       </div>
+    );
+  }
+
+  if (showContestSelector) {
+    return (
+      <ToastProvider>
+        <ContestSelectorScreen
+          onSelectContest={() => {
+            setShowContestSelector(false);
+          }}
+        />
+      </ToastProvider>
     );
   }
 
@@ -72,7 +99,11 @@ export function App() {
     <ToastProvider>
       <HashRouter>
         <Routes>
-          <Route element={<AppLayout />}>
+          <Route
+            element={
+              <AppLayout onSwitchContestScreen={() => setShowContestSelector(true)} />
+            }
+          >
             <Route path="/" element={<OverviewScreen />} />
             <Route path="/calendario" element={<CalendarScreen />} />
             <Route path="/cronograma" element={<ScheduleScreen />} />

@@ -9,6 +9,7 @@ import {
   Settings as SettingsIcon,
   Timer as TimerIcon,
   CalendarDays,
+  Layers,
   LogOut,
   User as UserIcon,
 } from 'lucide-react';
@@ -25,12 +26,19 @@ import { elapsedSeconds } from '../../domain/timer';
 import { formatClock } from '../../lib/format';
 import { BnbLogo } from '../ui/BnbLogo';
 import type { ThemePreference } from '../../db/types';
+import type { UserContestProfile } from '../../services/contests';
 
 interface HeaderProps {
   onToggleMobileMenu: () => void;
+  activeContest?: UserContestProfile;
+  onSwitchContestScreen?: () => void;
 }
 
-export function Header({ onToggleMobileMenu }: HeaderProps) {
+export function Header({
+  onToggleMobileMenu,
+  activeContest,
+  onSwitchContestScreen,
+}: HeaderProps) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [authUser, setAuthUser] = useState(() => getAuthSession()?.user ?? null);
   const settings = useSettings();
@@ -64,7 +72,12 @@ export function Header({ onToggleMobileMenu }: HeaderProps) {
   // Global keyboard shortcut: Ctrl+K or /
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.key === 'k' && (e.metaKey || e.ctrlKey)) || (e.key === '/' && (e.target as HTMLElement).tagName !== 'INPUT' && (e.target as HTMLElement).tagName !== 'TEXTAREA')) {
+      if (
+        (e.key === 'k' && (e.metaKey || e.ctrlKey)) ||
+        (e.key === '/' &&
+          (e.target as HTMLElement).tagName !== 'INPUT' &&
+          (e.target as HTMLElement).tagName !== 'TEXTAREA')
+      ) {
         e.preventDefault();
         setSearchOpen(true);
       }
@@ -100,20 +113,38 @@ export function Header({ onToggleMobileMenu }: HeaderProps) {
 
   return (
     <>
-      <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center justify-between border-b border-border bg-surface px-4 sm:px-6">
-        <div className="flex items-center gap-3">
+      <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center justify-between gap-2 border-b border-border bg-surface px-3 sm:px-6">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <IconButton
             label="Abrir menu de navegação"
             icon={<Menu className="size-5" />}
             onClick={onToggleMobileMenu}
-            className="lg:hidden"
+            className="lg:hidden shrink-0"
           />
 
-          <BnbLogo className="size-7 shrink-0 lg:hidden" />
+          <BnbLogo className="size-7 shrink-0 lg:hidden rounded-lg" />
 
-          <div className="flex items-center gap-2">
-            <CalendarDays className="size-4 text-fg-subtle hidden sm:inline" />
-            <span className="text-xs sm:text-sm font-medium text-fg capitalize">
+          {activeContest && onSwitchContestScreen && (
+            <button
+              type="button"
+              onClick={onSwitchContestScreen}
+              title="Trocar de concurso"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-primary/30 bg-primary-soft/25 hover:bg-primary-soft/45 px-2 sm:px-2.5 py-1 text-xs font-semibold text-fg transition min-w-0 max-w-[140px] sm:max-w-[220px] cursor-pointer"
+            >
+              <span
+                className="size-4 rounded text-[9px] font-bold text-white flex items-center justify-center shrink-0"
+                style={{ backgroundColor: activeContest.accentColor || '#c20018' }}
+              >
+                {activeContest.shortName.slice(0, 2)}
+              </span>
+              <span className="truncate">{activeContest.name}</span>
+              <Layers className="size-3 text-primary shrink-0" />
+            </button>
+          )}
+
+          <div className="hidden md:flex items-center gap-2">
+            <CalendarDays className="size-4 text-fg-subtle" />
+            <span className="text-xs sm:text-sm font-medium text-fg capitalize truncate">
               {formatLongDate(today)}
             </span>
           </div>
@@ -121,27 +152,29 @@ export function Header({ onToggleMobileMenu }: HeaderProps) {
           {examDaysLeft !== null && (
             <Badge
               tone={examDaysLeft <= 14 ? 'danger' : examDaysLeft <= 30 ? 'warning' : 'primary'}
-              className="hidden md:inline-flex"
+              className="hidden xl:inline-flex"
             >
               {examDaysLeft > 0
                 ? `${examDaysLeft} dias até a prova`
                 : examDaysLeft === 0
-                ? 'Dia da prova hoje!'
-                : `Prova realizada há ${Math.abs(examDaysLeft)} dias`}
+                  ? 'Dia da prova hoje!'
+                  : `Prova realizada há ${Math.abs(examDaysLeft)} dias`}
             </Badge>
           )}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           {timer && (
             <button
               type="button"
               onClick={() => navigate('/estudar-agora')}
-              className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary-soft px-3 py-1 text-xs font-semibold text-primary transition-colors hover:brightness-95 animate-pulse"
+              className="inline-flex items-center gap-1.5 sm:gap-2 rounded-full border border-primary/30 bg-primary-soft px-2.5 sm:px-3 py-1 text-xs font-semibold text-primary transition-colors hover:brightness-95 animate-pulse"
               title="Sessão de estudo em andamento — Clique para abrir o cronômetro"
             >
               <TimerIcon className="size-3.5" />
-              <span>{timer.status === 'paused' ? 'Pausado' : 'Estudando'}</span>
+              <span className="hidden sm:inline">
+                {timer.status === 'paused' ? 'Pausado' : 'Estudando'}
+              </span>
               <span className="tabular-nums font-mono">{formatClock(timerSeconds)}</span>
             </button>
           )}

@@ -46,7 +46,7 @@ export async function generateSchedule(
 
   // Caso os tópicos do Edital Verticalizado BNB 2022 ainda não estejam cadastrados no banco,
   // semeia automaticamente para que todas as sessões geradas fiquem vinculadas aos tópicos oficiais.
-  if (topics.length === 0) {
+  if (topics.length === 0 && disciplines.some((d) => d.id === 'arquitetura')) {
     await db.topics.bulkAdd(DEFAULT_TOPICS);
     topics = await db.topics.toArray();
   }

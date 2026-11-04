@@ -220,6 +220,14 @@ export interface Settings {
   geminiApiKey?: string;
   /** Provedor preferido de IA ('builtin' | 'gemini'). */
   aiProvider?: 'builtin' | 'gemini';
+  /** Identificador do concurso ativo neste workspace. */
+  contestId?: string;
+  /** Nome do concurso escolhido pelo usuário (ex: "Banco do Brasil", "Polícia Federal"). */
+  contestName?: string;
+  /** Cargo/área escolhida pelo usuário (ex: "Agente de Tecnologia"). */
+  contestRole?: string;
+  /** Nome do arquivo de edital verticalizado enviado pelo usuário. */
+  editalFileName?: string | null;
 }
 
 /**

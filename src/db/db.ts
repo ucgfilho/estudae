@@ -3,6 +3,7 @@ import {
   fetchUserWorkspaceFromApi,
   getAuthSession,
   getAuthToken,
+  getWorkspaceCacheKey,
   hasUnsyncedChanges,
   replaceUserWorkspaceInApi,
   syncBatchMutationsToApi,
@@ -414,7 +415,7 @@ export class AppDatabase {
           geminiApiKey: '',
         }));
       }
-      const key = `bnb_workspace_cache_v1:${session.user.email.toLowerCase()}`;
+      const key = getWorkspaceCacheKey(session.user.email);
       window.localStorage.setItem(
         key,
         JSON.stringify({
@@ -555,7 +556,7 @@ function loadLocalWorkspaceCacheEnvelope(): LocalWorkspaceCacheEnvelope | null {
     return null;
   }
   try {
-    const key = `bnb_workspace_cache_v1:${session.user.email.toLowerCase()}`;
+    const key = getWorkspaceCacheKey(session.user.email);
     const raw = window.localStorage.getItem(key);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as LocalWorkspaceCacheEnvelope;
@@ -687,9 +688,18 @@ export async function ensureLocalDefaults(database: AppDatabase = db): Promise<v
     database.sessions,
     async () => {
       const existingList = await database.disciplines.toArray();
-      const existing = new Set(existingList.map((d) => d.id));
-      const missing = DEFAULT_DISCIPLINES.filter((d) => !existing.has(d.id));
-      if (missing.length > 0) await database.disciplines.bulkAdd(missing);
+      const settings = await database.settings.get(SETTINGS_ID);
+      const isCustomContest =
+        Boolean(settings?.contestId && settings.contestId !== 'bnb-ti') ||
+        (existingList.length > 0 && !existingList.some((d) => d.id === 'arquitetura'));
+
+      if (!isCustomContest) {
+        const existing = new Set(existingList.map((d) => d.id));
+        const missing = DEFAULT_DISCIPLINES.filter((d) => !existing.has(d.id));
+        if (missing.length > 0) await database.disciplines.bulkAdd(missing);
+      } else if (existingList.length === 0) {
+        await database.disciplines.bulkAdd(DEFAULT_DISCIPLINES);
+      }
 
       const oldPalette = [
         '#2563eb',
@@ -708,7 +718,6 @@ export async function ensureLocalDefaults(database: AppDatabase = db): Promise<v
         }
       }
 
-      const settings = await database.settings.get(SETTINGS_ID);
       if (!settings) {
         await database.settings.add({
           ...DEFAULT_SETTINGS,
@@ -718,7 +727,9 @@ export async function ensureLocalDefaults(database: AppDatabase = db): Promise<v
         const merged: Settings = {
           ...DEFAULT_SETTINGS,
           ...settings,
-          distribution: { ...DEFAULT_SETTINGS.distribution, ...settings.distribution },
+          distribution: isCustomContest
+            ? { ...settings.distribution }
+            : { ...DEFAULT_SETTINGS.distribution, ...settings.distribution },
         };
         if (JSON.stringify(merged) !== JSON.stringify(settings)) {
           await database.settings.put(merged);
@@ -781,10 +792,17 @@ async function runEnsureSeed(database: AppDatabase): Promise<void> {
     }
   }
 
-  // Em produção/conta autenticada, se a lista de tópicos estiver vazia e não tiver sido
-  // explicitamente excluída pelo usuário, semeia os 148 tópicos oficiais do Edital Verticalizado BNB 2022.
+  // Em produção/conta autenticada, se a lista de tópicos estiver vazia, não tiver sido
+  // explicitamente excluída pelo usuário e o concurso for o padrão BNB, semeia os 148 tópicos oficiais.
+  const currentDiscs = database.disciplines.toArraySync();
+  const currentSettings = database.settings.toArraySync()[0] as Settings | undefined;
+  const isDefaultBnbContest =
+    (!currentSettings?.contestId || currentSettings.contestId === 'bnb-ti') &&
+    (currentDiscs.length === 0 || currentDiscs.some((d) => d.id === 'arquitetura'));
+
   if (
     isRealAuthenticatedDb &&
+    isDefaultBnbContest &&
     database.topics.toArraySync().length === 0 &&
     !database.isTableExplicitlyCleared('topics')
   ) {

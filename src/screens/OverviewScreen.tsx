@@ -154,7 +154,11 @@ export function OverviewScreen() {
     <div className="space-y-6">
       <PageHeader
         title="Visão Geral"
-        description="Acompanhamento do seu desempenho para o concurso do BNB (Analista de Sistemas — Desenvolvimento)."
+        description={
+          settings?.contestName
+            ? `Acompanhamento do seu desempenho para ${settings.contestName}${settings.contestRole ? ` (${settings.contestRole})` : ''}.`
+            : 'Acompanhamento do seu desempenho para o concurso do BNB (Analista de Sistemas — Desenvolvimento).'
+        }
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Button

@@ -2813,24 +2813,213 @@ export function findMatchingTopic(
 }
 
 /**
- * Monta o plano de 24 semanas utilizando o motor de IA especializado BNB (Builtin),
- * seguindo estritamente o Edital Verticalizado BNB 2022.
+ * Identifica se o conjunto de disciplinas e tópicos corresponde ao Edital padrão BNB 2022.
+ */
+export function isDefaultBnbSyllabus(disciplines: Discipline[], topics: Topic[]): boolean {
+  const bnbIds = new Set(Object.keys(EDITAL_VERTICALIZADO_BNB_2022));
+  const activeDiscs = disciplines.filter((d) => d.active);
+  if (activeDiscs.length === 0) return true;
+  const allMatchBnb = activeDiscs.every((d) => bnbIds.has(d.id));
+  if (!allMatchBnb) return false;
+  if (topics.length > 0 && topics.length !== 148) {
+    const officialSet = new Set(Object.values(EDITAL_VERTICALIZADO_BNB_2022).flat());
+    const matchingCount = topics.filter((t) => officialSet.has(t.title.trim())).length;
+    if (matchingCount < topics.length * 0.5) return false;
+  }
+  return true;
+}
+
+/**
+ * Gera dinamicamente a matriz pedagógica de 24 semanas para QUALQUER concurso e Edital Verticalizado
+ * enviado pelo usuário, distribuindo todos os tópicos nas 4 fases progressivas.
+ */
+export function buildDynamicCurriculumFromEdital(
+  disciplines: Discipline[],
+  topics: Topic[],
+  contestLabel = 'Concurso Selecionado',
+): AiWeekTemplate[] {
+  const activeDiscs = disciplines.filter((d) => d.active).sort((a, b) => a.order - b.order);
+  const fallbackDisc: Discipline = activeDiscs[0] ?? {
+    id: 'geral',
+    name: 'Conhecimentos Gerais',
+    color: '#c20018',
+    active: true,
+    order: 0,
+    kind: 'general',
+  };
+  const discList = activeDiscs.length > 0 ? activeDiscs : [fallbackDisc];
+
+  const techDiscs = discList.filter((d) => d.kind === 'technical');
+  const genDiscs = discList.filter((d) => d.kind === 'general');
+
+  // Constrói rotação de 10 sessões semanais (Seg a Sex, 2 por dia = 10 sessões)
+  // Se houver específicas e gerais: 8 sessões específicas (Seg-Qui) e 2 gerais (Sex)
+  const buildWeeklyDisciplineSlots = (weekIdx: number): Discipline[] => {
+    const slots: Discipline[] = [];
+    if (techDiscs.length > 0 && genDiscs.length > 0) {
+      for (let i = 0; i < 8; i++) {
+        slots.push(techDiscs[(weekIdx * 3 + i) % techDiscs.length]);
+      }
+      for (let i = 0; i < 2; i++) {
+        slots.push(genDiscs[(weekIdx + i) % genDiscs.length]);
+      }
+    } else {
+      for (let i = 0; i < 10; i++) {
+        slots.push(discList[(weekIdx * 2 + i) % discList.length]);
+      }
+    }
+    return slots;
+  };
+
+  const topicsByDisc = new Map<string, Topic[]>();
+  for (const d of discList) {
+    const dTopics = topics
+      .filter((t) => t.disciplineId === d.id && t.active)
+      .sort((a, b) => a.order - b.order);
+    topicsByDisc.set(d.id, dTopics);
+  }
+
+  const discTopicCursor = new Map<string, number>();
+  const nextTopicForDiscipline = (disc: Discipline, weekNum: number): string => {
+    const list = topicsByDisc.get(disc.id) ?? [];
+    if (list.length === 0) {
+      return `Estudo dirigido de ${disc.name} — Bloco ${weekNum}`;
+    }
+    const idx = discTopicCursor.get(disc.id) ?? 0;
+    discTopicCursor.set(disc.id, idx + 1);
+    const topic = list[idx % list.length];
+    if (idx >= list.length && weekNum >= 15) {
+      return `Revisão e Questões: ${topic.title}`;
+    }
+    return topic.title;
+  };
+
+  const getPhaseName = (w: number): string => {
+    if (w <= 6) return `Fase 1: Base do Edital Verticalizado (${contestLabel})`;
+    if (w <= 14) return `Fase 2: Aprofundamento no Edital Verticalizado (${contestLabel})`;
+    if (w <= 20) return `Fase 3: Consolidação e Baterias de Questões (${contestLabel})`;
+    return `Fase 4: Reta Final e Revisão Intensiva (${contestLabel})`;
+  };
+
+  const weeks: AiWeekTemplate[] = [];
+
+  for (let w = 1; w <= 24; w++) {
+    const slots = buildWeeklyDisciplineSlots(w - 1);
+    const weekTopics: string[] = [];
+    const days: AiWeekTemplate['days'] = [];
+
+    for (let dayOffset = 0; dayOffset < 5; dayOffset++) {
+      const d1 = slots[dayOffset * 2];
+      const d2 = slots[dayOffset * 2 + 1];
+      const t1 = nextTopicForDiscipline(d1, w);
+      const t2 = nextTopicForDiscipline(d2, w);
+      weekTopics.push(t1, t2);
+
+      days.push({
+        dayOffset,
+        sessions: [
+          {
+            disciplineId: d1.id,
+            plannedMinutes: 60,
+            objective: t1,
+            topicKeyword: t1.replace(/^Revisão e Questões:\s*/i, ''),
+          },
+          {
+            disciplineId: d2.id,
+            plannedMinutes: 60,
+            objective: t2,
+            topicKeyword: t2.replace(/^Revisão e Questões:\s*/i, ''),
+          },
+        ],
+      });
+    }
+
+    const uniqueTopics = Array.from(new Set(weekTopics));
+    const saturdaySummary = uniqueTopics.slice(0, 5).join(', ');
+    days.push({
+      dayOffset: 5,
+      sessions: [
+        {
+          disciplineId: SIMULADO_DISCIPLINE_ID,
+          plannedMinutes: 120,
+          objective: `Sábado de Questões e Simulado (${contestLabel}): ${saturdaySummary}.`,
+        },
+      ],
+    });
+
+    weeks.push({
+      weekIndex: w,
+      phase: getPhaseName(w),
+      objectives: `Semana ${w} (${contestLabel}): ${uniqueTopics.slice(0, 6).join('; ')}.`,
+      plannedContent: uniqueTopics.join('. ') + '.',
+      days,
+    });
+  }
+
+  return weeks;
+}
+
+/**
+ * Formata o Edital Verticalizado dinâmico (de qualquer concurso enviado pelo usuário) para o prompt da IA.
+ */
+export function formatDynamicEditalForPrompt(
+  disciplines: Discipline[],
+  topics: Topic[],
+): string {
+  if (isDefaultBnbSyllabus(disciplines, topics)) {
+    return formatEditalVerticalizadoForPrompt();
+  }
+  const activeDiscs = disciplines.filter((d) => d.active).sort((a, b) => a.order - b.order);
+  return activeDiscs
+    .map((d) => {
+      const kindLabel =
+        d.kind === 'technical' ? 'Conhecimentos Específicos' : 'Conhecimentos Gerais';
+      const header = `### ${d.name} (ID: ${d.id} — ${kindLabel})`;
+      const dTopics = topics
+        .filter((t) => t.disciplineId === d.id && t.active)
+        .sort((a, b) => a.order - b.order);
+      const list =
+        dTopics.length > 0
+          ? dTopics.map((t) => `- "${t.title}"`).join('\n')
+          : `- "Tópicos gerais de ${d.name}"`;
+      return `${header}\n${list}`;
+    })
+    .join('\n\n');
+}
+
+/**
+ * Monta o plano de 24 semanas utilizando o motor de IA especializado (Builtin),
+ * adaptando-se dinamicamente ao Edital Verticalizado do concurso escolhido pelo usuário.
  */
 export function buildBuiltinAiSchedule(
   startDate: DateKey,
   disciplines: Discipline[],
   topics: Topic[],
   customInstructions?: string,
+  contestLabel?: string,
 ): { weeklyPlans: WeeklyPlan[]; sessions: StudySession[] } {
-  const activeDisciplineIds = new Set(disciplines.filter((d) => d.active).map((d) => d.id));
+  const activeDisciplines = disciplines.filter((d) => d.active);
+  const activeDisciplineIds = new Set(activeDisciplines.map((d) => d.id));
   activeDisciplineIds.add(SIMULADO_DISCIPLINE_ID);
+  const fallbackDiscId = activeDisciplines[0]?.id ?? 'engenharia';
+
+  const useBnbDefault = isDefaultBnbSyllabus(disciplines, topics);
+  const effectiveContestLabel =
+    contestLabel ||
+    (useBnbDefault
+      ? 'Edital Verticalizado BNB 2022 (Perfil 1: Desenvolvimento de Sistemas)'
+      : 'Edital Verticalizado do Concurso');
+
+  const curriculum = useBnbDefault
+    ? BNB_24_WEEKS_CURRICULUM
+    : buildDynamicCurriculumFromEdital(disciplines, topics, effectiveContestLabel);
 
   const weeklyPlans: WeeklyPlan[] = [];
   const sessions: StudySession[] = [];
 
   const firstWeekStart = startOfWeek(startDate);
 
-  for (const weekTpl of BNB_24_WEEKS_CURRICULUM) {
+  for (const weekTpl of curriculum) {
     const weekStart = addDays(firstWeekStart, (weekTpl.weekIndex - 1) * 7);
     let totalWeeklyMinutes = 0;
 
@@ -2860,7 +3049,9 @@ export function buildBuiltinAiSchedule(
         const allocatedMinutes = Math.min(sTpl.plannedMinutes, 120 - dayMinutes);
         if (allocatedMinutes <= 0) return;
 
-        const discId = activeDisciplineIds.has(sTpl.disciplineId) ? sTpl.disciplineId : 'engenharia';
+        const discId = activeDisciplineIds.has(sTpl.disciplineId)
+          ? sTpl.disciplineId
+          : fallbackDiscId;
         const matchedTopic = findMatchingTopic(sTpl.objective, discId, topics, sTpl.topicKeyword);
 
         const session = createAiStudySession(
@@ -2888,7 +3079,9 @@ export function buildBuiltinAiSchedule(
       plannedContent: weekTpl.plannedContent,
       plannedMinutes: totalWeeklyMinutes || (weekSessions.length === 0 ? 0 : 720),
       status: 'pendente',
-      notes: `${weekTpl.phase} — Baseado rigorosamente no Edital Verticalizado BNB 2022 (Perfil 1: Desenvolvimento de Sistemas).`,
+      notes: useBnbDefault
+        ? `${weekTpl.phase} — Baseado rigorosamente no Edital Verticalizado BNB 2022 (Perfil 1: Desenvolvimento de Sistemas).`
+        : `${weekTpl.phase} — Cronograma gerado sob medida para o Edital Verticalizado (${effectiveContestLabel}).`,
     };
 
     weeklyPlans.push(weeklyPlan);
@@ -3052,27 +3245,32 @@ function asText(value: unknown): string {
 }
 
 /**
- * Chamada à API Google Gemini para gerar o cronograma de 24 semanas rigorosamente vinculado
- * ao Edital Verticalizado BNB 2022 (Perfil 1: Desenvolvimento de Sistemas).
+ * Constrói a instrução de sistema adaptada ao concurso e ao Edital Verticalizado enviado pelo usuário.
  */
-export async function callGeminiScheduleApi(
-  apiKey: string,
+export function buildContestSystemInstruction(
   startDate: DateKey,
   disciplines: Discipline[],
   topics: Topic[],
-  customInstructions?: string,
-): Promise<{ weeklyPlans: WeeklyPlan[]; sessions: StudySession[] }> {
-  const activeDiscs = disciplines
-    .filter((d) => d.active)
+  contestLabel?: string,
+): string {
+  const useBnbDefault = isDefaultBnbSyllabus(disciplines, topics);
+  const activeDiscsList = disciplines.filter((d) => d.active);
+  const activeDiscs = activeDiscsList
     .map(
       (d) =>
-        `${d.id} (${d.name} - ${d.kind === 'technical' ? 'Conhecimentos Específicos — Perfil 1: Desenvolvimento de Sistemas' : 'Conhecimentos Gerais'})`,
+        `${d.id} (${d.name} - ${
+          d.kind === 'technical'
+            ? useBnbDefault
+              ? 'Conhecimentos Específicos — Perfil 1: Desenvolvimento de Sistemas'
+              : 'Conhecimentos Específicos'
+            : 'Conhecimentos Gerais'
+        })`,
     )
     .join(', ');
 
-  const editalPromptBlock = formatEditalVerticalizadoForPrompt();
-
-  const systemInstruction = `Você é um mentor especialista no concurso do Banco do Nordeste do Brasil (BNB) para o cargo de Especialista Técnico — Analista de Sistemas — Perfil 1: Desenvolvimento de Sistemas (Edital nº 1 — BNB, de 22 de setembro de 2022, item 14.2.1.1 e item 14.2.2, Perfil 1).
+  if (useBnbDefault) {
+    const editalPromptBlock = formatEditalVerticalizadoForPrompt();
+    return `Você é um mentor especialista no concurso do Banco do Nordeste do Brasil (BNB) para o cargo de Especialista Técnico — Analista de Sistemas — Perfil 1: Desenvolvimento de Sistemas (Edital nº 1 — BNB, de 22 de setembro de 2022, item 14.2.1.1 e item 14.2.2, Perfil 1).
 Você DEVE estruturar um cronograma de exatamente 24 semanas a partir da data de início ${startDate} baseando-se RIGOROSAMENTE e EXCLUSIVAMENTE nos tópicos listados no EDITAL VERTICALIZADO — BNB 2022 abaixo.
 
 PROIBIÇÃO ESTRITA:
@@ -3103,16 +3301,85 @@ Cada semana deve ter:
     - "disciplineId": ID válido de disciplina ("portugues", "raciocinio", "logica-programacao", "arquitetura", "engenharia", "linguagens", "banco-dados", "nuvem") ou "simulado" no sábado
     - "plannedMinutes": 60 (dias úteis) ou 120 (sábado)
     - "objective": título EXATO e LITERAL do tópico correspondente no Edital Verticalizado BNB 2022 acima (ou descrição do simulado/questões no sábado referenciando os tópicos da semana)`;
+  }
+
+  const label = contestLabel || 'Concurso Público Selecionado';
+  const dynamicEditalBlock = formatDynamicEditalForPrompt(disciplines, topics);
+  const validDiscIds = activeDiscsList.map((d) => `"${d.id}"`).join(', ');
+
+  return `Você é um mentor especialista em preparação de alto desempenho para o concurso "${label}".
+Você DEVE estruturar um cronograma estratégico de exatamente 24 semanas a partir da data de início ${startDate} baseando-se RIGOROSAMENTE e EXCLUSIVAMENTE nos tópicos do EDITAL VERTICALIZADO enviado pelo usuário abaixo.
+
+DIRETRIZES DO EDITAL VERTICALIZADO (${label}):
+- Adapte todo o planejamento às disciplinas e aos tópicos reais do edital verticalizado listado abaixo.
+- Cada sessão de estudo de segunda a sexta DEVE ter no campo "objective" o título literal de um tópico oficial da respectiva disciplina constante no Edital Verticalizado abaixo.
+- O campo "plannedContent" de cada semana DEVE listar os tópicos do Edital Verticalizado estudados naquela semana.
+
+REGRAS OBRIGATÓRIAS DE CARGA E ESTRUTURA:
+1. Dias de estudo com RIGOROSAMENTE 2 horas (120 minutos) de estudo (duas sessões de 60 minutos de segunda a sexta).
+2. Sábados (dayOffset 5): EXCLUSIVAMENTE dedicados à resolução de questões da banca ou simulados sobre os tópicos do Edital Verticalizado estudados na semana (1 sessão de 120 minutos com disciplineId "simulado").
+3. Domingos: Dia livre / descanso semanal (0 minutos de estudo planejado).
+4. Segunda a Sexta (dayOffset 0 a 4): Priorize as disciplinas de Conhecimentos Específicos (80% do tempo quando presentes) e Conhecimentos Gerais (20% do tempo), cobrindo 100% do edital verticalizado nas 24 semanas.
+5. Disciplinas ativas no edital: ${activeDiscs}.
+
+LISTA INTEGRAL DE DISCIPLINAS E TÓPICOS DO EDITAL VERTICALIZADO (${label}):
+${dynamicEditalBlock}
+
+Retorne ESTRITAMENTE um objeto JSON válido contendo a chave "weeks" com array das semanas solicitadas na mensagem do usuário (cada uma com seu weekIndex correto, de 1 a 24).
+Cada semana deve ter:
+- "weekIndex": número de 1 a 24
+- "objectives": resumo pedagógico da semana para o concurso ${label}
+- "plannedContent": lista dos tópicos do Edital Verticalizado estudados na semana
+- "days": array de 6 dias (dayOffset 0 a 5, onde 0=segunda, 1=terça, 2=quarta, 3=quinta, 4=sexta e 5=sábado)
+  Cada dia tem:
+  - "dayOffset": 0 a 5
+  - "sessions": array de sessões que somam exatamente 120 minutos (duas de 60m de segunda a sexta; uma de 120m no sábado)
+    Cada sessão tem:
+    - "disciplineId": ID válido de disciplina (${validDiscIds}) ou "simulado" no sábado
+    - "plannedMinutes": 60 (dias úteis) ou 120 (sábado)
+    - "objective": título do tópico correspondente no Edital Verticalizado acima (ou descrição do simulado/questões no sábado)`;
+}
+
+/**
+ * Chamada à API Google Gemini para gerar o cronograma de 24 semanas vinculado
+ * ao Edital Verticalizado do concurso escolhido pelo usuário.
+ */
+export async function callGeminiScheduleApi(
+  apiKey: string,
+  startDate: DateKey,
+  disciplines: Discipline[],
+  topics: Topic[],
+  customInstructions?: string,
+  contestLabel?: string,
+): Promise<{ weeklyPlans: WeeklyPlan[]; sessions: StudySession[] }> {
+  const useBnbDefault = isDefaultBnbSyllabus(disciplines, topics);
+  const effectiveLabel =
+    contestLabel ||
+    (useBnbDefault
+      ? 'BNB Analista de Sistemas — Perfil 1: Desenvolvimento de Sistemas'
+      : 'Concurso Selecionado');
+
+  const referenceCurriculum = useBnbDefault
+    ? BNB_24_WEEKS_CURRICULUM
+    : buildDynamicCurriculumFromEdital(disciplines, topics, effectiveLabel);
+
+  const systemInstruction = buildContestSystemInstruction(
+    startDate,
+    disciplines,
+    topics,
+    effectiveLabel,
+  );
 
   const extra = customInstructions
-    ? ` Instruções adicionais do usuário (respeitando estritamente os tópicos do Edital Verticalizado BNB 2022): ${customInstructions}`
+    ? ` Instruções adicionais do usuário (respeitando estritamente os tópicos do Edital Verticalizado): ${customInstructions}`
     : '';
   const buildUserPrompt = (from: number, to: number) => {
-    const referenceSlice = BNB_24_WEEKS_CURRICULUM.slice(from - 1, to)
+    const referenceSlice = referenceCurriculum
+      .slice(from - 1, to)
       .map((w) => `Semana ${w.weekIndex}: ${w.plannedContent}`)
       .join('\n');
-    return `Gere SOMENTE as semanas ${from} a ${to} (do total de 24) do cronograma para o BNB Analista de Sistemas — Perfil 1: Desenvolvimento de Sistemas, com data de início em ${startDate}.
-Use rigorosamente os tópicos do Edital Verticalizado BNB 2022. Distribuição de referência dos tópicos do edital para estas semanas:
+    return `Gere SOMENTE as semanas ${from} a ${to} (do total de 24) do cronograma para ${effectiveLabel}, com data de início em ${startDate}.
+Use rigorosamente os tópicos do Edital Verticalizado. Distribuição de referência dos tópicos do edital para estas semanas:
 ${referenceSlice}
 Responda apenas com o JSON {"weeks":[...]} contendo ${to - from + 1} semanas.${extra}`;
   };
@@ -3152,22 +3419,24 @@ Responda apenas com o JSON {"weeks":[...]} contendo ${to - from + 1} semanas.${e
       : new Error('A API do Gemini não retornou nenhuma semana válida.');
   }
 
-  // Semanas ausentes/inválidas são completadas pela matriz pedagógica oficial do Edital Verticalizado.
+  // Semanas ausentes/inválidas são completadas pela matriz pedagógica do Edital Verticalizado.
   const parsed: { weeks: AiWeekTemplate[] } = {
-    weeks: Array.from({ length: 24 }, (_, i) => weeksByIndex.get(i + 1) ?? BNB_24_WEEKS_CURRICULUM[i]),
+    weeks: Array.from({ length: 24 }, (_, i) => weeksByIndex.get(i + 1) ?? referenceCurriculum[i]),
   };
 
   const weeklyPlans: WeeklyPlan[] = [];
   const sessions: StudySession[] = [];
-  const activeDisciplineIds = new Set(disciplines.filter((d) => d.active).map((d) => d.id));
+  const activeDisciplines = disciplines.filter((d) => d.active);
+  const activeDisciplineIds = new Set(activeDisciplines.map((d) => d.id));
   activeDisciplineIds.add(SIMULADO_DISCIPLINE_ID);
+  const fallbackDiscId = activeDisciplines[0]?.id ?? 'engenharia';
 
   const firstWeekStart = startOfWeek(startDate);
   const topicCounters: Record<string, number> = {};
 
   for (let i = 0; i < 24; i++) {
     const weekData = parsed.weeks[i];
-    const fallbackWeek = BNB_24_WEEKS_CURRICULUM[i];
+    const fallbackWeek = referenceCurriculum[i];
     const weekStart = addDays(firstWeekStart, i * 7);
     let totalWeeklyMinutes = 0;
 
@@ -3210,7 +3479,7 @@ Responda apenas com o JSON {"weeks":[...]} contendo ${to - from + 1} semanas.${e
           ? SIMULADO_DISCIPLINE_ID
           : activeDisciplineIds.has(s.disciplineId)
             ? s.disciplineId
-            : 'engenharia';
+            : fallbackDiscId;
 
         let finalObjective = s.objective || '';
         let matchedTopic: Topic | null = null;
@@ -3220,14 +3489,30 @@ Responda apenas com o JSON {"weeks":[...]} contendo ${to - from + 1} semanas.${e
             s.objective && s.objective.trim().length > 0
               ? s.objective.trim()
               : fallbackWeek.days.find((d) => d.dayOffset === 5)?.sessions[0]?.objective ??
-                'Sábado de Questões/Simulado (Edital Verticalizado BNB 2022)';
-        } else {
+                `Sábado de Questões/Simulado (${effectiveLabel})`;
+        } else if (useBnbDefault) {
           const counter = topicCounters[discId] ?? 0;
           topicCounters[discId] = counter + 1;
           const enforced = enforceOfficialEditalObjective(finalObjective, discId, counter);
           finalObjective = enforced.objective;
           weekOfficialTopics.push(enforced.officialTopic);
           matchedTopic = findMatchingTopic(finalObjective, discId, topics, enforced.officialTopic);
+        } else {
+          const counter = topicCounters[discId] ?? 0;
+          topicCounters[discId] = counter + 1;
+          matchedTopic = findMatchingTopic(finalObjective, discId, topics);
+          if (!matchedTopic) {
+            const discTopics = topics.filter((t) => t.disciplineId === discId && t.active);
+            if (discTopics.length > 0) {
+              matchedTopic = discTopics[counter % discTopics.length];
+            }
+          }
+          if (matchedTopic) {
+            finalObjective = matchedTopic.title;
+            weekOfficialTopics.push(matchedTopic.title);
+          } else if (finalObjective) {
+            weekOfficialTopics.push(finalObjective);
+          }
         }
 
         sessions.push(
@@ -3257,8 +3542,9 @@ Responda apenas com o JSON {"weeks":[...]} contendo ${to - from + 1} semanas.${e
       plannedContent: asText(weekData.plannedContent) || plannedContentFromTopics,
       plannedMinutes: totalWeeklyMinutes || 720,
       status: 'pendente',
-      notes:
-        'Cronograma gerado via Google Gemini AI — Baseado rigorosamente no Edital Verticalizado BNB 2022 (Perfil 1: Desenvolvimento de Sistemas).',
+      notes: useBnbDefault
+        ? 'Cronograma gerado via Google Gemini AI — Baseado rigorosamente no Edital Verticalizado BNB 2022 (Perfil 1: Desenvolvimento de Sistemas).'
+        : `Cronograma gerado via Google Gemini AI — Adaptado ao Edital Verticalizado (${effectiveLabel}).`,
     });
   }
 
@@ -3281,6 +3567,9 @@ export async function generateAiSchedulePlan(params: {
     settings.aiProvider ??
     (options?.apiKey || settings.geminiApiKey ? 'gemini' : 'builtin');
   const apiKey = options?.apiKey || settings.geminiApiKey;
+  const contestLabel = settings.contestName
+    ? `${settings.contestName}${settings.contestRole ? ` — ${settings.contestRole}` : ''}`
+    : undefined;
 
   if (effectiveProvider === 'gemini' && apiKey?.trim()) {
     try {
@@ -3290,6 +3579,7 @@ export async function generateAiSchedulePlan(params: {
         disciplines,
         topics,
         options?.customInstructions,
+        contestLabel,
       );
       return {
         weeklyPlans: result.weeklyPlans,
@@ -3305,7 +3595,13 @@ export async function generateAiSchedulePlan(params: {
   }
 
   // Motor Especialista Integrado (Builtin)
-  const result = buildBuiltinAiSchedule(startDate, disciplines, topics, options?.customInstructions);
+  const result = buildBuiltinAiSchedule(
+    startDate,
+    disciplines,
+    topics,
+    options?.customInstructions,
+    contestLabel,
+  );
   return {
     weeklyPlans: result.weeklyPlans,
     sessions: result.sessions,

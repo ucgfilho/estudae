@@ -608,7 +608,11 @@ export function ScheduleScreen() {
     <div className="space-y-6">
       <PageHeader
         title="Cronograma de Estudos (24 Semanas)"
-        description="Planejamento estruturado gerado exclusivamente por IA com foco nas especificidades da prova do BNB (Analista de TI), 2h diárias e sábados de questões/simulados."
+        description={
+          settings?.contestName
+            ? `Planejamento estruturado gerado por IA adaptado ao Edital Verticalizado de ${settings.contestName}${settings.contestRole ? ` (${settings.contestRole})` : ''}: 2h diárias e sábados de questões/simulados.`
+            : 'Planejamento estruturado gerado exclusivamente por IA com foco nas especificidades da prova do BNB (Analista de TI), 2h diárias e sábados de questões/simulados.'
+        }
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Button
