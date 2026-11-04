@@ -242,7 +242,7 @@ export function ContestSelectorScreen({ onSelectContest }: ContestSelectorScreen
               <Plus className="size-10 stroke-[2.2]" />
             </div>
             <div className="font-bold text-sm sm:text-base text-fg group-hover:text-primary transition">
-              + Novo concurso
+              Novo concurso
             </div>
             <div className="text-xs text-fg-muted mt-0.5">
               Enviar outro edital verticalizado
