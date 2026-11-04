@@ -11,11 +11,13 @@ import {
   CalendarDays,
   Layers,
   LogOut,
-  User as UserIcon,
+  Pencil,
 } from 'lucide-react';
 import { IconButton } from '../ui/Button';
 import { Badge } from '../ui/Display';
+import { Avatar } from '../ui/Avatar';
 import { SearchModal } from './SearchModal';
+import { ProfileModal } from '../profile/ProfileModal';
 import { useSettings, useActiveTimer, useNow } from '../../hooks/useData';
 import { updateSettings } from '../../services/settings';
 import { getAuthSession, setAuthSession, subscribeAuth } from '../../services/auth';
@@ -40,6 +42,7 @@ export function Header({
   onSwitchContestScreen,
 }: HeaderProps) {
   const [searchOpen, setSearchOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
   const [authUser, setAuthUser] = useState(() => getAuthSession()?.user ?? null);
   const settings = useSettings();
   const timer = useActiveTimer();
@@ -180,13 +183,19 @@ export function Header({
           )}
 
           {authUser && (
-            <div
-              className="hidden md:inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface-muted px-2.5 py-1 text-xs font-medium text-fg-muted"
-              title={`Conectado como ${authUser.email}`}
+            <button
+              type="button"
+              data-testid="header-profile-button"
+              onClick={() => setProfileOpen(true)}
+              title={`Editar perfil (${authUser.name} · ${authUser.email})`}
+              className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-surface-muted/70 hover:bg-surface-muted hover:border-primary/40 px-2 sm:px-2.5 text-xs font-medium text-fg transition cursor-pointer"
             >
-              <UserIcon className="size-3.5 text-primary shrink-0" />
-              <span className="max-w-36 truncate">{authUser.email}</span>
-            </div>
+              <Avatar name={authUser.name || authUser.email} src={authUser.avatarUrl} size="sm" />
+              <span className="hidden md:inline-block max-w-32 truncate font-semibold text-fg">
+                {authUser.name}
+              </span>
+              <Pencil className="hidden sm:block size-3 text-fg-subtle shrink-0" />
+            </button>
           )}
 
           <IconButton
@@ -214,6 +223,7 @@ export function Header({
       </header>
 
       <SearchModal open={searchOpen} onClose={() => setSearchOpen(false)} />
+      <ProfileModal open={profileOpen} onClose={() => setProfileOpen(false)} />
     </>
   );
 }

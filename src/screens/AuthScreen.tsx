@@ -11,7 +11,7 @@ import {
 import { BnbLogo } from '../components/ui/BnbLogo';
 import { Button } from '../components/ui/Button';
 import { Alert } from '../components/ui/Display';
-import { Field, Input } from '../components/ui/Form';
+import { Field, InputWithIcon } from '../components/ui/Form';
 import { ContestSearchSelect } from '../components/contests/ContestSearchSelect';
 import { EditalUploadBox } from '../components/contests/EditalUploadBox';
 import { loginWithCredentials, registerUserAccount } from '../services/auth';
@@ -49,11 +49,11 @@ export function AuthScreen({ onAuthenticated }: AuthScreenProps) {
         return;
       }
       if (!selectedContestId) {
-        setError('Selecione qual concurso você deseja fazer para liberar o Edital Verticalizado.');
+        setError('Escolha o concurso para liberar o envio do edital.');
         return;
       }
       if (selectedContestId === 'custom' && !customContestName.trim()) {
-        setError('Informe o nome do concurso personalizado.');
+        setError('Digite o nome do concurso.');
         return;
       }
     }
@@ -106,7 +106,7 @@ export function AuthScreen({ onAuthenticated }: AuthScreenProps) {
           <div>
             <div className="text-lg sm:text-xl font-bold tracking-tight">estudaê</div>
             <div className="text-xs text-white/80">
-              Plataforma Inteligente para Qualquer Concurso Público
+              Estudo organizado para qualquer concurso
             </div>
           </div>
         </div>
@@ -114,54 +114,50 @@ export function AuthScreen({ onAuthenticated }: AuthScreenProps) {
         <div className="my-8 lg:my-0 space-y-5 max-w-lg relative z-10">
           <div className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3.5 py-1 text-xs font-medium backdrop-blur-xs">
             <ShieldCheck className="size-4 text-[#f68b1f]" />
-            <span>Edital Verticalizado Adaptativo + Cronograma IA de 24 Semanas</span>
+            <span>Cronograma de 24 semanas feito a partir do seu edital</span>
           </div>
 
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold leading-tight">
-            Envie seu Edital Verticalizado. Nós criamos seu plano de aprovação.
+            Envie seu edital verticalizado e monte seu plano de estudo.
           </h1>
 
           <p className="text-xs sm:text-sm text-white/85 leading-relaxed">
-            O <strong>estudaê</strong> se adapta a qualquer concurso público que você escolher.
-            Envie seu edital verticalizado no cadastro ou crie múltiplos concursos na mesma conta,
-            com cronogramas de 24 semanas gerados sob medida por IA.
+            Escolha o concurso, envie o edital verticalizado e receba 24 semanas de estudo
+            baseadas nos tópicos dele. Dá para ter vários concursos na mesma conta, cada um
+            com o seu painel.
           </p>
 
           <ul className="space-y-2.5 text-xs sm:text-sm text-white/90 pt-1">
             <li className="flex items-center gap-2.5">
               <CheckCircle2 className="size-4 text-[#f68b1f] shrink-0" />
               <span>
-                Escolha qualquer concurso (Bancários, TI, Policiais, Fiscais, Tribunais e mais)
+                Bancos, TI, polícia, fiscal, tribunais e outros
               </span>
             </li>
             <li className="flex items-center gap-2.5">
               <CheckCircle2 className="size-4 text-[#f68b1f] shrink-0" />
               <span>
-                Prompt de IA adaptado dinamicamente ao Edital Verticalizado enviado por você
+                O cronograma segue os tópicos do seu edital
               </span>
             </li>
             <li className="flex items-center gap-2.5">
               <CheckCircle2 className="size-4 text-[#f68b1f] shrink-0" />
               <span>
-                Múltiplos concursos na mesma conta (estilo perfis da Netflix ao entrar)
+                Um painel separado para cada concurso
               </span>
             </li>
           </ul>
         </div>
 
         <div className="text-xs text-white/70 relative z-10 hidden sm:block">
-          estudaê · Sua jornada estruturada rumo à aprovação em qualquer edital
+          estudaê
         </div>
       </div>
 
       {/* Coluna do Formulário de Login / Cadastro */}
       <div className="flex-1 flex items-center justify-center p-4 sm:p-8 lg:p-12 overflow-y-auto">
         <div
-          className={
-            mode === 'register'
-              ? 'w-full max-w-xl space-y-5 my-auto'
-              : 'w-full max-w-md space-y-6 my-auto'
-          }
+          className="w-full max-w-xl space-y-5 my-auto"
         >
           <div className="space-y-1.5 text-center sm:text-left">
             <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-fg">
@@ -169,8 +165,8 @@ export function AuthScreen({ onAuthenticated }: AuthScreenProps) {
             </h2>
             <p className="text-xs sm:text-sm text-fg-muted">
               {mode === 'login'
-                ? 'Informe seu e-mail e senha para escolher seu concurso e continuar estudando.'
-                : 'Preencha seus dados, escolha seu concurso e envie seu Edital Verticalizado.'}
+                ? 'Entre com seu e-mail e senha para continuar de onde parou.'
+                : 'Preencha seus dados, escolha o concurso e envie o edital.'}
             </p>
           </div>
 
@@ -221,34 +217,28 @@ export function AuthScreen({ onAuthenticated }: AuthScreenProps) {
           <form onSubmit={handleSubmit} className="space-y-4">
             {mode === 'register' && (
               <Field label="Seu nome completo" required>
-                <div className="relative">
-                  <User className="size-4 text-fg-subtle absolute left-3 top-2.5 pointer-events-none" />
-                  <Input
+                <InputWithIcon
                     type="text"
                     required
                     minLength={2}
                     placeholder="Ex: Maria Oliveira"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="pl-9"
-                  />
-                </div>
+                icon={<User />}
+              />
               </Field>
             )}
 
             <Field label="E-mail" required>
-              <div className="relative">
-                <Mail className="size-4 text-fg-subtle absolute left-3 top-2.5 pointer-events-none" />
-                <Input
+              <InputWithIcon
                   type="email"
                   required
                   autoComplete="email"
                   placeholder="seu.email@exemplo.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
+                icon={<Mail />}
+              />
             </Field>
 
             <div
@@ -261,11 +251,9 @@ export function AuthScreen({ onAuthenticated }: AuthScreenProps) {
               <Field
                 label="Senha"
                 required
-                hint={mode === 'register' ? 'Mínimo de 6 caracteres' : undefined}
+                hint={mode === 'register' ? 'Use pelo menos 6 caracteres.' : undefined}
               >
-                <div className="relative">
-                  <Lock className="size-4 text-fg-subtle absolute left-3 top-2.5 pointer-events-none" />
-                  <Input
+                <InputWithIcon
                     type="password"
                     required
                     minLength={6}
@@ -273,16 +261,13 @@ export function AuthScreen({ onAuthenticated }: AuthScreenProps) {
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="pl-9"
-                  />
-                </div>
+                icon={<Lock />}
+              />
               </Field>
 
               {mode === 'register' && (
                 <Field label="Confirmar senha" required>
-                  <div className="relative">
-                    <Lock className="size-4 text-fg-subtle absolute left-3 top-2.5 pointer-events-none" />
-                    <Input
+                  <InputWithIcon
                       type="password"
                       required
                       minLength={6}
@@ -290,9 +275,8 @@ export function AuthScreen({ onAuthenticated }: AuthScreenProps) {
                       placeholder="••••••••"
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
-                      className="pl-9"
-                    />
-                  </div>
+                icon={<Lock />}
+              />
                 </Field>
               )}
             </div>
@@ -310,7 +294,7 @@ export function AuthScreen({ onAuthenticated }: AuthScreenProps) {
                   customRole={customContestRole}
                   onCustomRoleChange={setCustomContestRole}
                   disabled={loading}
-                  label="Qual concurso você quer fazer?"
+                  label="Qual concurso você vai fazer?"
                 />
 
                 <EditalUploadBox
@@ -328,14 +312,14 @@ export function AuthScreen({ onAuthenticated }: AuthScreenProps) {
             <Button
               type="submit"
               variant="primary"
-              size="md"
-              className="w-full mt-2 py-2.5"
+              size="lg"
+              className="w-full mt-2"
               loading={loading}
               icon={mode === 'login' ? <LogIn className="size-4" /> : <UserPlus className="size-4" />}
             >
               {mode === 'login'
                 ? 'Entrar na plataforma'
-                : 'Criar conta e gerar cronograma de 24 semanas'}
+                : 'Criar conta e gerar meu cronograma'}
             </Button>
           </form>
         </div>

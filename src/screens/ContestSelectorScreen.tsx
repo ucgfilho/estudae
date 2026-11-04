@@ -3,11 +3,13 @@ import {
   BookOpen,
   CalendarRange,
   LogOut,
+  Pencil,
   Plus,
-  Sparkles,
   Trash2,
 } from 'lucide-react';
 import { BnbLogo } from '../components/ui/BnbLogo';
+import { Avatar } from '../components/ui/Avatar';
+import { ProfileModal } from '../components/profile/ProfileModal';
 import { NewContestModal } from '../components/modals/NewContestModal';
 import {
   deleteContestProfile,
@@ -17,7 +19,7 @@ import {
   switchActiveContest,
   type UserContestProfile,
 } from '../services/contests';
-import { getAuthSession, setAuthSession } from '../services/auth';
+import { getAuthSession, setAuthSession, subscribeAuth } from '../services/auth';
 import { cn } from '../lib/utils';
 
 interface ContestSelectorScreenProps {
@@ -25,10 +27,11 @@ interface ContestSelectorScreenProps {
 }
 
 export function ContestSelectorScreen({ onSelectContest }: ContestSelectorScreenProps) {
-  const session = getAuthSession();
+  const [authUser, setAuthUser] = useState(() => getAuthSession()?.user ?? null);
   const [contests, setContests] = useState<UserContestProfile[]>(() => getUserContests());
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [showNewModal, setShowNewModal] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
   const [manageMode, setManageMode] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -36,9 +39,16 @@ export function ContestSelectorScreen({ onSelectContest }: ContestSelectorScreen
 
   useEffect(() => {
     setContests(getUserContests());
-    return subscribeContests(() => {
+    const unsubContests = subscribeContests(() => {
       setContests(getUserContests());
     });
+    const unsubAuth = subscribeAuth(() => {
+      setAuthUser(getAuthSession()?.user ?? null);
+    });
+    return () => {
+      unsubContests();
+      unsubAuth();
+    };
   }, []);
 
   const handleChoose = async (contest: UserContestProfile) => {
@@ -89,26 +99,33 @@ export function ContestSelectorScreen({ onSelectContest }: ContestSelectorScreen
           <div>
             <div className="text-lg sm:text-xl font-bold tracking-tight text-fg flex items-center gap-1.5">
               <span>estudaê</span>
-              <span className="inline-flex items-center rounded-full bg-primary-soft px-2 py-0.5 text-[10px] font-semibold text-primary">
-                Multi-Concursos
-              </span>
             </div>
             <div className="text-[11px] text-fg-muted">
-              Sua plataforma adaptativa de editais e cronogramas
+              Seus concursos e cronogramas de estudo
             </div>
           </div>
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3">
-          {session?.user && (
-            <span className="hidden sm:inline-block text-xs text-fg-muted">
-              Olá, <strong className="text-fg">{session.user.name}</strong>
-            </span>
+          {authUser && (
+            <button
+              type="button"
+              data-testid="selector-profile-button"
+              onClick={() => setProfileOpen(true)}
+              title="Editar perfil"
+              className="inline-flex h-9 items-center gap-2 rounded-lg border border-border-strong bg-surface px-2.5 text-xs font-medium text-fg hover:border-primary/40 transition cursor-pointer"
+            >
+              <Avatar name={authUser.name || authUser.email} src={authUser.avatarUrl} size="sm" />
+              <span className="hidden sm:inline-block max-w-36 truncate font-semibold text-fg">
+                {authUser.name}
+              </span>
+              <Pencil className="size-3 text-fg-subtle shrink-0" />
+            </button>
           )}
           <button
             type="button"
             onClick={() => setAuthSession(null)}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-border-strong bg-surface px-3 py-1.5 text-xs font-medium text-fg-muted hover:text-danger hover:border-danger/40 transition"
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border-strong bg-surface px-3 text-xs font-medium text-fg-muted hover:text-danger hover:border-danger/40 transition cursor-pointer"
           >
             <LogOut className="size-3.5" />
             <span>Sair</span>
@@ -119,16 +136,12 @@ export function ContestSelectorScreen({ onSelectContest }: ContestSelectorScreen
       {/* Conteúdo Central estilo Netflix Profiles */}
       <main className="relative z-10 flex-1 flex flex-col items-center justify-center px-4 sm:px-8 py-6 sm:py-10 max-w-5xl w-full mx-auto text-center">
         <div className="space-y-2 mb-8 sm:mb-10">
-          <div className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary-soft/40 px-3 py-1 text-xs font-semibold text-primary">
-            <Sparkles className="size-3.5" />
-            <span>Ambientes Isolados por Edital</span>
-          </div>
           <h1 className="text-2xl sm:text-4xl font-bold tracking-tight text-fg">
-            Qual concurso vamos estudar agora?
+            Qual concurso você vai estudar agora?
           </h1>
           <p className="text-xs sm:text-sm text-fg-muted max-w-xl mx-auto">
-            Escolha um dos seus concursos abaixo para acessar o edital verticalizado, simulados e
-            cronograma de 24 semanas, ou adicione um novo concurso.
+            Escolha um concurso para abrir o edital verticalizado, as questões e o cronograma de
+            24 semanas, ou cadastre outro.
           </p>
         </div>
 
@@ -207,11 +220,13 @@ export function ContestSelectorScreen({ onSelectContest }: ContestSelectorScreen
                   </span>
                 </div>
 
-                {isLoading && (
-                  <div className="mt-2 text-[11px] font-semibold text-primary animate-pulse">
-                    Abrindo painel...
-                  </div>
-                )}
+                <div className="h-4 mt-1 flex items-center justify-center">
+                  {isLoading && (
+                    <span className="text-[11px] font-semibold text-primary animate-pulse">
+                      Abrindo painel...
+                    </span>
+                  )}
+                </div>
               </div>
             );
           })}
@@ -249,7 +264,7 @@ export function ContestSelectorScreen({ onSelectContest }: ContestSelectorScreen
       </main>
 
       <footer className="relative z-10 py-4 text-center text-[11px] text-fg-subtle">
-        estudaê · Cronogramas inteligentes de 24 semanas adaptados ao seu Edital Verticalizado
+        estudaê · Cronogramas de 24 semanas a partir do seu edital verticalizado
       </footer>
 
       <NewContestModal
@@ -260,6 +275,8 @@ export function ContestSelectorScreen({ onSelectContest }: ContestSelectorScreen
           onSelectContest(created);
         }}
       />
+
+      <ProfileModal open={profileOpen} onClose={() => setProfileOpen(false)} />
     </div>
   );
 }

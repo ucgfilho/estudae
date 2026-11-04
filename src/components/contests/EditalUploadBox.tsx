@@ -260,11 +260,10 @@ export function EditalUploadBox({
         <div className="flex items-start gap-2 rounded-lg bg-surface/90 border border-border px-3 py-2 text-[11px] text-fg-muted">
           <Sparkles className="size-3.5 text-primary shrink-0 mt-0.5" />
           <div>
-            <span className="font-semibold text-fg">Prompt de IA adaptado:</span> O motor de 24
-            semanas distribuirá automaticamente as{' '}
+            <span className="font-semibold text-fg">Resumo do edital:</span> As{' '}
             <strong className="text-fg">{parsedPreview.disciplineCount} disciplinas</strong> e{' '}
-            <strong className="text-fg">{parsedPreview.topicCount} tópicos</strong> deste edital em
-            sessões diárias e simulados aos sábados.
+            <strong className="text-fg">{parsedPreview.topicCount} tópicos</strong> serão
+            distribuídos nas 24 semanas, com revisões e simulados aos sábados.
           </div>
         </div>
       )}

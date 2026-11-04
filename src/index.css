@@ -219,6 +219,16 @@
 
   html {
     -webkit-text-size-adjust: 100%;
+    /* Evita o "pulo" lateral quando a barra de rolagem aparece ou some. */
+    scrollbar-gutter: stable;
+  }
+  /* Ícones nunca encolhem nem esticam dentro de linhas flex. */
+  svg.lucide {
+    flex-shrink: 0;
+  }
+  button,
+  [role='button'] {
+    cursor: pointer;
   }
   body {
     @apply bg-canvas text-fg font-sans antialiased;
@@ -254,8 +264,18 @@
   }
 }
 
-.input-base {
-  @apply w-full rounded-md border border-border bg-surface px-3 py-1.5 text-sm text-fg transition-colors placeholder:text-fg-subtle focus-visible:border-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-50;
+/*
+ * Padrão de campos: fica em @layer components para que utilitários (pl-10, h-11…)
+ * sempre vençam. Borda fixa de 1px e foco só com ring (sem mudar o tamanho).
+ */
+@layer components {
+  .input-base {
+    @apply w-full rounded-md border border-border bg-surface px-3 py-1.5 text-sm text-fg transition-colors placeholder:text-fg-subtle focus-visible:border-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  /* Campo com ícone à esquerda: o espaço do ícone é reservado pelo padding. */
+  .input-with-icon {
+    padding-left: 2.5rem;
+  }
 }
 
 /* Campos numéricos: sem as setas nativas (brancas, fora do tema). */

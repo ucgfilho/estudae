@@ -32,6 +32,35 @@ export const loginRequestSchema = z.object({
     .min(1, 'Informe a sua senha.'),
 });
 
+export const updateProfileSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(2, 'O nome deve ter no mínimo 2 caracteres.')
+    .max(120, 'O nome deve ter no máximo 120 caracteres.')
+    .optional(),
+  avatarUrl: z
+    .string()
+    .max(300_000, 'A foto é grande demais. Escolha uma imagem menor.')
+    .regex(/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/, 'Formato de foto inválido.')
+    .nullable()
+    .optional(),
+});
+
+export interface UpdateProfileDto {
+  name?: string;
+  avatarUrl?: string | null;
+}
+
+export function parseUpdateProfileDto(raw: unknown): UpdateProfileDto {
+  const result = updateProfileSchema.safeParse(raw);
+  if (!result.success) {
+    const messages = result.error.issues.map((i) => i.message);
+    throw new DtoValidationError(messages[0] ?? 'Dados de perfil inválidos.', messages);
+  }
+  return result.data;
+}
+
 export interface RegisterRequestDto {
   name: string;
   email: string;
@@ -47,6 +76,7 @@ export interface UserResponseDto {
   id: string;
   name: string;
   email: string;
+  avatarUrl?: string | null;
   createdAt: string;
 }
 
@@ -101,6 +131,7 @@ export function toUserResponseDto(entity: UserEntity): UserResponseDto {
     id: entity.id,
     name: entity.name,
     email: entity.email,
+    avatarUrl: entity.avatarUrl ?? null,
     createdAt: entity.createdAt,
   };
 }

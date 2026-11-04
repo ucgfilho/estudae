@@ -24,6 +24,11 @@ export class SqliteDatabaseClient implements IDatabaseClient {
       this.db.exec('PRAGMA synchronous = NORMAL;');
     }
     this.db.exec(RELATIONAL_SCHEMA_SQL);
+    try {
+      this.db.exec('ALTER TABLE users ADD COLUMN avatar_url TEXT NULL;');
+    } catch {
+      // Coluna já existente
+    }
     for (const col of ['contest_id', 'contest_name', 'contest_role', 'edital_file_name']) {
       try {
         this.db.exec(`ALTER TABLE user_settings ADD COLUMN ${col} TEXT NULL;`);

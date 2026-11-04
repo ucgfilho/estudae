@@ -245,4 +245,28 @@ describe('Backend SOLID Architecture, DTOs, JWT Bearer & LGPD Compliance', () =>
       secondInstance.dbClient?.close();
     }
   });
+
+  it('updates user profile (name and avatarUrl) via AuthController.updateMe', async () => {
+    const loginRes = await container.authController.login({
+      email: TEST_USER.email,
+      password: TEST_USER.password,
+    });
+    const authUser = await container.authGuard.authenticate({
+      authorization: `Bearer ${loginRes.data.token}`,
+    });
+
+    const sampleAvatar = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/';
+    const patchRes = await container.authController.updateMe(authUser, {
+      name: 'Novo Nome Estudaê',
+      avatarUrl: sampleAvatar,
+    });
+
+    expect(patchRes.status).toBe(200);
+    expect(patchRes.data.user.name).toBe('Novo Nome Estudaê');
+    expect(patchRes.data.user.avatarUrl).toBe(sampleAvatar);
+
+    const meRes = await container.authController.me(authUser);
+    expect(meRes.data.user.name).toBe('Novo Nome Estudaê');
+    expect(meRes.data.user.avatarUrl).toBe(sampleAvatar);
+  });
 });

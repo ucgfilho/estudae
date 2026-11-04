@@ -319,9 +319,11 @@ export function QuestionsScreen() {
                   placeholder="Ex: Cebraspe, FCC..."
                   value={filterSource}
                   onChange={(e) => setFilterSource(e.target.value)}
-                className="pr-8"
-              />
-                <Search className="size-3.5 absolute right-2.5 top-3 text-fg-subtle pointer-events-none" />
+                  className="pr-9"
+                />
+                <span className="pointer-events-none absolute inset-y-0 right-0 flex w-9 items-center justify-center text-fg-subtle">
+                  <Search className="size-3.5" />
+                </span>
               </div>
             </div>
           </div>

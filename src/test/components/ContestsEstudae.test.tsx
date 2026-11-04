@@ -126,7 +126,7 @@ Tecnologia da Informação e Ciência de Dados:
     const selectorScreen = await screen.findByTestId('contest-selector-screen');
     expect(selectorScreen).toBeInTheDocument();
     expect(
-      screen.getByRole('heading', { name: /qual concurso vamos estudar agora\?/i }),
+      screen.getByRole('heading', { name: /qual concurso (vamos|você vai) estudar agora\?/i }),
     ).toBeInTheDocument();
     expect(screen.getByTestId('new-contest-card-button')).toBeInTheDocument();
 
@@ -164,5 +164,42 @@ Tecnologia da Informação e Ciência de Dados:
     const allContests = getUserContests();
     expect(allContests.length).toBe(2);
     expect(allContests.some((c) => c.templateId === 'bb-ti')).toBe(true);
+  });
+
+  it('permite abrir o modal de editar perfil pelo header e atualizar nome e foto do usuário', async () => {
+    setAuthSession(TEST_SESSION);
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /visão geral/i })).toBeInTheDocument();
+    });
+
+    const profileBtn = screen.getByTestId('header-profile-button');
+    expect(profileBtn).toBeInTheDocument();
+    expect(profileBtn).toHaveTextContent('Candidato Teste');
+
+    fireEvent.click(profileBtn);
+
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toBeInTheDocument();
+
+    const nameInput = screen.getByDisplayValue('Candidato Teste');
+    fireEvent.change(nameInput, { target: { value: 'Maria Aprovada' } });
+
+    const fileInput = screen.getByTestId('avatar-file-input') as HTMLInputElement;
+    const fakePng = new File([new Uint8Array([137, 80, 78, 71])], 'foto.png', {
+      type: 'image/png',
+    });
+    fireEvent.change(fileInput, { target: { files: [fakePng] } });
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /trocar foto/i })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /^salvar$/i }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('header-profile-button')).toHaveTextContent('Maria Aprovada');
+    });
   });
 });

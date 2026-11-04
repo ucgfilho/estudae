@@ -6,6 +6,7 @@ interface UserDoc {
   name: string;
   email: string;
   passwordHash: string;
+  avatarUrl?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -37,6 +38,7 @@ export class MongoUserRepository implements IUserRepository {
       name: doc.name,
       email: doc.email,
       passwordHash: doc.passwordHash,
+      avatarUrl: doc.avatarUrl ?? null,
       createdAt: doc.createdAt,
       updatedAt: doc.updatedAt,
     };
@@ -50,6 +52,7 @@ export class MongoUserRepository implements IUserRepository {
       name: doc.name,
       email: doc.email,
       passwordHash: doc.passwordHash,
+      avatarUrl: doc.avatarUrl ?? null,
       createdAt: doc.createdAt,
       updatedAt: doc.updatedAt,
     };
@@ -77,6 +80,17 @@ export class MongoUserRepository implements IUserRepository {
       name: user.name.trim(),
       email: normalizedEmail,
     };
+  }
+
+  public async updateProfile(
+    id: string,
+    changes: { name?: string; avatarUrl?: string | null },
+  ): Promise<UserEntity | null> {
+    const set: Partial<UserDoc> = { updatedAt: new Date().toISOString() };
+    if (changes.name?.trim()) set.name = changes.name.trim();
+    if (changes.avatarUrl !== undefined) set.avatarUrl = changes.avatarUrl;
+    await this.db.collection<UserDoc>('users').updateOne({ _id: id }, { $set: set });
+    return this.findById(id);
   }
 
   public async deleteById(id: string): Promise<boolean> {

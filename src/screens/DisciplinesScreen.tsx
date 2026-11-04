@@ -230,8 +230,8 @@ export function DisciplinesScreen() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Disciplinas e Conteúdos Programáticos"
-        description="Organização dos tópicos e subtópicos para o cargo de Analista de Sistemas — Desenvolvimento."
+        title="Disciplinas e Conteúdos"
+        description="Organize os tópicos e acompanhe o que já foi estudado em cada disciplina do seu concurso."
         actions={
           currentDiscipline && (
             <div className="flex flex-wrap items-center gap-2">
@@ -340,19 +340,21 @@ export function DisciplinesScreen() {
                   placeholder="Buscar tópico por palavra-chave..."
                   value={topicSearch}
                   onChange={(e) => setTopicSearch(e.target.value)}
-                  className="pr-8 pr-8"
+                  className="pr-9"
                 />
                 {topicSearch ? (
                   <button
                     type="button"
                     onClick={() => setTopicSearch('')}
-                    className="absolute right-2.5 top-2.5 text-fg-subtle hover:text-fg"
+                    className="absolute inset-y-0 right-0 flex w-9 items-center justify-center text-fg-subtle hover:text-fg"
                     aria-label="Limpar busca"
                   >
                     <X className="size-4" />
                   </button>
                 ) : (
-                  <Search className="size-4 absolute right-2.5 top-2.5 text-fg-subtle pointer-events-none" />
+                  <span className="pointer-events-none absolute inset-y-0 right-0 flex w-9 items-center justify-center text-fg-subtle">
+                    <Search className="size-4" />
+                  </span>
                 )}
               </div>
               <span className="text-xs text-fg-subtle">

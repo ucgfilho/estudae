@@ -1,4 +1,5 @@
 import {
+  forwardRef,
   cloneElement,
   isValidElement,
   useId,
@@ -61,6 +62,28 @@ export function Field({ label, hint, error, required, className, children }: Fie
 export function Input({ className, ...rest }: InputHTMLAttributes<HTMLInputElement>) {
   return <input className={cn('input-base h-9', className)} {...rest} />;
 }
+
+interface InputWithIconProps extends InputHTMLAttributes<HTMLInputElement> {
+  icon: ReactNode;
+}
+
+/** Campo com ícone fixo à esquerda. O ícone fica fora do fluxo e o texto nunca passa por baixo dele. */
+export const InputWithIcon = forwardRef<HTMLInputElement, InputWithIconProps>(function InputWithIcon(
+  { icon, className, ...rest },
+  ref,
+) {
+  return (
+    <div className="relative">
+      <span
+        className="pointer-events-none absolute inset-y-0 left-0 flex w-10 items-center justify-center text-fg-subtle [&_svg]:size-4"
+        aria-hidden="true"
+      >
+        {icon}
+      </span>
+      <input ref={ref} className={cn('input-base input-with-icon h-10', className)} {...rest} />
+    </div>
+  );
+});
 
 export function Textarea({ className, rows = 3, ...rest }: TextareaHTMLAttributes<HTMLTextAreaElement>) {
   return <textarea rows={rows} className={cn('input-base resize-y', className)} {...rest} />;

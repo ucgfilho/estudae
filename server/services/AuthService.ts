@@ -2,6 +2,7 @@ import { deterministicUserIdFromEmail } from '../database/seedFirefoxData';
 import {
   parseLoginDto,
   parseRegisterDto,
+  parseUpdateProfileDto,
   toAuthResponseDto,
   toUserResponseDto,
   type AuthResponseDto,
@@ -101,6 +102,15 @@ export class AuthService implements IAuthService {
 
   public async getProfile(userId: string): Promise<UserResponseDto> {
     const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new NotFoundError('Usuário não encontrado.');
+    }
+    return toUserResponseDto(user);
+  }
+
+  public async updateProfile(userId: string, input: unknown): Promise<UserResponseDto> {
+    const dto = parseUpdateProfileDto(input);
+    const user = await this.userRepository.updateProfile(userId, dto);
     if (!user) {
       throw new NotFoundError('Usuário não encontrado.');
     }

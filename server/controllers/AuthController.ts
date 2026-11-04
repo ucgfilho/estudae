@@ -28,6 +28,14 @@ export class AuthController {
     return { status: 200, data: { user: profile } };
   }
 
+  public async updateMe(
+    user: AuthenticatedUser,
+    body: unknown,
+  ): Promise<{ status: number; data: { user: UserResponseDto } }> {
+    const profile = await this.authService.updateProfile(user.id, body);
+    return { status: 200, data: { user: profile } };
+  }
+
   public async deleteAccount(
     user: AuthenticatedUser,
   ): Promise<{ status: number; data: { deleted: true } }> {

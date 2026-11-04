@@ -6,6 +6,7 @@ interface UserRow {
   name: string;
   email: string;
   password_hash: string;
+  avatar_url?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -16,6 +17,7 @@ function mapUserRow(row: UserRow): UserEntity {
     name: row.name,
     email: row.email,
     passwordHash: row.password_hash,
+    avatarUrl: row.avatar_url ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -35,7 +37,7 @@ export class SqlUserRepository implements IUserRepository {
   public findByEmail(email: string): UserEntity | null {
     const normalized = email.trim().toLowerCase();
     const row = this.db.get<UserRow>(
-      `SELECT id, name, email, password_hash, created_at, updated_at
+      `SELECT id, name, email, password_hash, avatar_url, created_at, updated_at
        FROM users
        WHERE LOWER(email) = ?
        LIMIT 1`,
@@ -46,7 +48,7 @@ export class SqlUserRepository implements IUserRepository {
 
   public findById(id: string): UserEntity | null {
     const row = this.db.get<UserRow>(
-      `SELECT id, name, email, password_hash, created_at, updated_at
+      `SELECT id, name, email, password_hash, avatar_url, created_at, updated_at
        FROM users
        WHERE id = ?
        LIMIT 1`,
@@ -67,6 +69,23 @@ export class SqlUserRepository implements IUserRepository {
       name: user.name.trim(),
       email: normalizedEmail,
     };
+  }
+
+  public updateProfile(
+    id: string,
+    changes: { name?: string; avatarUrl?: string | null },
+  ): UserEntity | null {
+    const current = this.findById(id);
+    if (!current) return null;
+    const name = changes.name?.trim() || current.name;
+    const avatar = changes.avatarUrl === undefined ? (current.avatarUrl ?? null) : changes.avatarUrl;
+    this.db.run(`UPDATE users SET name = ?, avatar_url = ?, updated_at = ? WHERE id = ?`, [
+      name,
+      avatar,
+      new Date().toISOString(),
+      id,
+    ]);
+    return this.findById(id);
   }
 
   public deleteById(id: string): boolean {

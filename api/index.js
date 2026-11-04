@@ -114,6 +114,12 @@ var AuthController = class {
 			data: { user: await this.authService.getProfile(user.id) }
 		};
 	}
+	async updateMe(user, body) {
+		return {
+			status: 200,
+			data: { user: await this.authService.updateProfile(user.id, body) }
+		};
+	}
 	async deleteAccount(user) {
 		await this.authService.deleteAccount(user.id);
 		return {
@@ -36644,6 +36650,7 @@ CREATE TABLE IF NOT EXISTS users (
   name TEXT NOT NULL,
   email TEXT NOT NULL UNIQUE COLLATE NOCASE,
   password_hash TEXT NOT NULL,
+  avatar_url TEXT NULL,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );
@@ -36877,6 +36884,9 @@ var SqliteDatabaseClient = class {
 			this.db.exec("PRAGMA synchronous = NORMAL;");
 		}
 		this.db.exec(RELATIONAL_SCHEMA_SQL);
+		try {
+			this.db.exec("ALTER TABLE users ADD COLUMN avatar_url TEXT NULL;");
+		} catch {}
 		for (const col of [
 			"contest_id",
 			"contest_name",
@@ -37458,6 +37468,7 @@ var MongoUserRepository = class {
 			name: doc.name,
 			email: doc.email,
 			passwordHash: doc.passwordHash,
+			avatarUrl: doc.avatarUrl ?? null,
 			createdAt: doc.createdAt,
 			updatedAt: doc.updatedAt
 		};
@@ -37470,6 +37481,7 @@ var MongoUserRepository = class {
 			name: doc.name,
 			email: doc.email,
 			passwordHash: doc.passwordHash,
+			avatarUrl: doc.avatarUrl ?? null,
 			createdAt: doc.createdAt,
 			updatedAt: doc.updatedAt
 		};
@@ -37490,6 +37502,13 @@ var MongoUserRepository = class {
 			name: user.name.trim(),
 			email: normalizedEmail
 		};
+	}
+	async updateProfile(id, changes) {
+		const set = { updatedAt: (/* @__PURE__ */ new Date()).toISOString() };
+		if (changes.name?.trim()) set.name = changes.name.trim();
+		if (changes.avatarUrl !== void 0) set.avatarUrl = changes.avatarUrl;
+		await this.db.collection("users").updateOne({ _id: id }, { $set: set });
+		return this.findById(id);
 	}
 	async deleteById(id) {
 		return ((await this.db.collection("users").deleteOne({ _id: id })).deletedCount ?? 0) > 0;
@@ -38241,6 +38260,7 @@ function mapUserRow(row) {
 		name: row.name,
 		email: row.email,
 		passwordHash: row.password_hash,
+		avatarUrl: row.avatar_url ?? null,
 		createdAt: row.created_at,
 		updatedAt: row.updated_at
 	};
@@ -38256,14 +38276,14 @@ var SqlUserRepository = class {
 	}
 	findByEmail(email) {
 		const normalized = email.trim().toLowerCase();
-		const row = this.db.get(`SELECT id, name, email, password_hash, created_at, updated_at
+		const row = this.db.get(`SELECT id, name, email, password_hash, avatar_url, created_at, updated_at
        FROM users
        WHERE LOWER(email) = ?
        LIMIT 1`, [normalized]);
 		return row ? mapUserRow(row) : null;
 	}
 	findById(id) {
-		const row = this.db.get(`SELECT id, name, email, password_hash, created_at, updated_at
+		const row = this.db.get(`SELECT id, name, email, password_hash, avatar_url, created_at, updated_at
        FROM users
        WHERE id = ?
        LIMIT 1`, [id]);
@@ -38285,6 +38305,19 @@ var SqlUserRepository = class {
 			name: user.name.trim(),
 			email: normalizedEmail
 		};
+	}
+	updateProfile(id, changes) {
+		const current = this.findById(id);
+		if (!current) return null;
+		const name = changes.name?.trim() || current.name;
+		const avatar = changes.avatarUrl === void 0 ? current.avatarUrl ?? null : changes.avatarUrl;
+		this.db.run(`UPDATE users SET name = ?, avatar_url = ?, updated_at = ? WHERE id = ?`, [
+			name,
+			avatar,
+			(/* @__PURE__ */ new Date()).toISOString(),
+			id
+		]);
+		return this.findById(id);
 	}
 	deleteById(id) {
 		return this.db.run(`DELETE FROM users WHERE id = ?`, [id]).changes > 0;
@@ -38450,6 +38483,18 @@ var loginRequestSchema = object({
 	email: string().trim().toLowerCase().email("Informe um endereço de e-mail válido."),
 	password: string().min(1, "Informe a sua senha.")
 });
+var updateProfileSchema = object({
+	name: string().trim().min(2, "O nome deve ter no mínimo 2 caracteres.").max(120, "O nome deve ter no máximo 120 caracteres.").optional(),
+	avatarUrl: string().max(3e5, "A foto é grande demais. Escolha uma imagem menor.").regex(/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/, "Formato de foto inválido.").nullable().optional()
+});
+function parseUpdateProfileDto(raw) {
+	const result = updateProfileSchema.safeParse(raw);
+	if (!result.success) {
+		const messages = result.error.issues.map((i) => i.message);
+		throw new DtoValidationError(messages[0] ?? "Dados de perfil inválidos.", messages);
+	}
+	return result.data;
+}
 function parseRegisterDto(raw) {
 	const result = registerRequestSchema.safeParse(raw);
 	if (!result.success) {
@@ -38478,6 +38523,7 @@ function toUserResponseDto(entity) {
 		id: entity.id,
 		name: entity.name,
 		email: entity.email,
+		avatarUrl: entity.avatarUrl ?? null,
 		createdAt: entity.createdAt
 	};
 }
@@ -38548,6 +38594,12 @@ var AuthService = class {
 	}
 	async getProfile(userId) {
 		const user = await this.userRepository.findById(userId);
+		if (!user) throw new NotFoundError("Usuário não encontrado.");
+		return toUserResponseDto(user);
+	}
+	async updateProfile(userId, input) {
+		const dto = parseUpdateProfileDto(input);
+		const user = await this.userRepository.updateProfile(userId, dto);
 		if (!user) throw new NotFoundError("Usuário não encontrado.");
 		return toUserResponseDto(user);
 	}
@@ -38645,6 +38697,10 @@ function createAppContainer(overrides = {}) {
 			async create(user) {
 				const { mongoUserRepo } = await mongoInitPromise;
 				return mongoUserRepo.create(user);
+			},
+			async updateProfile(id, changes) {
+				const { mongoUserRepo } = await mongoInitPromise;
+				return mongoUserRepo.updateProfile(id, changes);
 			},
 			async deleteById(id) {
 				const { mongoUserRepo } = await mongoInitPromise;
@@ -38835,6 +38891,12 @@ async function handleApiRequest(container, req, res) {
 		const user = await container.authGuard.authenticate(req.headers);
 		if (method === "GET" && pathname === "/api/auth/me") {
 			const result = await container.authController.me(user);
+			sendJson(res, result.status, result.data);
+			return true;
+		}
+		if (method === "PATCH" && pathname === "/api/auth/me") {
+			const body = await readJsonBody(req);
+			const result = await container.authController.updateMe(user, body);
 			sendJson(res, result.status, result.data);
 			return true;
 		}

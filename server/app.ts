@@ -141,6 +141,13 @@ export async function handleApiRequest(
       return true;
     }
 
+    if (method === 'PATCH' && pathname === '/api/auth/me') {
+      const body = await readJsonBody(req);
+      const result = await container.authController.updateMe(user, body);
+      sendJson(res, result.status, result.data);
+      return true;
+    }
+
     if (method === 'DELETE' && pathname === '/api/auth/me') {
       const result = await container.authController.deleteAccount(user);
       sendJson(res, result.status, result.data);

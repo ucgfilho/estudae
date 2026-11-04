@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Dialog } from '../ui/Dialog';
-import { Input } from '../ui/Form';
+import { InputWithIcon } from '../ui/Form';
 import { useTopics, useDisciplines, useSessions, useErrorNotes } from '../../hooks/useData';
 import { Search, BookOpen, Calendar, AlertOctagon, ArrowRight } from 'lucide-react';
 import { formatDate } from '../../lib/dates';
@@ -54,17 +54,14 @@ export function SearchModal({ open, onClose }: SearchModalProps) {
   return (
     <Dialog open={open} onClose={onClose} title="Busca Rápida no Conteúdo" size="md">
       <div className="space-y-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-2.5 size-4 text-fg-subtle" />
-          <Input
-            type="search"
-            placeholder="Buscar por tópico, objetivo, anotação ou erro..."
-            className="pl-9"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            autoFocus
-          />
-        </div>
+        <InputWithIcon
+          type="search"
+          icon={<Search className="size-4" />}
+          placeholder="Buscar por tópico, objetivo, anotação ou erro..."
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          autoFocus
+        />
 
         {query.trim() && totalResults === 0 && (
           <p className="py-6 text-center text-sm text-fg-muted">

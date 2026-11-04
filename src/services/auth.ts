@@ -4,6 +4,7 @@ export interface AuthUserDto {
   id: string;
   name: string;
   email: string;
+  avatarUrl?: string | null;
   createdAt: string;
 }
 
@@ -193,6 +194,35 @@ export async function verifyCurrentSession(): Promise<AuthUserDto | null> {
   } catch {
     return null;
   }
+}
+
+export interface UpdateProfileInput {
+  name?: string;
+  avatarUrl?: string | null;
+}
+
+/** Atualiza nome e foto do perfil e mantém a sessão local em sincronia. */
+export async function updateUserProfile(input: UpdateProfileInput): Promise<AuthUserDto> {
+  const token = getAuthToken();
+  if (!token) throw new Error('Sessão expirada. Entre novamente.');
+  if (token === TEST_BYPASS_TOKEN) {
+    if (cachedSession) {
+      const user = { ...cachedSession.user, ...input, name: input.name?.trim() || cachedSession.user.name };
+      setAuthSession({ ...cachedSession, user });
+      return user;
+    }
+    throw new Error('Sessão expirada. Entre novamente.');
+  }
+  const res = await fetch('/api/auth/me', {
+    method: 'PATCH',
+    headers: buildBearerHeaders(),
+    body: JSON.stringify(input),
+  });
+  const data = await parseApiJson<{ user: AuthUserDto }>(res);
+  if (cachedSession) {
+    setAuthSession({ ...cachedSession, user: data.user });
+  }
+  return data.user;
 }
 
 export async function deleteUserAccount(): Promise<void> {

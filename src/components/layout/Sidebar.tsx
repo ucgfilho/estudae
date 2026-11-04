@@ -152,7 +152,7 @@ export function Sidebar({
                 onCloseMobile();
                 onOpenNewContest();
               }}
-              className="w-full flex items-center justify-center gap-2 rounded-lg border border-primary/40 bg-primary-soft/40 hover:bg-primary hover:text-primary-fg text-primary font-semibold px-3 py-2 text-xs transition shadow-2xs cursor-pointer"
+              className="w-full h-9 flex items-center justify-center gap-2 rounded-lg border border-primary/40 bg-primary-soft/40 hover:bg-primary hover:text-primary-fg text-primary font-semibold px-3 text-xs transition shadow-2xs cursor-pointer"
             >
               <FolderPlus className="size-4 shrink-0" />
               <span>+ Novo concurso</span>

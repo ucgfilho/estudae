@@ -2,7 +2,7 @@ import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
 import { cn } from '../../lib/utils';
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'subtle';
-type Size = 'sm' | 'md';
+type Size = 'sm' | 'md' | 'lg';
 
 const variants: Record<Variant, string> = {
   primary: 'bg-primary text-primary-fg hover:bg-primary-hover border border-transparent',
@@ -15,6 +15,7 @@ const variants: Record<Variant, string> = {
 const sizes: Record<Size, string> = {
   sm: 'h-8 px-2.5 text-xs gap-1.5',
   md: 'h-9 px-3.5 text-sm gap-2',
+  lg: 'h-11 px-5 text-sm gap-2',
 };
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -43,7 +44,15 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       )}
       {...rest}
     >
-      {loading ? <span className="size-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" aria-hidden /> : icon}
+      {(loading || icon) && (
+        <span className="inline-flex size-4 shrink-0 items-center justify-center" aria-hidden={loading || undefined}>
+          {loading ? (
+            <span className="size-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+          ) : (
+            icon
+          )}
+        </span>
+      )}
       {children}
     </button>
   );

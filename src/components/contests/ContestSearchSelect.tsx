@@ -160,7 +160,9 @@ export function ContestSearchSelect({
           >
             <div className="p-2 border-b border-border bg-surface-muted/40">
               <div className="relative flex items-center">
-                <Search className="size-4 text-fg-subtle absolute left-2.5 pointer-events-none" />
+                <span className="pointer-events-none absolute inset-y-0 left-0 flex w-9 items-center justify-center text-fg-subtle">
+                  <Search className="size-4" />
+                </span>
                 <input
                   ref={searchInputRef}
                   type="text"
@@ -168,13 +170,13 @@ export function ContestSearchSelect({
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="Pesquisar concurso, órgão, cargo ou banca (ex: BB, PF, Receita, BNB)..."
                   data-testid="contest-search-input"
-                  className="w-full rounded-lg border border-border bg-surface pl-8 pr-8 py-1.5 text-xs text-fg placeholder:text-fg-subtle focus:border-primary focus:outline-none"
+                  className="input-base h-9 pl-9 pr-9 text-xs"
                 />
                 {query && (
                   <button
                     type="button"
                     onClick={() => setQuery('')}
-                    className="absolute right-2 text-fg-subtle hover:text-fg"
+                    className="absolute inset-y-0 right-0 flex w-9 items-center justify-center text-fg-subtle hover:text-fg"
                     aria-label="Limpar busca"
                   >
                     <X className="size-3.5" />

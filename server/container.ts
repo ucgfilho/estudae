@@ -94,6 +94,10 @@ export function createAppContainer(overrides: Partial<ServerEnv> = {}): AppConta
         const { mongoUserRepo } = await mongoInitPromise;
         return mongoUserRepo.create(user);
       },
+      async updateProfile(id, changes) {
+        const { mongoUserRepo } = await mongoInitPromise;
+        return mongoUserRepo.updateProfile(id, changes);
+      },
       async deleteById(id: string) {
         const { mongoUserRepo } = await mongoInitPromise;
         return mongoUserRepo.deleteById(id);
