@@ -49,7 +49,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     <ToastContext.Provider value={api}>
       {children}
       <div
-        className="pointer-events-none fixed bottom-4 right-4 z-[100] flex w-[min(24rem,calc(100vw-2rem))] flex-col gap-2"
+        className="pointer-events-none fixed bottom-4 right-4 z-[100] flex w-[min(24rem,calc(100vw-2rem))] flex-col-reverse gap-2"
         aria-live="polite"
       >
         {toasts.map((t) => (
@@ -58,7 +58,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             role={t.tone === 'danger' ? 'alert' : 'status'}
             className={cn(
               t.closing ? 'animate-toast-out' : 'animate-toast-in',
-              'pointer-events-auto flex items-start gap-2.5 rounded-xl border bg-surface p-3 text-sm text-fg shadow-lg',
+              'pointer-events-auto flex items-start gap-2.5 rounded-xl border bg-surface p-3 text-sm text-fg shadow-lg transition-all duration-300 ease-out',
               t.tone === 'success' ? 'border-success/50' : 'border-danger/50',
             )}
           >
