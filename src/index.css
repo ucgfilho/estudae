@@ -240,7 +240,7 @@
     border-radius: 4px;
   }
   dialog::backdrop {
-    background: rgb(15 23 42 / 0.45);
+    background: rgb(0 0 0 / 0.5);
   }
   dialog[data-state='open'] {
     animation: dialog-in 200ms var(--ease-emphasized) backwards;

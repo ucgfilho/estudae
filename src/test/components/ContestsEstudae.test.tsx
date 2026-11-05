@@ -166,13 +166,12 @@ Tecnologia da Informação e Ciência de Dados:
       ).toBeInTheDocument();
     });
 
-    // Verifica que a marca "estudaê" e o botão "+ Novo concurso" estão presentes na barra lateral esquerda
+    // Verifica que a marca "estudaê" e o botão de trocar de concurso estão presentes na barra lateral esquerda
     expect(
       screen.getByRole("heading", { name: /^estudaê$/i }),
     ).toBeInTheDocument();
-    const newContestBtn = screen.getByTestId("sidebar-new-contest-button");
-    expect(newContestBtn).toBeInTheDocument();
-    expect(newContestBtn).toHaveTextContent("Novo concurso");
+    const switchContestBtn = screen.getByTestId("sidebar-switch-contest-button");
+    expect(switchContestBtn).toBeInTheDocument();
 
     // Cria um segundo concurso para o usuário
     await createAndActivateContest({

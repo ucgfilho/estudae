@@ -11,7 +11,6 @@ import {
   BookMarked,
   BarChart3,
   Settings,
-  FolderPlus,
   ArrowLeftRight,
   X,
 } from 'lucide-react';
@@ -50,7 +49,7 @@ export function Sidebar({
   onCloseMobile,
   activeContest,
   contestCount = 1,
-  onOpenNewContest,
+  onOpenNewContest: _onOpenNewContest,
   onSwitchContestScreen,
 }: SidebarProps) {
   const today = useToday();
@@ -104,61 +103,29 @@ export function Sidebar({
           />
         </div>
 
-        {/* Painel do Concurso Ativo + Botão "+ Novo concurso" */}
-        <div className="px-3 pt-3 pb-1.5 space-y-2 border-b border-border/60">
-          {activeContest && (
-            <div className="rounded-xl border border-border bg-surface-muted/60 p-2.5 space-y-1.5">
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2 min-w-0">
-                  <span
-                    className="size-6 rounded-md flex items-center justify-center text-[10px] font-extrabold text-white shrink-0 shadow-xs"
-                    style={{ backgroundColor: activeContest.accentColor || '#c20018' }}
-                  >
-                    {activeContest.shortName.slice(0, 3)}
-                  </span>
-                  <div className="min-w-0">
-                    <div className="text-xs font-semibold text-fg truncate">
-                      {activeContest.name}
-                    </div>
-                    <div className="text-[10px] text-fg-muted truncate">
-                      {activeContest.disciplineCount} disc. · {activeContest.topicCount} tópicos
-                    </div>
+        {/* Painel do Concurso Ativo */}
+        {activeContest && (
+          <div className="px-3 pt-3 pb-2 border-b border-border/60">
+            <div className="rounded-xl border border-border bg-surface-muted/60 p-2.5">
+              <div className="flex items-center gap-2 min-w-0">
+                <span
+                  className="size-6 rounded-md flex items-center justify-center text-[10px] font-extrabold text-white shrink-0 shadow-xs"
+                  style={{ backgroundColor: activeContest.accentColor || '#c20018' }}
+                >
+                  {activeContest.shortName.slice(0, 3)}
+                </span>
+                <div className="min-w-0">
+                  <div className="text-xs font-semibold text-fg truncate">
+                    {activeContest.name}
+                  </div>
+                  <div className="text-[10px] text-fg-muted truncate">
+                    {activeContest.disciplineCount} disc. · {activeContest.topicCount} tópicos
                   </div>
                 </div>
-                {onSwitchContestScreen && (
-                  <button
-                    type="button"
-                    data-testid="sidebar-switch-contest-button"
-                    onClick={() => {
-                      onCloseMobile();
-                      onSwitchContestScreen();
-                    }}
-                    title={contestCount && contestCount > 1 ? `Trocar concurso (${contestCount} disponíveis)` : "Trocar concurso"}
-                    aria-label="Trocar concurso"
-                    className="flex size-7 items-center justify-center rounded-lg border border-border bg-surface text-fg-muted hover:text-primary hover:border-primary/40 hover:bg-primary-soft/30 transition shrink-0 cursor-pointer shadow-2xs"
-                  >
-                    <ArrowLeftRight className="size-3.5 text-primary" />
-                  </button>
-                )}
               </div>
             </div>
-          )}
-
-          {onOpenNewContest && (
-            <button
-              type="button"
-              data-testid="sidebar-new-contest-button"
-              onClick={() => {
-                onCloseMobile();
-                onOpenNewContest();
-              }}
-              className="w-full h-9 flex items-center justify-center gap-2 rounded-lg border border-primary/40 bg-primary-soft/40 hover:bg-primary hover:text-primary-fg text-primary font-semibold px-3 text-xs transition shadow-2xs cursor-pointer"
-            >
-              <FolderPlus className="size-4 shrink-0" />
-              <span>+ Novo concurso</span>
-            </button>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Navigation list */}
         <nav className="flex-1 overflow-y-auto px-3 py-3 space-y-1">
@@ -220,16 +187,48 @@ export function Sidebar({
           })}
         </nav>
 
-        {/* Target role reminder */}
-        <div className="border-t border-border p-3 text-[11px] text-fg-subtle">
-          <div className="font-semibold text-fg">
-            {activeContest ? activeContest.name : 'Concurso Ativo'}
+        {/* Botão de Trocar Concurso na parte inferior */}
+        {onSwitchContestScreen && (
+          <div className="border-t border-border p-2.5">
+            <button
+              type="button"
+              data-testid="sidebar-switch-contest-button"
+              onClick={() => {
+                onCloseMobile();
+                onSwitchContestScreen();
+              }}
+              title={contestCount && contestCount > 1 ? `Trocar concurso (${contestCount} disponíveis)` : "Trocar concurso"}
+              className="w-full flex items-center justify-between gap-2 rounded-xl border border-border bg-surface-muted/50 hover:bg-primary-soft/40 hover:border-primary/40 p-2.5 text-left transition group cursor-pointer"
+            >
+              <div className="min-w-0">
+                <div className="text-xs font-semibold text-fg group-hover:text-primary transition truncate">
+                  {activeContest ? activeContest.name : 'Concurso Ativo'}
+                </div>
+                <div className="text-[11px] text-fg-subtle truncate mt-0.5">
+                  {activeContest ? activeContest.role : 'Analista de Sistemas — Desenvolvimento'}
+                </div>
+                <div className="mt-1 text-[11px] text-primary font-medium">
+                  Meta: 120 min/dia (840 min/sem)
+                </div>
+              </div>
+              <div className="flex size-7 items-center justify-center rounded-lg border border-border bg-surface text-fg-muted group-hover:text-primary group-hover:border-primary/40 transition shrink-0 shadow-2xs">
+                <ArrowLeftRight className="size-3.5" />
+              </div>
+            </button>
           </div>
-          <div className="truncate">
-            {activeContest ? activeContest.role : 'Analista de Sistemas — Desenvolvimento'}
+        )}
+
+        {!onSwitchContestScreen && (
+          <div className="border-t border-border p-3 text-[11px] text-fg-subtle">
+            <div className="font-semibold text-fg">
+              {activeContest ? activeContest.name : 'Concurso Ativo'}
+            </div>
+            <div className="truncate">
+              {activeContest ? activeContest.role : 'Analista de Sistemas — Desenvolvimento'}
+            </div>
+            <div className="mt-1 text-primary font-medium">Meta: 120 min/dia (840 min/sem)</div>
           </div>
-          <div className="mt-1 text-primary font-medium">Meta: 120 min/dia (840 min/sem)</div>
-        </div>
+        )}
       </aside>
     </>
   );
