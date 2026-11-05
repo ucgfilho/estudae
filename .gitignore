@@ -73,3 +73,5 @@ Desktop.ini
 .cursor/
 .windsurf/
 graphify-out/
+.vercel
+.env*
