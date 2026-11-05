@@ -103,30 +103,6 @@ export function Sidebar({
           />
         </div>
 
-        {/* Painel do Concurso Ativo */}
-        {activeContest && (
-          <div className="px-3 pt-3 pb-2 border-b border-border/60">
-            <div className="rounded-xl border border-border bg-surface-muted/60 p-2.5">
-              <div className="flex items-center gap-2 min-w-0">
-                <span
-                  className="size-6 rounded-md flex items-center justify-center text-[10px] font-extrabold text-white shrink-0 shadow-xs"
-                  style={{ backgroundColor: activeContest.accentColor || '#c20018' }}
-                >
-                  {activeContest.shortName.slice(0, 3)}
-                </span>
-                <div className="min-w-0">
-                  <div className="text-xs font-semibold text-fg truncate">
-                    {activeContest.name}
-                  </div>
-                  <div className="text-[10px] text-fg-muted truncate">
-                    {activeContest.disciplineCount} disc. · {activeContest.topicCount} tópicos
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Navigation list */}
         <nav className="flex-1 overflow-y-auto px-3 py-3 space-y-1">
           {NAV_ITEMS.map((item) => {
