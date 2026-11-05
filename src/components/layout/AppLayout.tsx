@@ -125,7 +125,6 @@ export function AppLayout({ onSwitchContestScreen }: AppLayoutProps) {
         <Header
           onToggleMobileMenu={() => setMobileMenuOpen((prev) => !prev)}
           activeContest={activeContest}
-          onSwitchContestScreen={onSwitchContestScreen}
         />
         <main
           className="flex-1 overflow-y-auto p-3 sm:p-6 pb-20 lg:pb-6 focus:outline-hidden"

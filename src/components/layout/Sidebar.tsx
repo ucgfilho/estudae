@@ -12,7 +12,7 @@ import {
   BarChart3,
   Settings,
   FolderPlus,
-  Layers,
+  ArrowLeftRight,
   X,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
@@ -133,11 +133,11 @@ export function Sidebar({
                       onCloseMobile();
                       onSwitchContestScreen();
                     }}
-                    title="Trocar de concurso (Estilo Perfis)"
-                    className="inline-flex items-center gap-1 rounded-md border border-border-strong bg-surface hover:bg-primary-soft hover:text-primary px-2 py-1 text-[10px] font-semibold text-fg-muted transition shrink-0 cursor-pointer"
+                    title={contestCount && contestCount > 1 ? `Trocar concurso (${contestCount} disponíveis)` : "Trocar concurso"}
+                    aria-label="Trocar concurso"
+                    className="flex size-7 items-center justify-center rounded-lg border border-border bg-surface text-fg-muted hover:text-primary hover:border-primary/40 hover:bg-primary-soft/30 transition shrink-0 cursor-pointer shadow-2xs"
                   >
-                    <Layers className="size-3 text-primary" />
-                    <span>Trocar{contestCount > 1 ? ` (${contestCount})` : ''}</span>
+                    <ArrowLeftRight className="size-3.5 text-primary" />
                   </button>
                 )}
               </div>

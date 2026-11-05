@@ -9,7 +9,6 @@ import {
   Settings as SettingsIcon,
   Timer as TimerIcon,
   CalendarDays,
-  Layers,
   LogOut,
   Pencil,
 } from 'lucide-react';
@@ -33,13 +32,11 @@ import type { UserContestProfile } from '../../services/contests';
 interface HeaderProps {
   onToggleMobileMenu: () => void;
   activeContest?: UserContestProfile;
-  onSwitchContestScreen?: () => void;
 }
 
 export function Header({
   onToggleMobileMenu,
-  activeContest,
-  onSwitchContestScreen,
+  activeContest: _activeContest,
 }: HeaderProps) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -126,24 +123,6 @@ export function Header({
           />
 
           <BnbLogo className="size-7 shrink-0 lg:hidden rounded-lg" />
-
-          {activeContest && onSwitchContestScreen && (
-            <button
-              type="button"
-              onClick={onSwitchContestScreen}
-              title="Trocar de concurso"
-              className="inline-flex items-center gap-1.5 rounded-lg border border-primary/30 bg-primary-soft/25 hover:bg-primary-soft/45 px-2 sm:px-2.5 py-1 text-xs font-semibold text-fg transition min-w-0 max-w-[140px] sm:max-w-[220px] cursor-pointer"
-            >
-              <span
-                className="size-4 rounded text-[9px] font-bold text-white flex items-center justify-center shrink-0"
-                style={{ backgroundColor: activeContest.accentColor || '#c20018' }}
-              >
-                {activeContest.shortName.slice(0, 2)}
-              </span>
-              <span className="truncate">{activeContest.name}</span>
-              <Layers className="size-3 text-primary shrink-0" />
-            </button>
-          )}
 
           <div className="hidden md:flex items-center gap-2">
             <CalendarDays className="size-4 text-fg-subtle" />
