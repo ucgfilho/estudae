@@ -27,6 +27,7 @@ import { SessionModal } from '../components/modals/SessionModal';
 import { QuestionModal } from '../components/modals/QuestionModal';
 import { ErrorNoteModal } from '../components/modals/ErrorNoteModal';
 import { DailyMissionCard } from '../components/motivation/DailyMissionCard';
+import { RankCard } from '../components/motivation/RankCard';
 import {
   useDisciplines,
   useTopics,
@@ -208,6 +209,8 @@ export function OverviewScreen() {
         onStudyNow={() => navigate('/estudar-agora')}
         onOpenSettings={() => navigate('/configuracoes')}
       />
+
+      <RankCard sessions={sessions} reviews={reviews} settings={settings} today={today} />
 
       {/* Primary KPI Grid */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">

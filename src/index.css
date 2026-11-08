@@ -39,6 +39,7 @@
   --animate-fade-in: fade-in 320ms var(--ease-emphasized) both;
   --animate-celebrate-in: celebrate-in 420ms var(--ease-emphasized) both;
   --animate-pop: pop 480ms var(--ease-emphasized) both;
+  --animate-rank-drop: rank-drop 520ms var(--ease-emphasized) both;
   --animate-popover-in: popover-in 140ms var(--ease-emphasized) both;
   --animate-popover-out: popover-out 120ms ease-in both;
   --animate-toast-in: toast-in 220ms var(--ease-emphasized) both;
@@ -138,6 +139,19 @@
     }
     to {
       opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes rank-drop {
+    0% {
+      transform: translateY(-14px) scale(1.1);
+      opacity: 0;
+    }
+    55% {
+      transform: translateY(3px) scale(0.97);
+      opacity: 1;
+    }
+    100% {
       transform: none;
     }
   }
