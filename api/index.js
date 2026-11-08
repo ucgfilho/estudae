@@ -36475,21 +36475,37 @@ var settingsDtoSchema = object({
 	contestRole: string().optional(),
 	editalFileName: string().nullable().optional()
 });
+var questionNumberKey = string().regex(/^(?:[1-9]\d?|[1-4]\d{2}|500)$/, "Chave de questão inválida (esperado 1..500).");
+var answerKeyValueSchema = _enum([
+	"A",
+	"B",
+	"C",
+	"D",
+	"E",
+	"X"
+]);
+var markedResponseValueSchema = _enum([
+	"A",
+	"B",
+	"C",
+	"D",
+	"E"
+]);
 var mockExamDtoSchema = object({
-	id: string().min(1),
-	title: string(),
-	examFileName: string().nullable(),
-	keyFileName: string().nullable(),
-	questionCount: nonNegInt,
+	id: string().min(1).max(128),
+	title: string().max(500),
+	examFileName: string().max(500).nullable(),
+	keyFileName: string().max(500).nullable(),
+	questionCount: number().int().min(0).max(500),
 	optionCount: number().int().min(2).max(5),
-	answerKey: record(string(), string()),
+	answerKey: record(questionNumberKey, answerKeyValueSchema),
 	ranges: array(object({
-		from: number().int(),
-		to: number().int(),
-		disciplineId: string().min(1)
-	})),
-	responses: record(string(), string().nullable()),
-	submittedAt: string().nullable(),
+		from: number().int().min(1).max(500),
+		to: number().int().min(1).max(500),
+		disciplineId: string().min(1).max(128)
+	})).max(100),
+	responses: record(questionNumberKey, markedResponseValueSchema.nullable()),
+	submittedAt: string().max(64).nullable(),
 	createdAt: iso,
 	updatedAt: iso
 });

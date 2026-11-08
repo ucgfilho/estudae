@@ -3,7 +3,7 @@ import { Pie, PieChart, Cell, ResponsiveContainer, Tooltip, Bar, BarChart, XAxis
 import { Check, CircleMinus, Minus, TrendingUp, Trophy, Undo2, X as XIcon } from 'lucide-react';
 import { Button, IconButton } from '../ui/Button';
 import { Card, StatCard } from '../ui/Display';
-import { analyzeExam, statsByDiscipline, statsByThird } from '../../domain/mockExam';
+import { analyzeExam, isTrueFalseExam, optionLabel, statsByDiscipline, statsByThird } from '../../domain/mockExam';
 import { gradeStoredExam, reopenMockExam } from '../../services/mockExams';
 import { formatPercent } from '../../lib/format';
 import { cn } from '../../lib/utils';
@@ -21,8 +21,14 @@ export function ExamResult({ exam, disciplines, accuracyGoal }: ExamResultProps)
   const [bannerDismissed, setBannerDismissed] = useState(false);
   const graded = useMemo(() => gradeStoredExam(exam), [exam]);
   const names = useMemo(() => Object.fromEntries(disciplines.map((d) => [d.id, d.name])), [disciplines]);
-  const analysis = useMemo(() => analyzeExam(graded, { accuracyGoal, disciplineNames: names }), [graded, accuracyGoal, names]);
+  const analysis = useMemo(
+    () => analyzeExam(graded, { accuracyGoal, disciplineNames: names, optionCount: exam.optionCount }),
+    [graded, accuracyGoal, names, exam.optionCount],
+  );
   const { totals, results } = graded;
+  const trueFalse = isTrueFalseExam(exam.optionCount);
+  const fmtAnswer = (ans: string) =>
+    ans === 'X' ? 'anulada' : trueFalse ? `${optionLabel(ans, exam.optionCount)} (${ans})` : ans;
 
   const pieData = [
     { name: 'Acertos', value: totals.correct, color: COLORS.correct },
@@ -128,7 +134,7 @@ export function ExamResult({ exam, disciplines, accuracyGoal }: ExamResultProps)
             {results.map((r) => (
               <li
                 key={r.number}
-                title={`Questão ${r.number}: gabarito ${r.correctAnswer === 'X' ? 'anulada' : r.correctAnswer}, marcada ${r.marked ?? 'em branco'}`}
+                title={`Questão ${r.number}: gabarito ${fmtAnswer(r.correctAnswer)}, marcada ${r.marked ? fmtAnswer(r.marked) : 'em branco'}`}
                 className={cn(
                   'flex h-11 min-w-14 flex-col items-center justify-center rounded-md border px-1.5 text-[11px] leading-tight tabular-nums',
                   r.outcome === 'correct' && 'border-success/40 bg-success/10 text-success',

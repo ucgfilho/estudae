@@ -217,6 +217,31 @@ describe('Simulados screen', () => {
     expect(within(group).getAllByRole('radio')).toHaveLength(4);
   });
 
+  it('supports Certo ou Errado (C–E) exams end-to-end', async () => {
+    const user = userEvent.setup();
+    await openScreen();
+    await user.type(screen.getByLabelText(/nome do simulado/i), 'Simulado Cebraspe');
+    await user.selectOptions(screen.getByLabelText(/alternativas por questão/i), '2');
+    await user.type(screen.getByLabelText(/gabarito \(texto\)/i), '1 Certo\n2 Errado\n3 C');
+    expect(await screen.findByText(/3 questões identificadas/i)).toBeInTheDocument();
+    await user.click(await screen.findByRole('button', { name: /gerar folha de respostas/i }));
+
+    expect(await screen.findByText(/3 questões · Certo ou Errado/i)).toBeInTheDocument();
+    const group = await screen.findByRole('radiogroup', { name: 'Questão 1' });
+    const radios = within(group).getAllByRole('radio');
+    expect(radios.map((r) => r.getAttribute('value'))).toEqual(['C', 'E']);
+
+    await user.click(screen.getByRole('radio', { name: 'Questão 1 alternativa C (Certo)' }));
+    await user.click(screen.getByRole('radio', { name: 'Questão 2 alternativa C (Certo)' }));
+    await user.click(screen.getByRole('radio', { name: 'Questão 3 alternativa C (Certo)' }));
+    await user.click(screen.getByRole('button', { name: /enviar respostas/i }));
+
+    const result = await screen.findByTestId('exam-result');
+    expect(within(result).getByTestId('stat-correct')).toHaveTextContent('2');
+    expect(within(result).getByTestId('stat-wrong')).toHaveTextContent('1');
+    expect(within(result).getByTestId('stat-blank')).toHaveTextContent('0');
+  });
+
   it('blocks creation when the name is missing', async () => {
     const user = userEvent.setup();
     await openScreen();

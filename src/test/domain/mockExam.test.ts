@@ -4,9 +4,11 @@ import {
   analyzeExam,
   disciplineOfQuestion,
   gradeExam,
+  isTrueFalseExam,
   keyedQuestions,
   longestWrongStreak,
   normalizeMarked,
+  optionLabel,
   optionLetters,
   parseAnswerKey,
   percent,
@@ -97,19 +99,46 @@ describe('domain/mockExam › parseAnswerKey', () => {
   it('does not read letters glued to words as answers', () => {
     expect(parseAnswerKey('1 Alternativa').questionCount).toBe(0);
   });
+
+  it('reads Certo/Errado answer keys (C/E, Certo/Errado, V/F)', () => {
+    const parsedWords = parseAnswerKey('1 Certo\n2 Errado\n3 Certa\n4 Errada\n5 Anulada', 2);
+    expect(parsedWords.key).toEqual({ 1: 'C', 2: 'E', 3: 'C', 4: 'E', 5: ANNULLED });
+    expect(parsedWords.questionCount).toBe(5);
+
+    const parsedVF = parseAnswerKey('1-V, 2-F, 3-Verdadeiro, 4-Falso', 2);
+    expect(parsedVF.key).toEqual({ 1: 'C', 2: 'E', 3: 'C', 4: 'E' });
+
+    const parsedTable = parseAnswerKey('1 2 3 4\nC E C E', 2);
+    expect(parsedTable.key).toEqual({ 1: 'C', 2: 'E', 3: 'C', 4: 'E' });
+
+    const parsedSeq = parseAnswerKey('CEECC', 2);
+    expect(parsedSeq.key).toEqual({ 1: 'C', 2: 'E', 3: 'E', 4: 'C', 5: 'C' });
+
+    // In Certo/Errado mode (optionCount = 2), letters A, B, D are rejected
+    expect(parseAnswerKey('1 A\n2 B\n3 D', 2).questionCount).toBe(0);
+  });
 });
 
 describe('domain/mockExam › options and helpers', () => {
-  it('lists option letters within 2–5', () => {
+  it('lists option letters within 2–5 (using C/E for 2 options)', () => {
+    expect(optionLetters(2)).toEqual(['C', 'E']);
     expect(optionLetters(4)).toEqual(['A', 'B', 'C', 'D']);
     expect(optionLetters(5)).toEqual(['A', 'B', 'C', 'D', 'E']);
-    expect(optionLetters(1)).toEqual(['A', 'B']);
+    expect(optionLetters(1)).toEqual(['C', 'E']);
     expect(optionLetters(9)).toEqual(['A', 'B', 'C', 'D', 'E']);
+    expect(isTrueFalseExam(2)).toBe(true);
+    expect(isTrueFalseExam(5)).toBe(false);
+    expect(optionLabel('C', 2)).toBe('Certo');
+    expect(optionLabel('E', 2)).toBe('Errado');
+    expect(optionLabel('C', 5)).toBe('C');
   });
 
   it('normalizes marked letters', () => {
     expect(normalizeMarked('b')).toBe('B');
     expect(normalizeMarked(' c ')).toBe('C');
+    expect(normalizeMarked('certo', 2)).toBe('C');
+    expect(normalizeMarked('Errado', 2)).toBe('E');
+    expect(normalizeMarked('A', 2)).toBeNull();
     expect(normalizeMarked('Z')).toBeNull();
     expect(normalizeMarked('')).toBeNull();
     expect(normalizeMarked(null)).toBeNull();
@@ -298,6 +327,16 @@ describe('domain/mockExam › analyzeExam', () => {
   it('detects a bias toward one alternative in wrong answers', () => {
     const graded = gradeExam(keyOf('AAAAAAAAAA'), answersOf('CCCCBAAAAA'), 10);
     expect(analyzeExam(graded).improvements.join('\n')).toMatch(/Em 4 dos 5 erros você marcou a alternativa C/);
+  });
+
+  it('uses a higher bias threshold (70%) and Certo/Errado labels for 2-option exams', () => {
+    const gradedBalanced = gradeExam(keyOf('EEECC'), answersOf('CCCEE'), 5);
+    // 3 out of 5 errors are C (60% < 70%) -> should NOT flag bias in a 2-option exam
+    expect(analyzeExam(gradedBalanced, { optionCount: 2 }).improvements.join('\n')).not.toMatch(/viés/);
+
+    const gradedBiased = gradeExam(keyOf('EEEEC'), answersOf('CCCCE'), 5);
+    // 4 out of 5 errors are C (80% >= 70%) -> should flag bias with Certo (C)
+    expect(analyzeExam(gradedBiased, { optionCount: 2 }).improvements.join('\n')).toMatch(/Em 4 dos 5 erros você marcou Certo \(C\)/);
   });
 
   it('does not report a bias with few wrong answers', () => {

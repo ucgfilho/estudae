@@ -81,6 +81,20 @@ describe('services/mockExams', () => {
     await expect(setMockExamAnswer('nao-existe', 1, 'A')).rejects.toThrow(/não encontrado/);
   });
 
+  it('supports Certo/Errado (2 options) exams and rejects A/B/D answers on them', async () => {
+    const { id } = await createMockExam({
+      title: 'Cebraspe CE',
+      answerKey: { 1: 'C', 2: 'E' },
+      questionCount: 2,
+      optionCount: 2,
+    });
+    await setMockExamAnswer(id, 1, 'C');
+    await setMockExamAnswer(id, 2, 'errado');
+    expect((await db.mockExams.get(id))?.responses).toEqual({ '1': 'C', '2': 'E' });
+    await expect(setMockExamAnswer(id, 1, 'A')).rejects.toThrow(/Alternativa inválida/);
+    await expect(setMockExamAnswer(id, 1, 'B')).rejects.toThrow(/Alternativa inválida/);
+  });
+
   it('submits and grades the exam', async () => {
     const { id } = await createMockExam({ ...baseInput, ranges: [{ from: 1, to: 4, disciplineId: 'portugues' }] });
     await setMockExamAnswer(id, 1, 'A');
@@ -150,6 +164,15 @@ describe('services/mockExams', () => {
     const broken = JSON.parse(JSON.stringify(backup));
     broken.data.mockExams[0].optionCount = 99;
     expect(validateBackup(JSON.stringify(broken)).ok).toBe(false);
+
+    const maliciousKey = JSON.parse(JSON.stringify(backup));
+    maliciousKey.data.mockExams[0].answerKey = { '1': '<script>alert(1)</script>' };
+    expect(validateBackup(JSON.stringify(maliciousKey)).ok).toBe(false);
+
+    const outOfRangeKey = JSON.parse(JSON.stringify(backup));
+    outOfRangeKey.data.mockExams[0].answerKey = { '999': 'A' };
+    expect(validateBackup(JSON.stringify(outOfRangeKey)).ok).toBe(false);
+
     expect(id).toBeTruthy();
   });
 });

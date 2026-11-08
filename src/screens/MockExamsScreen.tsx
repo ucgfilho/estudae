@@ -9,6 +9,7 @@ import { ExamResult } from '../components/mockexam/ExamResult';
 import { Stepper } from '../components/mockexam/Stepper';
 import { useDisciplines, useMockExams, useSettings } from '../hooks/useData';
 import { deleteMockExam } from '../services/mockExams';
+import { isTrueFalseExam } from '../domain/mockExam';
 import type { MockExam } from '../db/types';
 
 export function MockExamsScreen() {
@@ -39,7 +40,9 @@ export function MockExamsScreen() {
       {selected ? (
         <>
           <Card title={selected.title} description={[selected.examFileName, selected.keyFileName].filter(Boolean).join(' · ') || undefined}>
-            <p className="text-sm text-fg-muted">{selected.questionCount} questões</p>
+            <p className="text-sm text-fg-muted">
+              {selected.questionCount} questões · {isTrueFalseExam(selected.optionCount) ? 'Certo ou Errado' : `${selected.optionCount} alternativas`}
+            </p>
           </Card>
           {selected.submittedAt ? (
             <ExamResult exam={selected} disciplines={disciplines} accuracyGoal={settings?.accuracyGoal ?? 70} />
@@ -61,7 +64,9 @@ export function MockExamsScreen() {
                     <li key={e.id} className="flex items-center justify-between gap-3 py-2">
                       <button type="button" className="min-w-0 flex-1 text-left" onClick={() => setSelectedId(e.id)}>
                         <span className="block truncate text-sm font-medium text-fg">{e.title}</span>
-                        <span className="text-xs text-fg-subtle">{e.questionCount} questões</span>
+                        <span className="text-xs text-fg-subtle">
+                          {e.questionCount} questões · {isTrueFalseExam(e.optionCount) ? 'Certo ou Errado' : `${e.optionCount} alternativas`}
+                        </span>
                       </button>
                       <Badge tone={e.submittedAt ? 'success' : 'warning'}>{e.submittedAt ? 'Enviado' : 'Em andamento'}</Badge>
                       <IconButton label={`Excluir ${e.title}`} icon={<Trash2 className="size-4" />} onClick={() => setToDelete(e)} />

@@ -7,7 +7,13 @@
 export const ANNULLED = 'X';
 
 export const DEFAULT_OPTION_COUNT = 5;
+export const TRUE_FALSE_OPTION_COUNT = 2;
 export const OPTION_LETTERS = ['A', 'B', 'C', 'D', 'E'] as const;
+export const TRUE_FALSE_LETTERS = ['C', 'E'] as const;
+export const TRUE_FALSE_LABELS: Record<string, string> = {
+  C: 'Certo',
+  E: 'Errado',
+};
 
 /** Número da questão (1..n) → letra correta (ou `ANNULLED`). */
 export type AnswerKey = Record<number, string>;
@@ -30,24 +36,35 @@ export interface ParsedAnswerKey {
 /* ------------------------------ Gabarito ------------------------------ */
 
 const ANNULLED_WORD = /^(anulada|anulado|nula|nulo|x|\*)$/i;
+const TRUE_WORD = /^(certo|certa|verdadeiro|verdadeira|v)$/i;
+const FALSE_WORD = /^(errado|errada|falso|falsa|f)$/i;
 
-function normalizeAnswer(raw: string): string | null {
+function normalizeAnswer(raw: string, optionCount?: number): string | null {
   const token = raw.trim();
   if (ANNULLED_WORD.test(token)) return ANNULLED;
+  if (TRUE_WORD.test(token)) return 'C';
+  if (FALSE_WORD.test(token)) return 'E';
+  if (optionCount === TRUE_FALSE_OPTION_COUNT) {
+    if (/^[CcEe]$/.test(token)) return token.toUpperCase();
+    return null;
+  }
   if (/^[A-Ea-e]$/.test(token)) return token.toUpperCase();
   return null;
 }
 
 /**
  * Lê um gabarito em texto livre. Formatos aceitos:
- *  - pares número/letra: `1 A`, `1-A`, `01) B`, `3: C`, `4.D`, `5=E`;
- *  - tabela em duas linhas (números e depois letras);
- *  - sequência de letras (`ABCDE…` ou `A, B, C…`), numerada a partir de 1.
+ *  - pares número/letra: `1 A`, `1-A`, `01) B`, `3: C`, `4.D`, `5=E`, `1 Certo`, `2 Errado`;
+ *  - tabela em duas linhas (números e depois letras/respostas);
+ *  - sequência de letras (`ABCDE…`, `CCEE…` ou `A, B, C…`), numerada a partir de 1.
  * `X`, `*` ou `ANULADA` marcam questão anulada.
  */
-export function parseAnswerKey(text: string): ParsedAnswerKey {
+export const MAX_ANSWER_KEY_TEXT_LENGTH = 500_000;
+
+export function parseAnswerKey(text: string, optionCount?: number): ParsedAnswerKey {
   const warnings: string[] = [];
-  const normalizedText = text.replace(/\r/g, '\n');
+  const boundedText = text.length > MAX_ANSWER_KEY_TEXT_LENGTH ? text.slice(0, MAX_ANSWER_KEY_TEXT_LENGTH) : text;
+  const normalizedText = boundedText.replace(/\r/g, '\n');
   const found = new Map<number, string>();
 
   const register = (num: number, answer: string) => {
@@ -68,32 +85,35 @@ export function parseAnswerKey(text: string): ParsedAnswerKey {
       nums.length >= 2 &&
       nums.length === answers.length &&
       nums.every((n) => /^\d{1,3}$/.test(n)) &&
-      answers.every((a) => normalizeAnswer(a) !== null)
+      answers.every((a) => normalizeAnswer(a, optionCount) !== null)
     ) {
-      nums.forEach((n, idx) => register(Number(n), normalizeAnswer(answers[idx]) as string));
+      nums.forEach((n, idx) => register(Number(n), normalizeAnswer(answers[idx], optionCount) as string));
       i++;
     }
   }
 
   // 2) Pares número/resposta.
   if (found.size === 0) {
-    const pair = /(?:^|[^\dA-Za-z])0*(\d{1,3})\s*[-–—.):=\s]+\s*(anulada|anulado|[A-Ea-e]|[Xx*])(?![A-Za-z])/gi;
+    const pair =
+      /(?:^|[^\dA-Za-z])0*(\d{1,3})\s*[-–—.):=\s]+\s*(anulada|anulado|nula|nulo|certo|certa|errado|errada|verdadeiro|verdadeira|falso|falsa|[A-Ea-eVvFfXx*])(?![A-Za-z])/gi;
     let m: RegExpExecArray | null;
     while ((m = pair.exec(normalizedText)) !== null) {
-      register(Number(m[1]), normalizeAnswer(m[2]) as string);
+      const normalized = normalizeAnswer(m[2], optionCount);
+      if (normalized) register(Number(m[1]), normalized);
     }
   }
 
   // 3) Sequência de letras sem numeração.
   if (found.size === 0) {
     const compact = normalizedText.replace(/[\s,;|-]+/g, '');
-    const tokens = /^[A-Ea-eXx*]+$/.test(compact)
+    const compactPattern = optionCount === TRUE_FALSE_OPTION_COUNT ? /^[CcEeVvFfXx*]+$/ : /^[A-Ea-eVvFfXx*]+$/;
+    const tokens = compactPattern.test(compact)
       ? compact.split('')
-      : lines.flatMap(splitCells).every((t) => normalizeAnswer(t) !== null)
+      : lines.flatMap(splitCells).every((t) => normalizeAnswer(t, optionCount) !== null)
         ? lines.flatMap(splitCells)
         : [];
     tokens.forEach((t, idx) => {
-      const answer = normalizeAnswer(t);
+      const answer = normalizeAnswer(t, optionCount);
       if (answer) register(idx + 1, answer);
     });
   }
@@ -125,9 +145,23 @@ export function keyedQuestions(key: AnswerKey, questionCount: number): number[] 
   return result;
 }
 
+export function isTrueFalseExam(optionCount: number): boolean {
+  return Math.round(optionCount) === TRUE_FALSE_OPTION_COUNT;
+}
+
 export function optionLetters(optionCount: number): string[] {
   const count = Math.min(Math.max(Math.round(optionCount), 2), OPTION_LETTERS.length);
+  if (count === TRUE_FALSE_OPTION_COUNT) {
+    return [...TRUE_FALSE_LETTERS];
+  }
   return OPTION_LETTERS.slice(0, count) as unknown as string[];
+}
+
+export function optionLabel(letter: string, optionCount: number): string {
+  if (isTrueFalseExam(optionCount)) {
+    return TRUE_FALSE_LABELS[letter] ?? letter;
+  }
+  return letter;
 }
 
 /* ------------------------- Faixas por disciplina ------------------------- */
@@ -195,9 +229,15 @@ export interface GradedExam {
   totals: ExamTotals;
 }
 
-export function normalizeMarked(value: string | null | undefined): string | null {
+export function normalizeMarked(value: string | null | undefined, optionCount?: number): string | null {
   if (!value) return null;
-  const letter = value.trim().toUpperCase();
+  const token = value.trim();
+  if (TRUE_WORD.test(token)) return 'C';
+  if (FALSE_WORD.test(token)) return 'E';
+  const letter = token.toUpperCase();
+  if (optionCount !== undefined) {
+    return optionLetters(optionCount).includes(letter) ? letter : null;
+  }
   return /^[A-E]$/.test(letter) ? letter : null;
 }
 
@@ -293,6 +333,8 @@ export interface AnalyzeOptions {
   accuracyGoal?: number;
   /** Nome legível de cada disciplina (por id). */
   disciplineNames?: Record<string, string>;
+  /** Quantidade de alternativas por questão (2 = Certo/Errado). */
+  optionCount?: number;
 }
 
 const fmt = (value: number | null) => (value === null ? '—' : `${String(value).replace('.', ',')}%`);
@@ -302,7 +344,7 @@ const fmt = (value: number | null) => (value === null ? '—' : `${String(value)
  * (nenhum dado da prova sai do navegador).
  */
 export function analyzeExam(graded: GradedExam, options: AnalyzeOptions = {}): ExamAnalysis {
-  const { accuracyGoal = 70, disciplineNames = {} } = options;
+  const { accuracyGoal = 70, disciplineNames = {}, optionCount = DEFAULT_OPTION_COUNT } = options;
   const { totals, results } = graded;
   const strengths: string[] = [];
   const improvements: string[] = [];
@@ -391,8 +433,10 @@ export function analyzeExam(graded: GradedExam, options: AnalyzeOptions = {}): E
     const counts = new Map<string, number>();
     for (const r of wrongs) counts.set(r.marked as string, (counts.get(r.marked as string) ?? 0) + 1);
     const [letter, qty] = [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
-    if (qty / wrongs.length >= 0.4) {
-      improvements.push(`Em ${qty} dos ${wrongs.length} erros você marcou a alternativa ${letter}: cuidado com o viés de chute.`);
+    const biasThreshold = isTrueFalseExam(optionCount) ? 0.7 : 0.4;
+    if (qty / wrongs.length >= biasThreshold) {
+      const displayLetter = isTrueFalseExam(optionCount) ? `${optionLabel(letter, optionCount)} (${letter})` : `a alternativa ${letter}`;
+      improvements.push(`Em ${qty} dos ${wrongs.length} erros você marcou ${displayLetter}: cuidado com o viés de chute.`);
     }
   }
 

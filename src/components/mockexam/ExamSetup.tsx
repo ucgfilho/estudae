@@ -28,8 +28,8 @@ export function ExamSetup({ disciplines, onCreated }: ExamSetupProps) {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  // O gabarito é lido automaticamente sempre que o texto muda.
-  const parsed = useMemo(() => (keyText.trim() ? parseAnswerKey(keyText) : null), [keyText]);
+  // O gabarito é lido automaticamente sempre que o texto ou o formato da prova muda.
+  const parsed = useMemo(() => (keyText.trim() ? parseAnswerKey(keyText, optionCount) : null), [keyText, optionCount]);
   const keyOk = parsed !== null && parsed.questionCount > 0;
   const rangeErrors = parsed ? validateRanges(ranges, parsed.questionCount) : [];
   const nameOk = title.trim().length > 0;
@@ -120,7 +120,14 @@ export function ExamSetup({ disciplines, onCreated }: ExamSetupProps) {
             Prefere colar ou corrigir o gabarito em texto?
           </summary>
           <div className="mt-3">
-            <Field label="Gabarito (texto)" hint="Uma questão por linha, ex.: 1-A, 2-C, 3-B. Use X para questão anulada.">
+            <Field
+              label="Gabarito (texto)"
+              hint={
+                optionCount === 2
+                  ? 'Uma questão por linha, ex.: 1-C, 2-E, 3-Certo, 4-Errado. Use X para questão anulada.'
+                  : 'Uma questão por linha, ex.: 1-A, 2-C, 3-B. Use X para questão anulada.'
+              }
+            >
               <Textarea
                 rows={5}
                 value={keyText}
@@ -128,7 +135,7 @@ export function ExamSetup({ disciplines, onCreated }: ExamSetupProps) {
                   setKeyText(e.target.value);
                   setRanges([]);
                 }}
-                placeholder={'1 A\n2 C\n3 B'}
+                placeholder={optionCount === 2 ? '1 C\n2 E\n3 C' : '1 A\n2 C\n3 B'}
               />
             </Field>
           </div>
@@ -154,6 +161,7 @@ export function ExamSetup({ disciplines, onCreated }: ExamSetupProps) {
           </Field>
           <Field label="Alternativas por questão">
             <Select value={optionCount} onChange={(e) => setOptionCount(Number(e.target.value))}>
+              <option value={2}>Certo ou Errado (C–E)</option>
               <option value={4}>4 alternativas (A–D)</option>
               <option value={5}>5 alternativas (A–E)</option>
             </Select>

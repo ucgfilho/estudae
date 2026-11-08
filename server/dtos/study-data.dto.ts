@@ -163,17 +163,29 @@ export const settingsDtoSchema = z.object({
   editalFileName: z.string().nullable().optional(),
 });
 
+const questionNumberKey = z.string().regex(/^(?:[1-9]\d?|[1-4]\d{2}|500)$/, 'Chave de questão inválida (esperado 1..500).');
+const answerKeyValueSchema = z.enum(['A', 'B', 'C', 'D', 'E', 'X']);
+const markedResponseValueSchema = z.enum(['A', 'B', 'C', 'D', 'E']);
+
 export const mockExamDtoSchema = z.object({
-  id: z.string().min(1),
-  title: z.string(),
-  examFileName: z.string().nullable(),
-  keyFileName: z.string().nullable(),
-  questionCount: nonNegInt,
+  id: z.string().min(1).max(128),
+  title: z.string().max(500),
+  examFileName: z.string().max(500).nullable(),
+  keyFileName: z.string().max(500).nullable(),
+  questionCount: z.number().int().min(0).max(500),
   optionCount: z.number().int().min(2).max(5),
-  answerKey: z.record(z.string(), z.string()),
-  ranges: z.array(z.object({ from: z.number().int(), to: z.number().int(), disciplineId: z.string().min(1) })),
-  responses: z.record(z.string(), z.string().nullable()),
-  submittedAt: z.string().nullable(),
+  answerKey: z.record(questionNumberKey, answerKeyValueSchema),
+  ranges: z
+    .array(
+      z.object({
+        from: z.number().int().min(1).max(500),
+        to: z.number().int().min(1).max(500),
+        disciplineId: z.string().min(1).max(128),
+      }),
+    )
+    .max(100),
+  responses: z.record(questionNumberKey, markedResponseValueSchema.nullable()),
+  submittedAt: z.string().max(64).nullable(),
   createdAt: iso,
   updatedAt: iso,
 });

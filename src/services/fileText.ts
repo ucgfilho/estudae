@@ -11,6 +11,10 @@ export class UnsupportedFileError extends Error {
   }
 }
 
+export const MAX_UPLOAD_FILE_BYTES = 20 * 1024 * 1024; // 20 MB
+export const MAX_PDF_PAGES = 150;
+export const MAX_EXTRACTED_TEXT_CHARS = 500_000;
+
 export function isPdf(file: Pick<File, 'name' | 'type'>): boolean {
   return file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
 }
@@ -40,6 +44,9 @@ async function pdfToText(file: File): Promise<string> {
   const worker = await import('pdfjs-dist/build/pdf.worker.min.mjs?url');
   pdfjs.GlobalWorkerOptions.workerSrc = worker.default;
   const doc = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
+  if (doc.numPages > MAX_PDF_PAGES) {
+    throw new UnsupportedFileError(`O PDF excede o limite de ${MAX_PDF_PAGES} páginas. Cole o gabarito manualmente.`);
+  }
   const pages: string[] = [];
   for (let p = 1; p <= doc.numPages; p++) {
     const content = await (await doc.getPage(p)).getTextContent();
@@ -49,10 +56,13 @@ async function pdfToText(file: File): Promise<string> {
     }
     pages.push(itemsToLines(items).join('\n'));
   }
-  return pages.join('\n');
+  return pages.join('\n').slice(0, MAX_EXTRACTED_TEXT_CHARS);
 }
 
 export async function readFileText(file: File): Promise<string> {
+  if (file.size > MAX_UPLOAD_FILE_BYTES) {
+    throw new UnsupportedFileError('O arquivo excede o tamanho máximo permitido (20 MB). Cole o gabarito manualmente.');
+  }
   if (isPdf(file)) {
     try {
       const text = await pdfToText(file);
@@ -66,5 +76,6 @@ export async function readFileText(file: File): Promise<string> {
   if (/\.(png|jpe?g|gif|webp|bmp|docx?|xlsx?)$/i.test(file.name)) {
     throw new UnsupportedFileError('Formato não suportado para leitura automática. Use PDF, TXT ou CSV, ou cole o gabarito.');
   }
-  return file.text();
+  const text = await file.text();
+  return text.slice(0, MAX_EXTRACTED_TEXT_CHARS);
 }
