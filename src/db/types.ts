@@ -244,6 +244,10 @@ export interface MockExamRange {
 export interface MockExam {
   id: string;
   title: string;
+  /** Data em que o simulado foi realizado / agendado (AAAA-MM-DD). */
+  date?: DateKey;
+  /** ID da sessão de estudo de 3h vinculada no cronograma. */
+  sessionId?: string | null;
   examFileName: string | null;
   keyFileName: string | null;
   questionCount: number;

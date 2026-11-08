@@ -189,6 +189,15 @@ describe('Simulados screen', () => {
     expect(stored).toHaveLength(1);
     expect(stored[0].submittedAt).not.toBeNull();
     expect(stored[0].ranges).toHaveLength(1);
+    expect(stored[0].sessionId).toBeTruthy();
+
+    const linkedSession = await db.sessions.get(stored[0].sessionId!);
+    expect(linkedSession).toMatchObject({
+      disciplineId: 'simulado',
+      plannedMinutes: 180,
+      actualSeconds: 180 * 60,
+      status: 'concluida',
+    });
   });
 
   it('reopens the answer sheet keeping the marked answers', async () => {

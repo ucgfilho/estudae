@@ -169,6 +169,8 @@ const markedResponseValueSchema = z.enum(['A', 'B', 'C', 'D', 'E']);
 const mockExamSchema = z.object({
   id: z.string().min(1).max(128),
   title: z.string().max(500),
+  date: dateKey.optional(),
+  sessionId: z.string().max(128).nullable().optional(),
   examFileName: z.string().max(500).nullable(),
   keyFileName: z.string().max(500).nullable(),
   questionCount: z.number().int().min(0).max(500),

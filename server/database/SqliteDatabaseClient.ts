@@ -36,6 +36,13 @@ export class SqliteDatabaseClient implements IDatabaseClient {
         // Coluna já existente
       }
     }
+    for (const col of ['exam_date', 'session_id']) {
+      try {
+        this.db.exec(`ALTER TABLE mock_exams ADD COLUMN ${col} TEXT NULL;`);
+      } catch {
+        // Coluna já existente
+      }
+    }
   }
 
   public exec(sql: string): void {

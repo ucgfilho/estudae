@@ -3,10 +3,12 @@ import { ArrowRight, CheckCircle2, Circle, Plus, Trash2 } from 'lucide-react';
 import { Button, IconButton } from '../ui/Button';
 import { Alert, Card } from '../ui/Display';
 import { Field, Input, Select, Textarea } from '../ui/Form';
+import { DateInput } from '../ui/DateInput';
 import { FileDropzone } from './FileDropzone';
 import { parseAnswerKey, validateRanges } from '../../domain/mockExam';
 import { readFileText } from '../../services/fileText';
 import { createMockExam } from '../../services/mockExams';
+import { isValidDateKey, todayKey } from '../../lib/dates';
 import type { Discipline, MockExam, MockExamRange } from '../../db/types';
 import { errorMessage } from '../../lib/utils';
 
@@ -19,6 +21,7 @@ const stripExtension = (name: string) => name.replace(/\.[^.]+$/, '');
 
 export function ExamSetup({ disciplines, onCreated }: ExamSetupProps) {
   const [title, setTitle] = useState('');
+  const [date, setDate] = useState(() => todayKey());
   const [examFile, setExamFile] = useState<File | null>(null);
   const [keyFile, setKeyFile] = useState<File | null>(null);
   const [keyText, setKeyText] = useState('');
@@ -33,7 +36,8 @@ export function ExamSetup({ disciplines, onCreated }: ExamSetupProps) {
   const keyOk = parsed !== null && parsed.questionCount > 0;
   const rangeErrors = parsed ? validateRanges(ranges, parsed.questionCount) : [];
   const nameOk = title.trim().length > 0;
-  const ready = keyOk && nameOk && rangeErrors.length === 0;
+  const dateOk = isValidDateKey(date);
+  const ready = keyOk && nameOk && dateOk && rangeErrors.length === 0;
 
   const onExamFile = (file: File | null) => {
     setExamFile(file);
@@ -73,6 +77,7 @@ export function ExamSetup({ disciplines, onCreated }: ExamSetupProps) {
     try {
       const exam = await createMockExam({
         title,
+        date,
         examFileName: examFile?.name ?? null,
         keyFileName: keyFile?.name ?? null,
         answerKey: parsed.key,
@@ -155,9 +160,12 @@ export function ExamSetup({ disciplines, onCreated }: ExamSetupProps) {
           </div>
         )}
 
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-3">
           <Field label="Nome do simulado" required>
             <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex.: Simulado BNB 01" />
+          </Field>
+          <Field label="Data do simulado" hint="Adiciona 3h no seu cronograma" required>
+            <DateInput value={date} onChange={(e) => setDate(e.target.value)} />
           </Field>
           <Field label="Alternativas por questão">
             <Select value={optionCount} onChange={(e) => setOptionCount(Number(e.target.value))}>

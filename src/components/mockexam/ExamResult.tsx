@@ -5,6 +5,7 @@ import { Button, IconButton } from '../ui/Button';
 import { Card, StatCard } from '../ui/Display';
 import { analyzeExam, isTrueFalseExam, optionLabel, statsByDiscipline, statsByThird } from '../../domain/mockExam';
 import { gradeStoredExam, reopenMockExam } from '../../services/mockExams';
+import { formatDate } from '../../lib/dates';
 import { formatPercent } from '../../lib/format';
 import { cn } from '../../lib/utils';
 import type { Discipline, MockExam } from '../../db/types';
@@ -47,7 +48,7 @@ export function ExamResult({ exam, disciplines, accuracyGoal }: ExamResultProps)
   return (
     <Card
       title="Seu resultado"
-      description={`${exam.title} — enviado em ${new Date(exam.submittedAt ?? exam.updatedAt).toLocaleString('pt-BR')}`}
+      description={`${exam.title}${exam.date ? ` · realizado em ${formatDate(exam.date)}` : ''} — enviado em ${new Date(exam.submittedAt ?? exam.updatedAt).toLocaleString('pt-BR')}`}
       actions={
         <Button size="sm" icon={<Undo2 className="size-4" />} onClick={() => void reopenMockExam(exam.id)}>
           Reabrir folha

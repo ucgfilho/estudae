@@ -205,6 +205,8 @@ CREATE TABLE IF NOT EXISTS mock_exams (
   user_id TEXT NOT NULL,
   id TEXT NOT NULL,
   title TEXT NOT NULL,
+  exam_date TEXT NULL,
+  session_id TEXT NULL,
   exam_file_name TEXT NULL,
   key_file_name TEXT NULL,
   question_count INTEGER NOT NULL CHECK (question_count >= 0),

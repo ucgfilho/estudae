@@ -36494,6 +36494,8 @@ var markedResponseValueSchema = _enum([
 var mockExamDtoSchema = object({
 	id: string().min(1).max(128),
 	title: string().max(500),
+	date: dateKey.optional(),
+	sessionId: string().max(128).nullable().optional(),
 	examFileName: string().max(500).nullable(),
 	keyFileName: string().max(500).nullable(),
 	questionCount: number().int().min(0).max(500),
@@ -36867,6 +36869,8 @@ CREATE TABLE IF NOT EXISTS mock_exams (
   user_id TEXT NOT NULL,
   id TEXT NOT NULL,
   title TEXT NOT NULL,
+  exam_date TEXT NULL,
+  session_id TEXT NULL,
   exam_file_name TEXT NULL,
   key_file_name TEXT NULL,
   question_count INTEGER NOT NULL CHECK (question_count >= 0),
@@ -36910,6 +36914,9 @@ var SqliteDatabaseClient = class {
 			"edital_file_name"
 		]) try {
 			this.db.exec(`ALTER TABLE user_settings ADD COLUMN ${col} TEXT NULL;`);
+		} catch {}
+		for (const col of ["exam_date", "session_id"]) try {
+			this.db.exec(`ALTER TABLE mock_exams ADD COLUMN ${col} TEXT NULL;`);
 		} catch {}
 	}
 	exec(sql) {
@@ -38005,12 +38012,14 @@ var SqlStudyDataRepository = class {
 	}
 	upsertMockExams(userId, items) {
 		for (const m of items) this.db.run(`INSERT INTO mock_exams (
-           user_id, id, title, exam_file_name, key_file_name,
+           user_id, id, title, exam_date, session_id, exam_file_name, key_file_name,
            question_count, option_count, answer_key_json,
            ranges_json, responses_json, submitted_at, created_at, updated_at
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(user_id, id) DO UPDATE SET
            title = excluded.title,
+           exam_date = excluded.exam_date,
+           session_id = excluded.session_id,
            exam_file_name = excluded.exam_file_name,
            key_file_name = excluded.key_file_name,
            question_count = excluded.question_count,
@@ -38024,6 +38033,8 @@ var SqlStudyDataRepository = class {
 			userId,
 			m.id,
 			m.title,
+			m.date ?? null,
+			m.sessionId ?? null,
 			m.examFileName,
 			m.keyFileName,
 			m.questionCount,
@@ -38248,24 +38259,29 @@ var SqlStudyDataRepository = class {
 		return [settingsObj];
 	}
 	getMockExams(userId) {
-		return this.db.all(`SELECT id, title, exam_file_name, key_file_name, question_count, option_count,
+		return this.db.all(`SELECT id, title, exam_date, session_id, exam_file_name, key_file_name, question_count, option_count,
               answer_key_json, ranges_json, responses_json, submitted_at, created_at, updated_at
        FROM mock_exams
        WHERE user_id = ?
-       ORDER BY created_at DESC`, [userId]).map((r) => ({
-			id: r.id,
-			title: r.title,
-			examFileName: r.exam_file_name,
-			keyFileName: r.key_file_name,
-			questionCount: r.question_count,
-			optionCount: r.option_count,
-			answerKey: JSON.parse(r.answer_key_json),
-			ranges: JSON.parse(r.ranges_json),
-			responses: JSON.parse(r.responses_json),
-			submittedAt: r.submitted_at,
-			createdAt: r.created_at,
-			updatedAt: r.updated_at
-		}));
+       ORDER BY created_at DESC`, [userId]).map((r) => {
+			const exam = {
+				id: r.id,
+				title: r.title,
+				examFileName: r.exam_file_name,
+				keyFileName: r.key_file_name,
+				questionCount: r.question_count,
+				optionCount: r.option_count,
+				answerKey: JSON.parse(r.answer_key_json),
+				ranges: JSON.parse(r.ranges_json),
+				responses: JSON.parse(r.responses_json),
+				submittedAt: r.submitted_at,
+				createdAt: r.created_at,
+				updatedAt: r.updated_at
+			};
+			if (r.exam_date) exam.date = r.exam_date;
+			if (r.session_id !== null && r.session_id !== void 0) exam.sessionId = r.session_id;
+			return exam;
+		});
 	}
 };
 //#endregion

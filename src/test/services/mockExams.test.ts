@@ -5,10 +5,12 @@ import {
   deleteMockExam,
   gradeStoredExam,
   keyToRecord,
+  MOCK_EXAM_SESSION_MINUTES,
   recordToKey,
   reopenMockExam,
   setMockExamAnswer,
   submitMockExam,
+  updateMockExamDate,
 } from '../../services/mockExams';
 import { createBackup, restoreBackup, validateBackup } from '../../services/backup';
 import { isPdf, itemsToLines, readFileText, UnsupportedFileError } from '../../services/fileText';
@@ -124,10 +126,50 @@ describe('services/mockExams', () => {
     await expect(reopenMockExam('nao-existe')).rejects.toBeInstanceOf(ValidationError);
   });
 
-  it('deletes an exam', async () => {
-    const { id } = await createMockExam(baseInput);
-    await deleteMockExam(id);
+  it('deletes an exam and its linked schedule session', async () => {
+    const exam = await createMockExam({ ...baseInput, date: '2026-11-15' });
+    expect(exam.date).toBe('2026-11-15');
+    expect(exam.sessionId).toBeTruthy();
+    const session = await db.sessions.get(exam.sessionId!);
+    expect(session).toMatchObject({
+      date: '2026-11-15',
+      disciplineId: 'simulado',
+      plannedMinutes: MOCK_EXAM_SESSION_MINUTES,
+      status: 'planejada',
+    });
+
+    await deleteMockExam(exam.id);
     expect(await db.mockExams.count()).toBe(0);
+    expect(await db.sessions.get(exam.sessionId!)).toBeUndefined();
+  });
+
+  it('synchronizes the 3h schedule session on date change, submission, and reopen', async () => {
+    const exam = await createMockExam({ ...baseInput, date: '2026-11-10' });
+    const sessionId = exam.sessionId!;
+
+    // Update date moves the linked 3h session to the new date
+    const moved = await updateMockExamDate(exam.id, '2026-11-12');
+    expect(moved.date).toBe('2026-11-12');
+    expect((await db.sessions.get(sessionId))?.date).toBe('2026-11-12');
+
+    // Submit marks the 3h session as completed (180 min = 10800s)
+    await setMockExamAnswer(exam.id, 1, 'A');
+    await submitMockExam(exam.id);
+    const completedSession = await db.sessions.get(sessionId);
+    expect(completedSession).toMatchObject({
+      date: '2026-11-12',
+      status: 'concluida',
+      plannedMinutes: 180,
+      actualSeconds: 180 * 60,
+    });
+
+    // Reopen reverts the session back to planned
+    await reopenMockExam(exam.id);
+    const reopenedSession = await db.sessions.get(sessionId);
+    expect(reopenedSession).toMatchObject({
+      status: 'planejada',
+      actualSeconds: 0,
+    });
   });
 
   it('includes mock exams in backups and restores them', async () => {

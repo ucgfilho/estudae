@@ -597,12 +597,14 @@ export class SqlStudyDataRepository implements IStudyDataRepository {
     for (const m of items) {
       this.db.run(
         `INSERT INTO mock_exams (
-           user_id, id, title, exam_file_name, key_file_name,
+           user_id, id, title, exam_date, session_id, exam_file_name, key_file_name,
            question_count, option_count, answer_key_json,
            ranges_json, responses_json, submitted_at, created_at, updated_at
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(user_id, id) DO UPDATE SET
            title = excluded.title,
+           exam_date = excluded.exam_date,
+           session_id = excluded.session_id,
            exam_file_name = excluded.exam_file_name,
            key_file_name = excluded.key_file_name,
            question_count = excluded.question_count,
@@ -617,6 +619,8 @@ export class SqlStudyDataRepository implements IStudyDataRepository {
           userId,
           m.id,
           m.title,
+          m.date ?? null,
+          m.sessionId ?? null,
           m.examFileName,
           m.keyFileName,
           m.questionCount,
@@ -1028,6 +1032,8 @@ export class SqlStudyDataRepository implements IStudyDataRepository {
     const rows = this.db.all<{
       id: string;
       title: string;
+      exam_date: string | null;
+      session_id: string | null;
       exam_file_name: string | null;
       key_file_name: string | null;
       question_count: number;
@@ -1039,26 +1045,31 @@ export class SqlStudyDataRepository implements IStudyDataRepository {
       created_at: string;
       updated_at: string;
     }>(
-      `SELECT id, title, exam_file_name, key_file_name, question_count, option_count,
+      `SELECT id, title, exam_date, session_id, exam_file_name, key_file_name, question_count, option_count,
               answer_key_json, ranges_json, responses_json, submitted_at, created_at, updated_at
        FROM mock_exams
        WHERE user_id = ?
        ORDER BY created_at DESC`,
       [userId],
     );
-    return rows.map((r) => ({
-      id: r.id,
-      title: r.title,
-      examFileName: r.exam_file_name,
-      keyFileName: r.key_file_name,
-      questionCount: r.question_count,
-      optionCount: r.option_count,
-      answerKey: JSON.parse(r.answer_key_json) as Record<string, string>,
-      ranges: JSON.parse(r.ranges_json) as MockExam['ranges'],
-      responses: JSON.parse(r.responses_json) as Record<string, string | null>,
-      submittedAt: r.submitted_at,
-      createdAt: r.created_at,
-      updatedAt: r.updated_at,
-    }));
+    return rows.map((r) => {
+      const exam: MockExam = {
+        id: r.id,
+        title: r.title,
+        examFileName: r.exam_file_name,
+        keyFileName: r.key_file_name,
+        questionCount: r.question_count,
+        optionCount: r.option_count,
+        answerKey: JSON.parse(r.answer_key_json) as Record<string, string>,
+        ranges: JSON.parse(r.ranges_json) as MockExam['ranges'],
+        responses: JSON.parse(r.responses_json) as Record<string, string | null>,
+        submittedAt: r.submitted_at,
+        createdAt: r.created_at,
+        updatedAt: r.updated_at,
+      };
+      if (r.exam_date) exam.date = r.exam_date;
+      if (r.session_id !== null && r.session_id !== undefined) exam.sessionId = r.session_id;
+      return exam;
+    });
   }
 }

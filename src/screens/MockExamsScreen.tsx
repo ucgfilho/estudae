@@ -3,13 +3,16 @@ import { Plus, Trash2, FileText } from 'lucide-react';
 import { PageHeader, Card, Badge, EmptyState } from '../components/ui/Display';
 import { Button, IconButton } from '../components/ui/Button';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
+import { Field } from '../components/ui/Form';
+import { DateInput } from '../components/ui/DateInput';
 import { ExamSetup } from '../components/mockexam/ExamSetup';
 import { AnswerSheet } from '../components/mockexam/AnswerSheet';
 import { ExamResult } from '../components/mockexam/ExamResult';
 import { Stepper } from '../components/mockexam/Stepper';
 import { useDisciplines, useMockExams, useSettings } from '../hooks/useData';
-import { deleteMockExam } from '../services/mockExams';
+import { deleteMockExam, updateMockExamDate } from '../services/mockExams';
 import { isTrueFalseExam } from '../domain/mockExam';
+import { formatDate, isValidDateKey, todayKey } from '../lib/dates';
 import type { MockExam } from '../db/types';
 
 export function MockExamsScreen() {
@@ -40,9 +43,22 @@ export function MockExamsScreen() {
       {selected ? (
         <>
           <Card title={selected.title} description={[selected.examFileName, selected.keyFileName].filter(Boolean).join(' · ') || undefined}>
-            <p className="text-sm text-fg-muted">
-              {selected.questionCount} questões · {isTrueFalseExam(selected.optionCount) ? 'Certo ou Errado' : `${selected.optionCount} alternativas`}
-            </p>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+              <p className="text-sm text-fg-muted">
+                {selected.questionCount} questões · {isTrueFalseExam(selected.optionCount) ? 'Certo ou Errado' : `${selected.optionCount} alternativas`} · 3h alocadas no cronograma
+              </p>
+              <Field label="Data do simulado" className="w-full sm:w-48">
+                <DateInput
+                  value={selected.date ?? todayKey()}
+                  onChange={(e) => {
+                    const nextDate = e.target.value;
+                    if (isValidDateKey(nextDate)) {
+                      void updateMockExamDate(selected.id, nextDate);
+                    }
+                  }}
+                />
+              </Field>
+            </div>
           </Card>
           {selected.submittedAt ? (
             <ExamResult exam={selected} disciplines={disciplines} accuracyGoal={settings?.accuracyGoal ?? 70} />
@@ -66,6 +82,7 @@ export function MockExamsScreen() {
                         <span className="block truncate text-sm font-medium text-fg">{e.title}</span>
                         <span className="text-xs text-fg-subtle">
                           {e.questionCount} questões · {isTrueFalseExam(e.optionCount) ? 'Certo ou Errado' : `${e.optionCount} alternativas`}
+                          {e.date ? ` · ${formatDate(e.date)}` : ''}
                         </span>
                       </button>
                       <Badge tone={e.submittedAt ? 'success' : 'warning'}>{e.submittedAt ? 'Enviado' : 'Em andamento'}</Badge>
