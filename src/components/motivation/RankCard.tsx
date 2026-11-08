@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Award, ChevronsUp, Crown, Flame, Gem, Medal, Shield, ShieldCheck, Snowflake, Star, Swords, TrendingDown, TrendingUp, Trophy, HeartPulse, type LucideIcon } from 'lucide-react';
+import { Award, BadgeCheck, BookOpen, Compass, ChevronsUp, Flag, Flame, Footprints, GraduationCap, Medal, ScrollText, Shield, ShieldCheck, Snowflake, Star, Swords, Target, TrendingDown, TrendingUp, Trophy, HeartPulse, Bird, Gem, type LucideIcon } from 'lucide-react';
 import { Card } from '../ui/Display';
 import { computeRank, RANKS, XP, type RankEventType, type RankInput } from '../../domain/rank';
 import { formatInteger } from '../../lib/format';
@@ -8,14 +8,22 @@ import { cn } from '../../lib/utils';
 
 const STORAGE_KEY = 'bnb:rank:last-seen';
 
+/** Ícone por patente (índice em RANKS), na mesma ordem. */
+const RANK_ICONS: LucideIcon[] = [
+  Footprints, ChevronsUp, Shield, Swords, ShieldCheck, BadgeCheck,
+  Medal, Star, Flag, Compass, BookOpen, GraduationCap,
+  Target, ScrollText, Bird, Gem, Flame, Trophy,
+];
+
 /** Emblema e cor por faixa de patente (índice em RANKS). */
 function tierOf(index: number): { icon: LucideIcon; color: string; ring: string } {
-  if (index < 4) return { icon: ChevronsUp, color: 'text-fg-muted', ring: 'ring-border-strong' };
-  if (index < 8) return { icon: Shield, color: 'text-info', ring: 'ring-info' };
-  if (index < 12) return { icon: Star, color: 'text-warning', ring: 'ring-warning' };
-  if (index < 15) return { icon: Medal, color: 'text-accent', ring: 'ring-accent' };
-  if (index < 17) return { icon: Crown, color: 'text-primary', ring: 'ring-primary' };
-  return { icon: Trophy, color: 'text-primary', ring: 'ring-primary' };
+  const icon = RANK_ICONS[index] ?? Trophy;
+  if (index < 4) return { icon, color: 'text-fg-muted', ring: 'ring-border-strong' };
+  if (index < 8) return { icon, color: 'text-info', ring: 'ring-info' };
+  if (index < 12) return { icon, color: 'text-warning', ring: 'ring-warning' };
+  if (index < 15) return { icon, color: 'text-accent', ring: 'ring-accent' };
+  if (index < 17) return { icon, color: 'text-primary', ring: 'ring-primary' };
+  return { icon, color: 'text-primary', ring: 'ring-primary' };
 }
 
 const EVENT_STYLE: Record<RankEventType, { icon: LucideIcon; tone: string }> = {
@@ -150,7 +158,7 @@ export function RankCard(input: RankInput) {
                 aria-current={i === state.rankIndex ? 'step' : undefined}
                 className={cn('flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs', i === state.rankIndex ? 'border-primary bg-primary-soft font-semibold text-fg' : reached ? 'border-border text-fg' : 'border-border text-fg-subtle opacity-70')}
               >
-                {reached ? <TIcon className={cn('size-3.5 shrink-0', t.color)} aria-hidden /> : <Gem className="size-3.5 shrink-0" aria-hidden />}
+                <TIcon className={cn('size-3.5 shrink-0', reached ? t.color : 'text-fg-subtle')} aria-hidden />
                 <span className="truncate">{r.name}</span>
                 <span className="ml-auto tabular-nums text-[10px] text-fg-subtle">{formatInteger(r.minXp)}</span>
               </li>
@@ -180,9 +188,18 @@ export function RankCard(input: RankInput) {
             )}
           </>
         )}
-        <p className="mt-3 flex items-center gap-1 text-[11px] text-fg-subtle">
-          <Award className="size-3" aria-hidden /> +{XP.studyDay} dia estudado (≥{XP.validMinutes} min ou meta) · +{XP.dailyGoal} meta · +{XP.review} por revisão · −{XP.firstMiss} 1ª falta · −{XP.nextMisses} faltas seguintes (até a 4ª).
-        </p>
+        <div className="mt-3 space-y-1 text-[11px] text-fg-subtle">
+          <p className="flex items-center gap-1 font-medium text-fg-muted">
+            <Award className="size-3" aria-hidden /> Como funciona o XP
+          </p>
+          <ul className="grid gap-x-6 gap-y-0.5 sm:grid-cols-2">
+            <li><span className="font-semibold text-success">+{XP.studyDay} XP</span> por dia estudado (≥{XP.validMinutes} min ou meta batida)</li>
+            <li><span className="font-semibold text-success">+{XP.dailyGoal} XP</span> bônus por bater a meta do dia</li>
+            <li><span className="font-semibold text-success">+{XP.review} XP</span> por cada revisão feita</li>
+            <li><span className="font-semibold text-danger">−{XP.firstMiss} XP</span> na 1ª falta seguida</li>
+            <li><span className="font-semibold text-danger">−{XP.nextMisses} XP</span> em cada falta seguinte (até a 4ª)</li>
+          </ul>
+        </div>
       </details>
     </Card>
   );
