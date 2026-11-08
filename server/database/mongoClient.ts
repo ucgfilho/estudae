@@ -9,6 +9,14 @@ export interface MongoConfig {
   dbName?: string;
 }
 
+export function sanitizeMongoErrorMessage(message: string): string {
+  return message.replace(
+    /(mongodb(?:\+srv)?:\/\/)([^@/]+@)/gi,
+    '$1[REDACTED]@',
+  );
+}
+
+
 /**
  * Retorna uma conexão reutilizável com o MongoDB, otimizada para Serverless (Vercel) e instâncias Node.js.
  * Segue as recomendações da skill mongodb-connection:
@@ -24,6 +32,7 @@ export async function getMongoDb(config: MongoConfig): Promise<Db> {
 
   if (!clientPromise) {
     const client = new MongoClient(config.uri, {
+      appName: 'bnb-estudos-rls',
       maxPoolSize: 10,
       minPoolSize: 0,
       maxIdleTimeMS: 30000,
@@ -40,6 +49,9 @@ export async function getMongoDb(config: MongoConfig): Promise<Db> {
         clientPromise = null;
         cachedClient = null;
         cachedDb = null;
+        if (err instanceof Error) {
+          err.message = sanitizeMongoErrorMessage(err.message);
+        }
         throw err;
       });
   }

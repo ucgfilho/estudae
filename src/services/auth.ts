@@ -120,7 +120,18 @@ export function setAuthSession(session: AuthSessionDto | null): void {
         window.localStorage.removeItem(ACTIVE_CONTEST_SCOPE_KEY);
         window.localStorage.removeItem('bnb_unsynced_changes_v1');
         if (previousEmail) {
-          window.localStorage.removeItem(`bnb_workspace_cache_v1:${previousEmail}`);
+          const cachePrefix = `bnb_workspace_cache_v1:${previousEmail}`;
+          window.localStorage.removeItem(cachePrefix);
+          const keysToRemove: string[] = [];
+          for (let i = 0; i < window.localStorage.length; i++) {
+            const k = window.localStorage.key(i);
+            if (k && (k === cachePrefix || k.startsWith(`${cachePrefix}::`))) {
+              keysToRemove.push(k);
+            }
+          }
+          for (const k of keysToRemove) {
+            window.localStorage.removeItem(k);
+          }
         }
       }
     } catch {
@@ -227,12 +238,20 @@ export async function updateUserProfile(input: UpdateProfileInput): Promise<Auth
 
 export async function deleteUserAccount(): Promise<void> {
   const token = getAuthToken();
+  const previousEmail = cachedSession?.user?.email?.toLowerCase();
   if (token && token !== TEST_BYPASS_TOKEN) {
     const res = await fetch('/api/auth/me', {
       method: 'DELETE',
       headers: buildBearerHeaders(),
     });
     await parseApiJson<{ deleted: boolean }>(res);
+  }
+  if (previousEmail && typeof window !== 'undefined' && window.localStorage) {
+    try {
+      window.localStorage.removeItem(`estudae_user_contests_v1:${previousEmail}`);
+    } catch {
+      // Ignore storage errors
+    }
   }
   setAuthSession(null);
 }

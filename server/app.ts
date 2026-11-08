@@ -154,11 +154,18 @@ export async function handleApiRequest(
       return true;
     }
 
-    // Suporte a múltiplos concursos por usuário via cabeçalho X-Contest-Id
+    // Suporte a múltiplos concursos por usuário via cabeçalho X-Contest-Id (validado contra bypass de RLS)
     const rawContestHeader = req.headers['x-contest-id'];
     const contestIdHeader = (Array.isArray(rawContestHeader) ? rawContestHeader[0] : rawContestHeader)?.trim();
+    if (
+      contestIdHeader &&
+      contestIdHeader !== 'default' &&
+      !/^[a-zA-Z0-9_-]{1,64}$/.test(contestIdHeader)
+    ) {
+      throw new DtoValidationError('Identificador de concurso (X-Contest-Id) inválido.');
+    }
     const studyUser =
-      contestIdHeader && contestIdHeader !== 'default' && /^[a-zA-Z0-9_-]{1,64}$/.test(contestIdHeader)
+      contestIdHeader && contestIdHeader !== 'default'
         ? { ...user, id: `${user.id}::contest::${contestIdHeader}` }
         : user;
 

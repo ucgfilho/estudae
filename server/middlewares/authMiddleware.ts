@@ -21,7 +21,7 @@ export class BearerAuthGuard {
   constructor(
     tokenService: ITokenService,
     userRepository: IUserRepository,
-    allowStatelessRecovery = Boolean(process.env.VERCEL),
+    allowStatelessRecovery = false,
   ) {
     this.tokenService = tokenService;
     this.userRepository = userRepository;
@@ -51,7 +51,8 @@ export class BearerAuthGuard {
         id: payload.sub,
         name: payload.name || payload.email.split('@')[0] || 'Titular da Conta',
         email: payload.email,
-        passwordHash: 'stateless-jwt-recovered',
+        passwordHash:
+          '$scrypt$16384$8$1$00000000000000000000000000000000$00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000',
         createdAt: now,
         updatedAt: now,
       });
@@ -59,6 +60,13 @@ export class BearerAuthGuard {
 
     if (!user) {
       throw new UnauthorizedError('Usuário associado ao token não existe mais.');
+    }
+
+    if (
+      user.id !== payload.sub ||
+      user.email.trim().toLowerCase() !== payload.email.trim().toLowerCase()
+    ) {
+      throw new UnauthorizedError('Violação RLS: identidade do token diverge do registro do titular.');
     }
 
     return {

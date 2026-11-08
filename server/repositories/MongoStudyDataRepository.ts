@@ -21,35 +21,65 @@ import {
 } from '../dtos/study-data.dto';
 import type { ISensitiveDataCipher } from '../interfaces/ISensitiveDataCipher';
 import type { IStudyDataRepository } from '../interfaces/IStudyDataRepository';
+import {
+  applyWorkspacesCollectionValidator,
+  assertWorkspaceDocumentOwnership,
+  buildWorkspaceCascadeDeleteFilter,
+  buildWorkspaceRlsFilter,
+  parseTenantScope,
+} from '../security/MongoRlsGuard';
 
-interface UserWorkspaceDocument {
-  _id: string; // userId
-  disciplines: Discipline[];
-  topics: Topic[];
-  sessions: StudySession[];
-  timer: TimerState[];
-  questionLogs: QuestionLog[];
-  errorNotes: ErrorNote[];
-  reviews: ReviewTask[];
-  weeklyPlans: WeeklyPlan[];
-  settings: Settings[];
-  mockExams: MockExam[];
+export interface UserWorkspaceDocument {
+  _id: string; // scopedId (ownerId ou `${ownerId}::contest::${scopeId}`)
+  ownerId: string; // RLS tenant owner ID imutável
+  scopeId: string; // 'default' ou ID do concurso
+  encryptedPayload: string; // AES-256-GCM AAD vinculado ao ownerId contendo o StudyWorkspaceDto
+  rlsVersion: number;
   updatedAt: string;
 }
 
+interface LegacyWorkspaceDocument extends Partial<UserWorkspaceDocument> {
+  _id: string;
+  disciplines?: Discipline[];
+  topics?: Topic[];
+  sessions?: StudySession[];
+  timer?: TimerState[];
+  questionLogs?: QuestionLog[];
+  errorNotes?: ErrorNote[];
+  reviews?: ReviewTask[];
+  weeklyPlans?: WeeklyPlan[];
+  settings?: Settings[];
+  mockExams?: MockExam[];
+}
+
+function buildDefaultWorkspaceDto(): StudyWorkspaceDto {
+  return {
+    disciplines: [...DEFAULT_DISCIPLINES],
+    topics: [],
+    sessions: [],
+    timer: [],
+    questionLogs: [],
+    errorNotes: [],
+    reviews: [],
+    weeklyPlans: [],
+    settings: [{ ...DEFAULT_SETTINGS, distribution: { ...DEFAULT_SETTINGS.distribution } }],
+    mockExams: [],
+  };
+}
+
 /**
- * Repositório de Dados de Estudo baseado em MongoDB (Document Model).
- * Segue rigorosamente a skill mongodb-schema-design:
- * - "Data that is accessed together should be stored together": O workspace completo de um usuário
- *   é armazenado como um documento de agregação vinculado ao `_id: userId`.
- * - Leituras e escritas são atômicas em uma única viagem de rede (RTT).
- * - Criptografia em repouso com AES-256-GCM para chaves de API / dados sensíveis (LGPD).
+ * Repositório de Dados de Estudo baseado em MongoDB com Row-Level Security (RLS) e Zero Dados Explícitos:
+ * - Cada documento exige `_id`, `ownerId` (chave de isolamento de titular) e `scopeId`.
+ * - Nenhuma tabela de estudo (`disciplines`, `topics`, `sessions`, `settings`, etc.) fica explícita no banco:
+ *   todo o documento de workspace é cifrado em repouso (`encryptedPayload`) com AES-256-GCM e AAD vinculado ao `ownerId`.
+ * - As chaves de API (`geminiApiKey`) possuem dupla camada de criptografia autenticada vinculada ao `ownerId`.
+ * - Exclusão em cascata via `ownerId` remove todos os escopos de concursos do titular (LGPD Art. 18, VI).
  */
 export class MongoStudyDataRepository implements IStudyDataRepository {
   private readonly db: Db;
-  private readonly cipher?: ISensitiveDataCipher;
+  private readonly cipher: ISensitiveDataCipher;
 
-  constructor(db: Db, cipher?: ISensitiveDataCipher) {
+  constructor(db: Db, cipher: ISensitiveDataCipher) {
     this.db = db;
     this.cipher = cipher;
   }
@@ -59,102 +89,130 @@ export class MongoStudyDataRepository implements IStudyDataRepository {
   }
 
   public async initIndexes(): Promise<void> {
-    // _id já é indexado por padrão pelo MongoDB
+    await this.migrateLegacyDocuments();
+
+    await this.collection().createIndex(
+      { ownerId: 1, _id: 1 },
+      { name: 'idx_workspaces_rls_owner_scope' },
+    );
+
+    await applyWorkspacesCollectionValidator(this.db);
   }
 
-  public async ensureUserSeed(userId: string): Promise<void> {
-    const existing = await this.collection().findOne({ _id: userId }, { projection: { _id: 1, disciplines: 1, settings: 1 } });
-    if (!existing) {
-      const initial: UserWorkspaceDocument = {
-        _id: userId,
-        disciplines: [...DEFAULT_DISCIPLINES],
-        topics: [],
-        sessions: [],
-        timer: [],
-        questionLogs: [],
-        errorNotes: [],
-        reviews: [],
-        weeklyPlans: [],
-        settings: [{ ...DEFAULT_SETTINGS, distribution: { ...DEFAULT_SETTINGS.distribution } }],
-        mockExams: [],
-        updatedAt: new Date().toISOString(),
-      };
-      await this.collection().insertOne(initial);
-      return;
-    }
+  /**
+   * Migra de forma idempotente documentos legados que possuam arrays de estudo explícitos
+   * para o envelope criptografado `encryptedPayload` vinculado ao `ownerId` via RLS,
+   * removendo (`$unset`) todos os campos em texto explícito do MongoDB.
+   */
+  public async migrateLegacyDocuments(): Promise<void> {
+    const existingCols = await this.db
+      .listCollections({ name: 'user_workspaces' }, { nameOnly: true })
+      .toArray();
+    if (existingCols.length === 0) return;
 
-    // Se já existe mas falta disciplinas ou settings, inicializa
-    const updates: Partial<UserWorkspaceDocument> = {};
-    if (!existing.disciplines || existing.disciplines.length === 0) {
-      updates.disciplines = [...DEFAULT_DISCIPLINES];
-    }
-    if (!existing.settings || existing.settings.length === 0) {
-      updates.settings = [{ ...DEFAULT_SETTINGS, distribution: { ...DEFAULT_SETTINGS.distribution } }];
-    }
+    const rawCol = this.db.collection<LegacyWorkspaceDocument>('user_workspaces');
+    const docs = await rawCol.find({}).toArray();
+    const now = new Date().toISOString();
 
-    if (Object.keys(updates).length > 0) {
-      updates.updatedAt = new Date().toISOString();
-      await this.collection().updateOne({ _id: userId }, { $set: updates });
-    }
-  }
+    for (const raw of docs) {
+      const hasExplicitArrays =
+        raw.disciplines !== undefined ||
+        raw.topics !== undefined ||
+        raw.sessions !== undefined ||
+        raw.timer !== undefined ||
+        raw.questionLogs !== undefined ||
+        raw.errorNotes !== undefined ||
+        raw.reviews !== undefined ||
+        raw.weeklyPlans !== undefined ||
+        raw.settings !== undefined ||
+        raw.mockExams !== undefined;
 
-  public async getWorkspace(userId: string): Promise<StudyWorkspaceDto> {
-    await this.ensureUserSeed(userId);
-    const doc = await this.collection().findOne({ _id: userId });
-    if (!doc) {
-      return {
-        disciplines: [...DEFAULT_DISCIPLINES],
-        topics: [],
-        sessions: [],
-        timer: [],
-        questionLogs: [],
-        errorNotes: [],
-        reviews: [],
-        weeklyPlans: [],
-        settings: [{ ...DEFAULT_SETTINGS }],
-        mockExams: [],
-      };
-    }
+      const needsMigration =
+        hasExplicitArrays ||
+        !raw.ownerId ||
+        !raw.scopeId ||
+        !raw.encryptedPayload ||
+        !raw.rlsVersion;
 
-    // Decripta chaves se necessário e garante id normalizado
-    const settings: Settings[] = (doc.settings || []).map((s) => {
-      let key = s.geminiApiKey ?? '';
-      if (key && this.cipher) {
-        try {
-          key = this.cipher.decrypt(key);
-        } catch {
-          // mantém caso não esteja criptografado
-        }
+      if (!needsMigration) continue;
+
+      const ctx = parseTenantScope(raw._id);
+
+      let workspace: StudyWorkspaceDto;
+      if (raw.encryptedPayload) {
+        workspace = this.decryptAndDeserializeWorkspace(ctx.ownerId, raw.encryptedPayload);
+      } else {
+        const decryptedSettings: Settings[] = (raw.settings || []).map((s) => {
+          let key = s.geminiApiKey ?? '';
+          if (key) {
+            try {
+              key = this.cipher.decryptForTenant(ctx.ownerId, key);
+            } catch {
+              key = this.cipher.decrypt(key);
+            }
+          }
+          return { ...s, id: SETTINGS_ID as 'settings', geminiApiKey: key };
+        });
+
+        workspace = {
+          disciplines:
+            raw.disciplines && raw.disciplines.length > 0
+              ? raw.disciplines
+              : [...DEFAULT_DISCIPLINES],
+          topics: raw.topics || [],
+          sessions: raw.sessions || [],
+          timer: raw.timer || [],
+          questionLogs: raw.questionLogs || [],
+          errorNotes: raw.errorNotes || [],
+          reviews: raw.reviews || [],
+          weeklyPlans: raw.weeklyPlans || [],
+          settings:
+            decryptedSettings.length > 0
+              ? decryptedSettings
+              : [{ ...DEFAULT_SETTINGS, distribution: { ...DEFAULT_SETTINGS.distribution } }],
+          mockExams: raw.mockExams || [],
+        };
       }
-      return { ...s, id: SETTINGS_ID as 'settings', geminiApiKey: key };
-    });
 
-    return {
-      disciplines: doc.disciplines || [],
-      topics: doc.topics || [],
-      sessions: doc.sessions || [],
-      timer: doc.timer || [],
-      questionLogs: doc.questionLogs || [],
-      errorNotes: doc.errorNotes || [],
-      reviews: doc.reviews || [],
-      weeklyPlans: doc.weeklyPlans || [],
-      settings,
-      mockExams: doc.mockExams || [],
-    };
+      const encryptedPayload = this.serializeAndEncryptWorkspace(ctx.ownerId, workspace);
+
+      await rawCol.updateOne(
+        { _id: ctx.scopedId },
+        {
+          $set: {
+            ownerId: ctx.ownerId,
+            scopeId: ctx.scopeId,
+            encryptedPayload,
+            rlsVersion: 1,
+            updatedAt: raw.updatedAt || now,
+          },
+          $unset: {
+            disciplines: '',
+            topics: '',
+            sessions: '',
+            timer: '',
+            questionLogs: '',
+            errorNotes: '',
+            reviews: '',
+            weeklyPlans: '',
+            settings: '',
+            mockExams: '',
+          },
+        },
+      );
+    }
   }
 
-  public async replaceWorkspace(
-    userId: string,
-    workspace: StudyWorkspaceDto,
-  ): Promise<StudyWorkspaceDto> {
+  private serializeAndEncryptWorkspace(ownerId: string, workspace: StudyWorkspaceDto): string {
     const encryptedSettings: Settings[] = (workspace.settings || []).map((s) => ({
       ...s,
       id: SETTINGS_ID as 'settings',
-      geminiApiKey: this.cipher && s.geminiApiKey ? this.cipher.encrypt(s.geminiApiKey) : (s.geminiApiKey ?? ''),
+      geminiApiKey: s.geminiApiKey
+        ? this.cipher.encryptForTenant(ownerId, s.geminiApiKey)
+        : '',
     }));
 
-    const doc: UserWorkspaceDocument = {
-      _id: userId,
+    const normalized: StudyWorkspaceDto = {
       disciplines: workspace.disciplines || [],
       topics: workspace.topics || [],
       sessions: workspace.sessions || [],
@@ -165,45 +223,160 @@ export class MongoStudyDataRepository implements IStudyDataRepository {
       weeklyPlans: workspace.weeklyPlans || [],
       settings: encryptedSettings,
       mockExams: workspace.mockExams || [],
+    };
+
+    return this.cipher.encryptForTenant(ownerId, JSON.stringify(normalized));
+  }
+
+  private decryptAndDeserializeWorkspace(
+    ownerId: string,
+    encryptedPayload: string,
+  ): StudyWorkspaceDto {
+    const decryptedJson = this.cipher.decryptForTenant(ownerId, encryptedPayload);
+    const parsed = JSON.parse(decryptedJson) as Partial<StudyWorkspaceDto>;
+
+    const settings: Settings[] = (parsed.settings || []).map((s) => {
+      let key = s.geminiApiKey ?? '';
+      if (key) {
+        try {
+          key = this.cipher.decryptForTenant(ownerId, key);
+        } catch {
+          key = this.cipher.decrypt(key);
+        }
+      }
+      return { ...s, id: SETTINGS_ID as 'settings', geminiApiKey: key };
+    });
+
+    return {
+      disciplines: parsed.disciplines || [],
+      topics: parsed.topics || [],
+      sessions: parsed.sessions || [],
+      timer: parsed.timer || [],
+      questionLogs: parsed.questionLogs || [],
+      errorNotes: parsed.errorNotes || [],
+      reviews: parsed.reviews || [],
+      weeklyPlans: parsed.weeklyPlans || [],
+      settings,
+      mockExams: parsed.mockExams || [],
+    };
+  }
+
+  public async ensureUserSeed(userId: string): Promise<void> {
+    const ctx = parseTenantScope(userId);
+    const rlsFilter = buildWorkspaceRlsFilter(userId);
+    const existing = await this.collection().findOne(rlsFilter);
+
+    if (!existing) {
+      const initialWorkspace = buildDefaultWorkspaceDto();
+      const doc: UserWorkspaceDocument = {
+        _id: ctx.scopedId,
+        ownerId: ctx.ownerId,
+        scopeId: ctx.scopeId,
+        encryptedPayload: this.serializeAndEncryptWorkspace(ctx.ownerId, initialWorkspace),
+        rlsVersion: 1,
+        updatedAt: new Date().toISOString(),
+      };
+      await this.collection().updateOne(rlsFilter, { $set: doc }, { upsert: true });
+      return;
+    }
+
+    assertWorkspaceDocumentOwnership(existing, userId);
+    const workspace = this.decryptAndDeserializeWorkspace(ctx.ownerId, existing.encryptedPayload);
+
+    let needsUpdate = false;
+    if (!workspace.disciplines || workspace.disciplines.length === 0) {
+      workspace.disciplines = [...DEFAULT_DISCIPLINES];
+      needsUpdate = true;
+    }
+    if (!workspace.settings || workspace.settings.length === 0) {
+      workspace.settings = [
+        { ...DEFAULT_SETTINGS, distribution: { ...DEFAULT_SETTINGS.distribution } },
+      ];
+      needsUpdate = true;
+    }
+
+    if (needsUpdate) {
+      await this.collection().updateOne(rlsFilter, {
+        $set: {
+          encryptedPayload: this.serializeAndEncryptWorkspace(ctx.ownerId, workspace),
+          updatedAt: new Date().toISOString(),
+        },
+      });
+    }
+  }
+
+  public async getWorkspace(userId: string): Promise<StudyWorkspaceDto> {
+    await this.ensureUserSeed(userId);
+    const rlsFilter = buildWorkspaceRlsFilter(userId);
+    const doc = await this.collection().findOne(rlsFilter);
+    if (!doc) {
+      return buildDefaultWorkspaceDto();
+    }
+
+    const ctx = assertWorkspaceDocumentOwnership(doc, userId);
+    return this.decryptAndDeserializeWorkspace(ctx.ownerId, doc.encryptedPayload);
+  }
+
+  public async replaceWorkspace(
+    userId: string,
+    workspace: StudyWorkspaceDto,
+  ): Promise<StudyWorkspaceDto> {
+    const ctx = parseTenantScope(userId);
+    const rlsFilter = buildWorkspaceRlsFilter(userId);
+
+    const normalized: StudyWorkspaceDto = {
+      disciplines:
+        workspace.disciplines && workspace.disciplines.length > 0
+          ? workspace.disciplines
+          : [...DEFAULT_DISCIPLINES],
+      topics: workspace.topics || [],
+      sessions: workspace.sessions || [],
+      timer: workspace.timer || [],
+      questionLogs: workspace.questionLogs || [],
+      errorNotes: workspace.errorNotes || [],
+      reviews: workspace.reviews || [],
+      weeklyPlans: workspace.weeklyPlans || [],
+      settings:
+        workspace.settings && workspace.settings.length > 0
+          ? workspace.settings
+          : [{ ...DEFAULT_SETTINGS, distribution: { ...DEFAULT_SETTINGS.distribution } }],
+      mockExams: workspace.mockExams || [],
+    };
+
+    const doc: UserWorkspaceDocument = {
+      _id: ctx.scopedId,
+      ownerId: ctx.ownerId,
+      scopeId: ctx.scopeId,
+      encryptedPayload: this.serializeAndEncryptWorkspace(ctx.ownerId, normalized),
+      rlsVersion: 1,
       updatedAt: new Date().toISOString(),
     };
 
-    await this.collection().updateOne(
-      { _id: userId },
-      { $set: doc },
-      { upsert: true }
-    );
-
+    await this.collection().updateOne(rlsFilter, { $set: doc }, { upsert: true });
     return this.getWorkspace(userId);
   }
 
   public async resetWorkspace(userId: string): Promise<StudyWorkspaceDto> {
-    const fresh: UserWorkspaceDocument = {
-      _id: userId,
-      disciplines: [...DEFAULT_DISCIPLINES],
-      topics: [],
-      sessions: [],
-      timer: [],
-      questionLogs: [],
-      errorNotes: [],
-      reviews: [],
-      weeklyPlans: [],
-      settings: [{ ...DEFAULT_SETTINGS, distribution: { ...DEFAULT_SETTINGS.distribution } }],
-      mockExams: [],
+    const ctx = parseTenantScope(userId);
+    const rlsFilter = buildWorkspaceRlsFilter(userId);
+    const fresh = buildDefaultWorkspaceDto();
+
+    const doc: UserWorkspaceDocument = {
+      _id: ctx.scopedId,
+      ownerId: ctx.ownerId,
+      scopeId: ctx.scopeId,
+      encryptedPayload: this.serializeAndEncryptWorkspace(ctx.ownerId, fresh),
+      rlsVersion: 1,
       updatedAt: new Date().toISOString(),
     };
 
-    await this.collection().updateOne(
-      { _id: userId },
-      { $set: fresh },
-      { upsert: true }
-    );
-
+    await this.collection().updateOne(rlsFilter, { $set: doc }, { upsert: true });
     return this.getWorkspace(userId);
   }
 
   public async deleteUserWorkspace(userId: string): Promise<void> {
-    await this.collection().deleteOne({ _id: userId });
+    const cascadeFilter = buildWorkspaceCascadeDeleteFilter(userId);
+    await this.collection().deleteMany(cascadeFilter);
   }
 
   public async applyBatch(
@@ -218,7 +391,7 @@ export class MongoStudyDataRepository implements IStudyDataRepository {
       } else if (op.action === 'delete') {
         const idSet = new Set(op.ids);
         (workspace[op.table] as unknown[]) = (workspace[op.table] as { id: string }[]).filter(
-          (item) => !idSet.has(item.id)
+          (item) => !idSet.has(item.id),
         );
       } else if (op.action === 'upsert') {
         const validated = validateTableRecords(op.table, op.records) as { id: string }[];

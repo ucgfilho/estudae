@@ -69,10 +69,10 @@ export function createAppContainer(overrides: Partial<ServerEnv> = {}): AppConta
   });
 
   if (env.mongoUri) {
-    // Modo MongoDB Cloud (Atlas)
+    // Modo MongoDB Cloud (Atlas) com RLS e Criptografia Autenticada em Repouso
     const initMongo = async () => {
       const db = await getMongoDb({ uri: env.mongoUri });
-      const mongoUserRepo = new MongoUserRepository(db);
+      const mongoUserRepo = new MongoUserRepository(db, sensitiveDataCipher);
       const mongoStudyRepo = new MongoStudyDataRepository(db, sensitiveDataCipher);
       await Promise.all([mongoUserRepo.initIndexes(), mongoStudyRepo.initIndexes()]);
       return { mongoUserRepo, mongoStudyRepo };
@@ -165,7 +165,11 @@ export function createAppContainer(overrides: Partial<ServerEnv> = {}): AppConta
   );
   const studyDataService = new StudyDataService(studyDataRepository);
 
-  const authGuard = new BearerAuthGuard(tokenService, userRepository);
+  const authGuard = new BearerAuthGuard(
+    tokenService,
+    userRepository,
+    !env.mongoUri && Boolean(process.env.VERCEL),
+  );
   const authController = new AuthController(authService);
   const studyDataController = new StudyDataController(studyDataService);
 

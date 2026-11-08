@@ -30610,6 +30610,9 @@ var require_lib = /* @__PURE__ */ __commonJSMin(((exports) => {
 var import_lib = require_lib();
 var cachedDb = null;
 var clientPromise = null;
+function sanitizeMongoErrorMessage(message) {
+	return message.replace(/(mongodb(?:\+srv)?:\/\/)([^@/]+@)/gi, "$1[REDACTED]@");
+}
 /**
 * Retorna uma conexão reutilizável com o MongoDB, otimizada para Serverless (Vercel) e instâncias Node.js.
 * Segue as recomendações da skill mongodb-connection:
@@ -30621,6 +30624,7 @@ var clientPromise = null;
 async function getMongoDb(config) {
 	if (cachedDb) return cachedDb;
 	if (!clientPromise) clientPromise = new import_lib.MongoClient(config.uri, {
+		appName: "bnb-estudos-rls",
 		maxPoolSize: 10,
 		minPoolSize: 0,
 		maxIdleTimeMS: 3e4,
@@ -30631,6 +30635,7 @@ async function getMongoDb(config) {
 	}).catch((err) => {
 		clientPromise = null;
 		cachedDb = null;
+		if (err instanceof Error) err.message = sanitizeMongoErrorMessage(err.message);
 		throw err;
 	});
 	cachedDb = (await clientPromise).db(config.dbName || "bnb_estudos");
@@ -30791,7 +30796,7 @@ var propertyKeyTypes = /* @__PURE__*/ new Set([
 	"number",
 	"symbol"
 ]);
-function escapeRegex(str) {
+function escapeRegex$1(str) {
 	return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 function clone(inst, def, params) {
@@ -31909,7 +31914,7 @@ var $ZodCheckUpperCase = /*@__PURE__*/ $constructor("$ZodCheckUpperCase", (inst,
 });
 var $ZodCheckIncludes = /*@__PURE__*/ $constructor("$ZodCheckIncludes", (inst, def) => {
 	$ZodCheck.init(inst, def);
-	const escapedRegex = escapeRegex(def.includes);
+	const escapedRegex = escapeRegex$1(def.includes);
 	def.pattern = new RegExp(typeof def.position === "number" ? `^.{${def.position},}${escapedRegex}` : escapedRegex);
 	inst._zod.check = (payload) => {
 		if (payload.value.includes(def.includes, def.position)) return;
@@ -31926,7 +31931,7 @@ var $ZodCheckIncludes = /*@__PURE__*/ $constructor("$ZodCheckIncludes", (inst, d
 });
 var $ZodCheckStartsWith = /*@__PURE__*/ $constructor("$ZodCheckStartsWith", (inst, def) => {
 	$ZodCheck.init(inst, def);
-	const pattern = new RegExp(`^${escapeRegex(def.prefix)}.*`);
+	const pattern = new RegExp(`^${escapeRegex$1(def.prefix)}.*`);
 	def.pattern ?? (def.pattern = pattern);
 	inst._zod.check = (payload) => {
 		if (payload.value.startsWith(def.prefix)) return;
@@ -31943,7 +31948,7 @@ var $ZodCheckStartsWith = /*@__PURE__*/ $constructor("$ZodCheckStartsWith", (ins
 });
 var $ZodCheckEndsWith = /*@__PURE__*/ $constructor("$ZodCheckEndsWith", (inst, def) => {
 	$ZodCheck.init(inst, def);
-	const pattern = new RegExp(`.*${escapeRegex(def.suffix)}$`);
+	const pattern = new RegExp(`.*${escapeRegex$1(def.suffix)}$`);
 	def.pattern ?? (def.pattern = pattern);
 	inst._zod.check = (payload) => {
 		if (payload.value.endsWith(def.suffix)) return;
@@ -33205,7 +33210,7 @@ var $ZodEnum = /*@__PURE__*/ $constructor("$ZodEnum", (inst, def) => {
 	inst._zod.values = valuesSet;
 	defineLazyInternal(inst, "pattern", (zod) => {
 		const patternValues = getEnumValues(zod.def.entries).filter((k) => propertyKeyTypes.has(typeof k));
-		return new RegExp(patternValues.length ? `^(${patternValues.map((o) => escapeRegex(o.toString())).join("|")})$` : "^[^\\s\\S]$");
+		return new RegExp(patternValues.length ? `^(${patternValues.map((o) => escapeRegex$1(o.toString())).join("|")})$` : "^[^\\s\\S]$");
 	});
 	inst._zod.parse = (payload, _ctx) => {
 		const input = payload.value;
@@ -33225,7 +33230,7 @@ var $ZodLiteral = /*@__PURE__*/ $constructor("$ZodLiteral", (inst, def) => {
 	inst._zod.values = values;
 	defineLazyInternal(inst, "pattern", (zod) => {
 		const vals = zod.def.values;
-		return new RegExp(vals.length ? `^(${vals.map((o) => typeof o === "string" ? escapeRegex(o) : o ? escapeRegex(o.toString()) : String(o)).join("|")})$` : "^[^\\s\\S]$");
+		return new RegExp(vals.length ? `^(${vals.map((o) => typeof o === "string" ? escapeRegex$1(o) : o ? escapeRegex$1(o.toString()) : String(o)).join("|")})$` : "^[^\\s\\S]$");
 	});
 	inst._zod.parse = (payload, _ctx) => {
 		const input = payload.value;
@@ -36289,6 +36294,11 @@ var UnauthorizedError = class extends AppError {
 		super(message, 401, "UNAUTHORIZED");
 	}
 };
+var ForbiddenError = class extends AppError {
+	constructor(message = "Acesso negado a este recurso.") {
+		super(message, 403, "FORBIDDEN");
+	}
+};
 var NotFoundError = class extends AppError {
 	constructor(message = "Recurso não encontrado.") {
 		super(message, 404, "NOT_FOUND");
@@ -36967,7 +36977,7 @@ var BearerAuthGuard = class {
 	tokenService;
 	userRepository;
 	allowStatelessRecovery;
-	constructor(tokenService, userRepository, allowStatelessRecovery = Boolean(process.env.VERCEL)) {
+	constructor(tokenService, userRepository, allowStatelessRecovery = false) {
 		this.tokenService = tokenService;
 		this.userRepository = userRepository;
 		this.allowStatelessRecovery = allowStatelessRecovery;
@@ -36986,12 +36996,13 @@ var BearerAuthGuard = class {
 				id: payload.sub,
 				name: payload.name || payload.email.split("@")[0] || "Titular da Conta",
 				email: payload.email,
-				passwordHash: "stateless-jwt-recovered",
+				passwordHash: "$scrypt$16384$8$1$00000000000000000000000000000000$00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
 				createdAt: now,
 				updatedAt: now
 			});
 		}
 		if (!user) throw new UnauthorizedError("Usuário associado ao token não existe mais.");
+		if (user.id !== payload.sub || user.email.trim().toLowerCase() !== payload.email.trim().toLowerCase()) throw new UnauthorizedError("Violação RLS: identidade do token diverge do registro do titular.");
 		return {
 			id: user.id,
 			email: user.email,
@@ -37282,14 +37293,286 @@ var DEFAULT_SETTINGS = {
 	aiProvider: "builtin"
 };
 //#endregion
-//#region server/repositories/MongoStudyDataRepository.ts
+//#region server/security/MongoRlsGuard.ts
+var OWNER_ID_REGEX = /^[a-zA-Z0-9_-]{1,128}$/;
+var CONTEST_SCOPE_REGEX = /^[a-zA-Z0-9_-]{1,64}$/;
+var EMAIL_HASH_REGEX = /^[a-f0-9]{64}$/;
+var CONTEST_SEPARATOR = "::contest::";
+function escapeRegex(literal) {
+	return literal.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
 /**
-* Repositório de Dados de Estudo baseado em MongoDB (Document Model).
-* Segue rigorosamente a skill mongodb-schema-design:
-* - "Data that is accessed together should be stored together": O workspace completo de um usuário
-*   é armazenado como um documento de agregação vinculado ao `_id: userId`.
-* - Leituras e escritas são atômicas em uma única viagem de rede (RTT).
-* - Criptografia em repouso com AES-256-GCM para chaves de API / dados sensíveis (LGPD).
+* Valida o identificador raiz do titular contra NoSQL Injection, operadores `$` e caracteres inválidos.
+*/
+function assertValidOwnerId(rawOwnerId) {
+	if (typeof rawOwnerId !== "string") throw new UnauthorizedError("Violação RLS: identificador do titular ausente ou inválido.");
+	const trimmed = rawOwnerId.trim();
+	if (!trimmed || trimmed.includes("\0") || trimmed.startsWith("$") || !OWNER_ID_REGEX.test(trimmed)) throw new ForbiddenError("Violação RLS: identificador do titular fora do padrão de segurança.");
+	return trimmed;
+}
+/**
+* Extrai e valida estritamente o contexto de isolamento de linha/documento (RLS) a partir do `userId` (com ou sem escopo de concurso).
+*/
+function parseTenantScope(rawUserId) {
+	if (typeof rawUserId !== "string") throw new UnauthorizedError("Violação RLS: contexto de autenticação ausente.");
+	const trimmed = rawUserId.trim();
+	if (!trimmed || trimmed.includes("\0") || trimmed.startsWith("$")) throw new ForbiddenError("Violação RLS: identificador de escopo inválido.");
+	if (!trimmed.includes(CONTEST_SEPARATOR)) {
+		const ownerId = assertValidOwnerId(trimmed);
+		return {
+			ownerId,
+			scopedId: ownerId,
+			scopeId: "default"
+		};
+	}
+	const parts = trimmed.split(CONTEST_SEPARATOR);
+	if (parts.length !== 2) throw new ForbiddenError("Violação RLS: delimitador de escopo de concurso malformado.");
+	const ownerId = assertValidOwnerId(parts[0]);
+	const rawScope = parts[1].trim();
+	if (!rawScope || rawScope.startsWith("$") || !CONTEST_SCOPE_REGEX.test(rawScope)) throw new ForbiddenError("Violação RLS: identificador de concurso inválido.");
+	if (rawScope === "default") return {
+		ownerId,
+		scopedId: ownerId,
+		scopeId: "default"
+	};
+	return {
+		ownerId,
+		scopedId: `${ownerId}${CONTEST_SEPARATOR}${rawScope}`,
+		scopeId: rawScope
+	};
+}
+/**
+* Valida um Blind Index (HMAC-SHA256) antes de executar consultas no MongoDB.
+*/
+function assertValidEmailHash(emailHash) {
+	if (typeof emailHash !== "string" || !EMAIL_HASH_REGEX.test(emailHash)) throw new ForbiddenError("Violação RLS: blind index de e-mail inválido.");
+	return emailHash;
+}
+/**
+* Filtro obrigatório de Row-Level Security (RLS) para leitura/escrita na coleção `users` por ID.
+*/
+function buildUserRlsFilterById(rawUserId) {
+	const ownerId = assertValidOwnerId(rawUserId);
+	return {
+		_id: ownerId,
+		ownerId
+	};
+}
+/**
+* Filtro obrigatório de Row-Level Security (RLS) para busca por Blind Index de e-mail na coleção `users`.
+*/
+function buildUserRlsFilterByEmailHash(emailHash) {
+	return { emailHash: assertValidEmailHash(emailHash) };
+}
+/**
+* Filtro obrigatório de Row-Level Security (RLS) para leitura/escrita na coleção `user_workspaces`.
+* Exige correspondência simultânea do `_id` (escopo) e do `ownerId` (titular raiz).
+*/
+function buildWorkspaceRlsFilter(rawUserId) {
+	const { ownerId, scopedId } = parseTenantScope(rawUserId);
+	return {
+		_id: scopedId,
+		ownerId
+	};
+}
+/**
+* Filtro RLS de exclusão em cascata (LGPD Art. 18, VI) para remover todos os workspaces
+* (principal e múltiplos concursos) pertencentes ao titular.
+*/
+function buildWorkspaceCascadeDeleteFilter(rawUserId) {
+	const { ownerId } = parseTenantScope(rawUserId);
+	return { $or: [
+		{ ownerId },
+		{ _id: ownerId },
+		{ _id: { $regex: `^${escapeRegex(ownerId)}${CONTEST_SEPARATOR}[a-zA-Z0-9_-]{1,64}$` } }
+	] };
+}
+/**
+* Verificação pós-leitura (Defense-in-Depth RLS) garantindo que o documento de usuário
+* retornado pelo MongoDB pertence estritamente ao titular esperado.
+*/
+function assertUserDocumentOwnership(doc, expectedOwnerId) {
+	const cleanExpected = assertValidOwnerId(expectedOwnerId);
+	if (!doc || doc._id !== cleanExpected || doc.ownerId !== cleanExpected) throw new ForbiddenError("Violação de política RLS no MongoDB: acesso negado a registro de outro titular.");
+}
+/**
+* Verificação pós-leitura (Defense-in-Depth RLS) garantindo que o workspace
+* retornado pelo MongoDB pertence estritamente ao titular e escopo autenticados.
+*/
+function assertWorkspaceDocumentOwnership(doc, rawUserId) {
+	const ctx = parseTenantScope(rawUserId);
+	if (!doc || doc._id !== ctx.scopedId || doc.ownerId !== ctx.ownerId || doc.scopeId !== void 0 && doc.scopeId !== ctx.scopeId) throw new ForbiddenError("Violação de política RLS no MongoDB: tentativa de acesso cruzado entre titulares ou escopos.");
+	return ctx;
+}
+/**
+* JSON Schema nativo do MongoDB para a coleção `users`:
+* - Exige `ownerId`, `emailHash`, `encryptedEmail`, `encryptedName`, `passwordHash`, `rlsVersion`.
+* - `additionalProperties: false` proíbe terminantemente qualquer campo explícito (`email`, `name`, `avatarUrl`, `password`).
+* - Exige prefixo criptográfico `$aes256gcm$rls$v1$` nos campos de dados pessoais e `$scrypt$` no hash de senha.
+*/
+var USERS_COLLECTION_JSON_SCHEMA = {
+	bsonType: "object",
+	required: [
+		"_id",
+		"ownerId",
+		"emailHash",
+		"encryptedEmail",
+		"encryptedName",
+		"passwordHash",
+		"rlsVersion",
+		"createdAt",
+		"updatedAt"
+	],
+	additionalProperties: false,
+	properties: {
+		_id: {
+			bsonType: "string",
+			minLength: 1,
+			maxLength: 128
+		},
+		ownerId: {
+			bsonType: "string",
+			minLength: 1,
+			maxLength: 128
+		},
+		emailHash: {
+			bsonType: "string",
+			pattern: "^[a-f0-9]{64}$"
+		},
+		encryptedEmail: {
+			bsonType: "string",
+			pattern: "^\\$aes256gcm\\$rls\\$v1\\$"
+		},
+		encryptedName: {
+			bsonType: "string",
+			pattern: "^\\$aes256gcm\\$rls\\$v1\\$"
+		},
+		encryptedAvatarUrl: { oneOf: [{ bsonType: "null" }, {
+			bsonType: "string",
+			pattern: "^\\$aes256gcm\\$rls\\$v1\\$"
+		}] },
+		passwordHash: {
+			bsonType: "string",
+			pattern: "^\\$scrypt\\$"
+		},
+		rlsVersion: {
+			bsonType: [
+				"int",
+				"long",
+				"double"
+			],
+			minimum: 1
+		},
+		createdAt: {
+			bsonType: "string",
+			minLength: 1
+		},
+		updatedAt: {
+			bsonType: "string",
+			minLength: 1
+		}
+	}
+};
+/**
+* JSON Schema nativo do MongoDB para a coleção `user_workspaces`:
+* - Exige `ownerId`, `scopeId`, `encryptedPayload`, `rlsVersion`, `updatedAt`.
+* - `additionalProperties: false` proíbe terminantemente qualquer array explícito (`disciplines`, `topics`, `sessions`,
+*   `timer`, `questionLogs`, `errorNotes`, `reviews`, `weeklyPlans`, `settings`, `mockExams`).
+* - Exige prefixo criptográfico `$aes256gcm$rls$v1$` em `encryptedPayload`.
+*/
+var WORKSPACES_COLLECTION_JSON_SCHEMA = {
+	bsonType: "object",
+	required: [
+		"_id",
+		"ownerId",
+		"scopeId",
+		"encryptedPayload",
+		"rlsVersion",
+		"updatedAt"
+	],
+	additionalProperties: false,
+	properties: {
+		_id: {
+			bsonType: "string",
+			minLength: 1,
+			maxLength: 256
+		},
+		ownerId: {
+			bsonType: "string",
+			minLength: 1,
+			maxLength: 128
+		},
+		scopeId: {
+			bsonType: "string",
+			minLength: 1,
+			maxLength: 64
+		},
+		encryptedPayload: {
+			bsonType: "string",
+			pattern: "^\\$aes256gcm\\$rls\\$v1\\$"
+		},
+		rlsVersion: {
+			bsonType: [
+				"int",
+				"long",
+				"double"
+			],
+			minimum: 1
+		},
+		updatedAt: {
+			bsonType: "string",
+			minLength: 1
+		}
+	}
+};
+async function ensureCollectionValidator(db, collectionName, jsonSchema) {
+	if ((await db.listCollections({ name: collectionName }, { nameOnly: true }).toArray()).length === 0) {
+		await db.createCollection(collectionName, {
+			validator: { $jsonSchema: jsonSchema },
+			validationLevel: "strict",
+			validationAction: "error"
+		});
+		return;
+	}
+	await db.command({
+		collMod: collectionName,
+		validator: { $jsonSchema: jsonSchema },
+		validationLevel: "strict",
+		validationAction: "error"
+	});
+}
+async function applyUsersCollectionValidator(db) {
+	await ensureCollectionValidator(db, "users", USERS_COLLECTION_JSON_SCHEMA);
+}
+async function applyWorkspacesCollectionValidator(db) {
+	await ensureCollectionValidator(db, "user_workspaces", WORKSPACES_COLLECTION_JSON_SCHEMA);
+}
+//#endregion
+//#region server/repositories/MongoStudyDataRepository.ts
+function buildDefaultWorkspaceDto() {
+	return {
+		disciplines: [...DEFAULT_DISCIPLINES],
+		topics: [],
+		sessions: [],
+		timer: [],
+		questionLogs: [],
+		errorNotes: [],
+		reviews: [],
+		weeklyPlans: [],
+		settings: [{
+			...DEFAULT_SETTINGS,
+			distribution: { ...DEFAULT_SETTINGS.distribution }
+		}],
+		mockExams: []
+	};
+}
+/**
+* Repositório de Dados de Estudo baseado em MongoDB com Row-Level Security (RLS) e Zero Dados Explícitos:
+* - Cada documento exige `_id`, `ownerId` (chave de isolamento de titular) e `scopeId`.
+* - Nenhuma tabela de estudo (`disciplines`, `topics`, `sessions`, `settings`, etc.) fica explícita no banco:
+*   todo o documento de workspace é cifrado em repouso (`encryptedPayload`) com AES-256-GCM e AAD vinculado ao `ownerId`.
+* - As chaves de API (`geminiApiKey`) possuem dupla camada de criptografia autenticada vinculada ao `ownerId`.
+* - Exclusão em cascata via `ownerId` remove todos os escopos de concursos do titular (LGPD Art. 18, VI).
 */
 var MongoStudyDataRepository = class {
 	db;
@@ -37301,92 +37584,90 @@ var MongoStudyDataRepository = class {
 	collection() {
 		return this.db.collection("user_workspaces");
 	}
-	async initIndexes() {}
-	async ensureUserSeed(userId) {
-		const existing = await this.collection().findOne({ _id: userId }, { projection: {
-			_id: 1,
-			disciplines: 1,
-			settings: 1
-		} });
-		if (!existing) {
-			const initial = {
-				_id: userId,
-				disciplines: [...DEFAULT_DISCIPLINES],
-				topics: [],
-				sessions: [],
-				timer: [],
-				questionLogs: [],
-				errorNotes: [],
-				reviews: [],
-				weeklyPlans: [],
-				settings: [{
-					...DEFAULT_SETTINGS,
-					distribution: { ...DEFAULT_SETTINGS.distribution }
-				}],
-				mockExams: [],
-				updatedAt: (/* @__PURE__ */ new Date()).toISOString()
-			};
-			await this.collection().insertOne(initial);
-			return;
-		}
-		const updates = {};
-		if (!existing.disciplines || existing.disciplines.length === 0) updates.disciplines = [...DEFAULT_DISCIPLINES];
-		if (!existing.settings || existing.settings.length === 0) updates.settings = [{
-			...DEFAULT_SETTINGS,
-			distribution: { ...DEFAULT_SETTINGS.distribution }
-		}];
-		if (Object.keys(updates).length > 0) {
-			updates.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
-			await this.collection().updateOne({ _id: userId }, { $set: updates });
+	async initIndexes() {
+		await this.migrateLegacyDocuments();
+		await this.collection().createIndex({
+			ownerId: 1,
+			_id: 1
+		}, { name: "idx_workspaces_rls_owner_scope" });
+		await applyWorkspacesCollectionValidator(this.db);
+	}
+	/**
+	* Migra de forma idempotente documentos legados que possuam arrays de estudo explícitos
+	* para o envelope criptografado `encryptedPayload` vinculado ao `ownerId` via RLS,
+	* removendo (`$unset`) todos os campos em texto explícito do MongoDB.
+	*/
+	async migrateLegacyDocuments() {
+		if ((await this.db.listCollections({ name: "user_workspaces" }, { nameOnly: true }).toArray()).length === 0) return;
+		const rawCol = this.db.collection("user_workspaces");
+		const docs = await rawCol.find({}).toArray();
+		const now = (/* @__PURE__ */ new Date()).toISOString();
+		for (const raw of docs) {
+			if (!(raw.disciplines !== void 0 || raw.topics !== void 0 || raw.sessions !== void 0 || raw.timer !== void 0 || raw.questionLogs !== void 0 || raw.errorNotes !== void 0 || raw.reviews !== void 0 || raw.weeklyPlans !== void 0 || raw.settings !== void 0 || raw.mockExams !== void 0 || !raw.ownerId || !raw.scopeId || !raw.encryptedPayload || !raw.rlsVersion)) continue;
+			const ctx = parseTenantScope(raw._id);
+			let workspace;
+			if (raw.encryptedPayload) workspace = this.decryptAndDeserializeWorkspace(ctx.ownerId, raw.encryptedPayload);
+			else {
+				const decryptedSettings = (raw.settings || []).map((s) => {
+					let key = s.geminiApiKey ?? "";
+					if (key) try {
+						key = this.cipher.decryptForTenant(ctx.ownerId, key);
+					} catch {
+						key = this.cipher.decrypt(key);
+					}
+					return {
+						...s,
+						id: SETTINGS_ID,
+						geminiApiKey: key
+					};
+				});
+				workspace = {
+					disciplines: raw.disciplines && raw.disciplines.length > 0 ? raw.disciplines : [...DEFAULT_DISCIPLINES],
+					topics: raw.topics || [],
+					sessions: raw.sessions || [],
+					timer: raw.timer || [],
+					questionLogs: raw.questionLogs || [],
+					errorNotes: raw.errorNotes || [],
+					reviews: raw.reviews || [],
+					weeklyPlans: raw.weeklyPlans || [],
+					settings: decryptedSettings.length > 0 ? decryptedSettings : [{
+						...DEFAULT_SETTINGS,
+						distribution: { ...DEFAULT_SETTINGS.distribution }
+					}],
+					mockExams: raw.mockExams || []
+				};
+			}
+			const encryptedPayload = this.serializeAndEncryptWorkspace(ctx.ownerId, workspace);
+			await rawCol.updateOne({ _id: ctx.scopedId }, {
+				$set: {
+					ownerId: ctx.ownerId,
+					scopeId: ctx.scopeId,
+					encryptedPayload,
+					rlsVersion: 1,
+					updatedAt: raw.updatedAt || now
+				},
+				$unset: {
+					disciplines: "",
+					topics: "",
+					sessions: "",
+					timer: "",
+					questionLogs: "",
+					errorNotes: "",
+					reviews: "",
+					weeklyPlans: "",
+					settings: "",
+					mockExams: ""
+				}
+			});
 		}
 	}
-	async getWorkspace(userId) {
-		await this.ensureUserSeed(userId);
-		const doc = await this.collection().findOne({ _id: userId });
-		if (!doc) return {
-			disciplines: [...DEFAULT_DISCIPLINES],
-			topics: [],
-			sessions: [],
-			timer: [],
-			questionLogs: [],
-			errorNotes: [],
-			reviews: [],
-			weeklyPlans: [],
-			settings: [{ ...DEFAULT_SETTINGS }],
-			mockExams: []
-		};
-		const settings = (doc.settings || []).map((s) => {
-			let key = s.geminiApiKey ?? "";
-			if (key && this.cipher) try {
-				key = this.cipher.decrypt(key);
-			} catch {}
-			return {
-				...s,
-				id: SETTINGS_ID,
-				geminiApiKey: key
-			};
-		});
-		return {
-			disciplines: doc.disciplines || [],
-			topics: doc.topics || [],
-			sessions: doc.sessions || [],
-			timer: doc.timer || [],
-			questionLogs: doc.questionLogs || [],
-			errorNotes: doc.errorNotes || [],
-			reviews: doc.reviews || [],
-			weeklyPlans: doc.weeklyPlans || [],
-			settings,
-			mockExams: doc.mockExams || []
-		};
-	}
-	async replaceWorkspace(userId, workspace) {
+	serializeAndEncryptWorkspace(ownerId, workspace) {
 		const encryptedSettings = (workspace.settings || []).map((s) => ({
 			...s,
 			id: SETTINGS_ID,
-			geminiApiKey: this.cipher && s.geminiApiKey ? this.cipher.encrypt(s.geminiApiKey) : s.geminiApiKey ?? ""
+			geminiApiKey: s.geminiApiKey ? this.cipher.encryptForTenant(ownerId, s.geminiApiKey) : ""
 		}));
-		const doc = {
-			_id: userId,
+		const normalized = {
 			disciplines: workspace.disciplines || [],
 			topics: workspace.topics || [],
 			sessions: workspace.sessions || [],
@@ -37396,35 +37677,130 @@ var MongoStudyDataRepository = class {
 			reviews: workspace.reviews || [],
 			weeklyPlans: workspace.weeklyPlans || [],
 			settings: encryptedSettings,
-			mockExams: workspace.mockExams || [],
-			updatedAt: (/* @__PURE__ */ new Date()).toISOString()
+			mockExams: workspace.mockExams || []
 		};
-		await this.collection().updateOne({ _id: userId }, { $set: doc }, { upsert: true });
-		return this.getWorkspace(userId);
+		return this.cipher.encryptForTenant(ownerId, JSON.stringify(normalized));
 	}
-	async resetWorkspace(userId) {
-		const fresh = {
-			_id: userId,
-			disciplines: [...DEFAULT_DISCIPLINES],
-			topics: [],
-			sessions: [],
-			timer: [],
-			questionLogs: [],
-			errorNotes: [],
-			reviews: [],
-			weeklyPlans: [],
-			settings: [{
+	decryptAndDeserializeWorkspace(ownerId, encryptedPayload) {
+		const decryptedJson = this.cipher.decryptForTenant(ownerId, encryptedPayload);
+		const parsed = JSON.parse(decryptedJson);
+		const settings = (parsed.settings || []).map((s) => {
+			let key = s.geminiApiKey ?? "";
+			if (key) try {
+				key = this.cipher.decryptForTenant(ownerId, key);
+			} catch {
+				key = this.cipher.decrypt(key);
+			}
+			return {
+				...s,
+				id: SETTINGS_ID,
+				geminiApiKey: key
+			};
+		});
+		return {
+			disciplines: parsed.disciplines || [],
+			topics: parsed.topics || [],
+			sessions: parsed.sessions || [],
+			timer: parsed.timer || [],
+			questionLogs: parsed.questionLogs || [],
+			errorNotes: parsed.errorNotes || [],
+			reviews: parsed.reviews || [],
+			weeklyPlans: parsed.weeklyPlans || [],
+			settings,
+			mockExams: parsed.mockExams || []
+		};
+	}
+	async ensureUserSeed(userId) {
+		const ctx = parseTenantScope(userId);
+		const rlsFilter = buildWorkspaceRlsFilter(userId);
+		const existing = await this.collection().findOne(rlsFilter);
+		if (!existing) {
+			const initialWorkspace = buildDefaultWorkspaceDto();
+			const doc = {
+				_id: ctx.scopedId,
+				ownerId: ctx.ownerId,
+				scopeId: ctx.scopeId,
+				encryptedPayload: this.serializeAndEncryptWorkspace(ctx.ownerId, initialWorkspace),
+				rlsVersion: 1,
+				updatedAt: (/* @__PURE__ */ new Date()).toISOString()
+			};
+			await this.collection().updateOne(rlsFilter, { $set: doc }, { upsert: true });
+			return;
+		}
+		assertWorkspaceDocumentOwnership(existing, userId);
+		const workspace = this.decryptAndDeserializeWorkspace(ctx.ownerId, existing.encryptedPayload);
+		let needsUpdate = false;
+		if (!workspace.disciplines || workspace.disciplines.length === 0) {
+			workspace.disciplines = [...DEFAULT_DISCIPLINES];
+			needsUpdate = true;
+		}
+		if (!workspace.settings || workspace.settings.length === 0) {
+			workspace.settings = [{
+				...DEFAULT_SETTINGS,
+				distribution: { ...DEFAULT_SETTINGS.distribution }
+			}];
+			needsUpdate = true;
+		}
+		if (needsUpdate) await this.collection().updateOne(rlsFilter, { $set: {
+			encryptedPayload: this.serializeAndEncryptWorkspace(ctx.ownerId, workspace),
+			updatedAt: (/* @__PURE__ */ new Date()).toISOString()
+		} });
+	}
+	async getWorkspace(userId) {
+		await this.ensureUserSeed(userId);
+		const rlsFilter = buildWorkspaceRlsFilter(userId);
+		const doc = await this.collection().findOne(rlsFilter);
+		if (!doc) return buildDefaultWorkspaceDto();
+		const ctx = assertWorkspaceDocumentOwnership(doc, userId);
+		return this.decryptAndDeserializeWorkspace(ctx.ownerId, doc.encryptedPayload);
+	}
+	async replaceWorkspace(userId, workspace) {
+		const ctx = parseTenantScope(userId);
+		const rlsFilter = buildWorkspaceRlsFilter(userId);
+		const normalized = {
+			disciplines: workspace.disciplines && workspace.disciplines.length > 0 ? workspace.disciplines : [...DEFAULT_DISCIPLINES],
+			topics: workspace.topics || [],
+			sessions: workspace.sessions || [],
+			timer: workspace.timer || [],
+			questionLogs: workspace.questionLogs || [],
+			errorNotes: workspace.errorNotes || [],
+			reviews: workspace.reviews || [],
+			weeklyPlans: workspace.weeklyPlans || [],
+			settings: workspace.settings && workspace.settings.length > 0 ? workspace.settings : [{
 				...DEFAULT_SETTINGS,
 				distribution: { ...DEFAULT_SETTINGS.distribution }
 			}],
-			mockExams: [],
+			mockExams: workspace.mockExams || []
+		};
+		const doc = {
+			_id: ctx.scopedId,
+			ownerId: ctx.ownerId,
+			scopeId: ctx.scopeId,
+			encryptedPayload: this.serializeAndEncryptWorkspace(ctx.ownerId, normalized),
+			rlsVersion: 1,
 			updatedAt: (/* @__PURE__ */ new Date()).toISOString()
 		};
-		await this.collection().updateOne({ _id: userId }, { $set: fresh }, { upsert: true });
+		await this.collection().updateOne(rlsFilter, { $set: doc }, { upsert: true });
+		return this.getWorkspace(userId);
+	}
+	async resetWorkspace(userId) {
+		const ctx = parseTenantScope(userId);
+		const rlsFilter = buildWorkspaceRlsFilter(userId);
+		const fresh = buildDefaultWorkspaceDto();
+		const doc = {
+			_id: ctx.scopedId,
+			ownerId: ctx.ownerId,
+			scopeId: ctx.scopeId,
+			encryptedPayload: this.serializeAndEncryptWorkspace(ctx.ownerId, fresh),
+			rlsVersion: 1,
+			updatedAt: (/* @__PURE__ */ new Date()).toISOString()
+		};
+		await this.collection().updateOne(rlsFilter, { $set: doc }, { upsert: true });
 		return this.getWorkspace(userId);
 	}
 	async deleteUserWorkspace(userId) {
-		await this.collection().deleteOne({ _id: userId });
+		const cascadeFilter = buildWorkspaceCascadeDeleteFilter(userId);
+		await this.collection().deleteMany(cascadeFilter);
 	}
 	async applyBatch(userId, operations) {
 		const workspace = await this.getWorkspace(userId);
@@ -37470,71 +37846,147 @@ var MongoStudyDataRepository = class {
 };
 //#endregion
 //#region server/repositories/MongoUserRepository.ts
+var USER_EMAIL_BLIND_INDEX_NAMESPACE = "users:email";
 /**
-* Repositório de Usuários no MongoDB com suporte a async/await.
-* Garante índice único e normalizado por e-mail no MongoDB.
+* Repositório de Usuários no MongoDB com Row-Level Security (RLS) estrito e Zero Dados Explícitos:
+* - Nenhum dado pessoal (`email`, `name`, `avatarUrl`) é armazenado em texto puro (plaintext).
+* - Busca por e-mail utiliza Blind Index determinístico (`emailHash` via HMAC-SHA256).
+* - Todos os campos sensíveis são cifrados com AES-256-GCM vinculado ao `ownerId` via AAD.
+* - Validação nativa `$jsonSchema` no MongoDB bloqueia inserções/atualizações com campos explícitos.
 */
 var MongoUserRepository = class {
 	db;
-	constructor(db) {
+	cipher;
+	constructor(db, cipher) {
 		this.db = db;
+		this.cipher = cipher;
+	}
+	collection() {
+		return this.db.collection("users");
 	}
 	async initIndexes() {
-		await this.db.collection("users").createIndex({ email: 1 }, { unique: true });
+		try {
+			if ((await this.collection().indexes()).some((idx) => idx.name === "email_1")) await this.collection().dropIndex("email_1");
+		} catch {}
+		await this.migrateLegacyDocuments();
+		await Promise.all([this.collection().createIndex({ emailHash: 1 }, {
+			unique: true,
+			name: "idx_users_email_hash_unique"
+		}), this.collection().createIndex({ ownerId: 1 }, { name: "idx_users_rls_owner" })]);
+		await applyUsersCollectionValidator(this.db);
+	}
+	/**
+	* Migra de forma idempotente documentos legados com campos explícitos (`email`, `name`, `avatarUrl`)
+	* para o formato criptografado com RLS (`ownerId`, `emailHash`, `encryptedEmail`, `encryptedName`)
+	* e remove (`$unset`) todos os campos explícitos do MongoDB.
+	*/
+	async migrateLegacyDocuments() {
+		if ((await this.db.listCollections({ name: "users" }, { nameOnly: true }).toArray()).length === 0) return;
+		const rawCol = this.db.collection("users");
+		const docs = await rawCol.find({}).toArray();
+		const now = (/* @__PURE__ */ new Date()).toISOString();
+		for (const raw of docs) {
+			if (!(raw.email !== void 0 || raw.name !== void 0 || raw.avatarUrl !== void 0 || !raw.ownerId || !raw.emailHash || !raw.encryptedEmail || !raw.encryptedName || !raw.rlsVersion)) continue;
+			const ownerId = assertValidOwnerId(raw._id);
+			const plainEmail = (raw.encryptedEmail ? this.cipher.decryptForTenant(ownerId, raw.encryptedEmail) : String(raw.email ?? "")).trim().toLowerCase();
+			const plainName = (raw.encryptedName ? this.cipher.decryptForTenant(ownerId, raw.encryptedName) : String(raw.name ?? "Titular da Conta")).trim();
+			const plainAvatar = raw.encryptedAvatarUrl ? this.cipher.decryptForTenant(ownerId, raw.encryptedAvatarUrl) : raw.avatarUrl ?? null;
+			const emailHash = this.cipher.blindIndex(plainEmail, USER_EMAIL_BLIND_INDEX_NAMESPACE);
+			const encryptedEmail = this.cipher.encryptForTenant(ownerId, plainEmail);
+			const encryptedName = this.cipher.encryptForTenant(ownerId, plainName);
+			const encryptedAvatarUrl = plainAvatar ? this.cipher.encryptForTenant(ownerId, plainAvatar) : null;
+			await rawCol.updateOne({ _id: ownerId }, {
+				$set: {
+					ownerId,
+					emailHash,
+					encryptedEmail,
+					encryptedName,
+					encryptedAvatarUrl,
+					passwordHash: raw.passwordHash ?? "",
+					rlsVersion: 1,
+					createdAt: raw.createdAt || now,
+					updatedAt: raw.updatedAt || now
+				},
+				$unset: {
+					email: "",
+					name: "",
+					avatarUrl: ""
+				}
+			});
+		}
+	}
+	mapDocToEntity(doc, expectedOwnerId) {
+		assertUserDocumentOwnership(doc, expectedOwnerId);
+		const email = this.cipher.decryptForTenant(expectedOwnerId, doc.encryptedEmail).trim().toLowerCase();
+		const name = this.cipher.decryptForTenant(expectedOwnerId, doc.encryptedName);
+		const avatarUrl = doc.encryptedAvatarUrl ? this.cipher.decryptForTenant(expectedOwnerId, doc.encryptedAvatarUrl) : null;
+		if (this.cipher.blindIndex(email, "users:email") !== doc.emailHash) throw new ForbiddenError("Violação de integridade RLS no MongoDB: divergência no blind index do titular.");
+		return {
+			id: doc._id,
+			name,
+			email,
+			passwordHash: doc.passwordHash,
+			avatarUrl,
+			createdAt: doc.createdAt,
+			updatedAt: doc.updatedAt
+		};
 	}
 	async findByEmail(email) {
 		const normalized = email.trim().toLowerCase();
-		const doc = await this.db.collection("users").findOne({ email: normalized });
+		if (!normalized) return null;
+		const emailHash = this.cipher.blindIndex(normalized, USER_EMAIL_BLIND_INDEX_NAMESPACE);
+		const doc = await this.collection().findOne(buildUserRlsFilterByEmailHash(emailHash));
 		if (!doc) return null;
-		return {
-			id: doc._id,
-			name: doc.name,
-			email: doc.email,
-			passwordHash: doc.passwordHash,
-			avatarUrl: doc.avatarUrl ?? null,
-			createdAt: doc.createdAt,
-			updatedAt: doc.updatedAt
-		};
+		return this.mapDocToEntity(doc, doc._id);
 	}
 	async findById(id) {
-		const doc = await this.db.collection("users").findOne({ _id: id });
+		const rlsFilter = buildUserRlsFilterById(id);
+		const doc = await this.collection().findOne(rlsFilter);
 		if (!doc) return null;
-		return {
-			id: doc._id,
-			name: doc.name,
-			email: doc.email,
-			passwordHash: doc.passwordHash,
-			avatarUrl: doc.avatarUrl ?? null,
-			createdAt: doc.createdAt,
-			updatedAt: doc.updatedAt
-		};
+		return this.mapDocToEntity(doc, rlsFilter.ownerId);
 	}
 	async create(user) {
+		const ownerId = assertValidOwnerId(user.id);
+		if (!user.passwordHash || !user.passwordHash.startsWith("$scrypt$")) throw new ForbiddenError("Violação de segurança no MongoDB: hash de senha inválido ou explícito rejeitado.");
 		const normalizedEmail = user.email.trim().toLowerCase();
+		const trimmedName = user.name.trim();
 		const doc = {
-			_id: user.id,
-			name: user.name.trim(),
-			email: normalizedEmail,
+			_id: ownerId,
+			ownerId,
+			emailHash: this.cipher.blindIndex(normalizedEmail, USER_EMAIL_BLIND_INDEX_NAMESPACE),
+			encryptedEmail: this.cipher.encryptForTenant(ownerId, normalizedEmail),
+			encryptedName: this.cipher.encryptForTenant(ownerId, trimmedName),
+			encryptedAvatarUrl: null,
 			passwordHash: user.passwordHash,
+			rlsVersion: 1,
 			createdAt: user.createdAt,
 			updatedAt: user.updatedAt
 		};
-		await this.db.collection("users").updateOne({ _id: user.id }, { $set: doc }, { upsert: true });
+		await this.collection().updateOne(buildUserRlsFilterById(ownerId), { $set: doc }, { upsert: true });
 		return {
-			...user,
-			name: user.name.trim(),
-			email: normalizedEmail
+			id: ownerId,
+			name: trimmedName,
+			email: normalizedEmail,
+			passwordHash: user.passwordHash,
+			avatarUrl: null,
+			createdAt: user.createdAt,
+			updatedAt: user.updatedAt
 		};
 	}
 	async updateProfile(id, changes) {
+		const rlsFilter = buildUserRlsFilterById(id);
+		const existing = await this.collection().findOne(rlsFilter);
+		if (!existing) return null;
+		assertUserDocumentOwnership(existing, rlsFilter.ownerId);
 		const set = { updatedAt: (/* @__PURE__ */ new Date()).toISOString() };
-		if (changes.name?.trim()) set.name = changes.name.trim();
-		if (changes.avatarUrl !== void 0) set.avatarUrl = changes.avatarUrl;
-		await this.db.collection("users").updateOne({ _id: id }, { $set: set });
-		return this.findById(id);
+		if (changes.name?.trim()) set.encryptedName = this.cipher.encryptForTenant(rlsFilter.ownerId, changes.name.trim());
+		if (changes.avatarUrl !== void 0) set.encryptedAvatarUrl = changes.avatarUrl ? this.cipher.encryptForTenant(rlsFilter.ownerId, changes.avatarUrl) : null;
+		await this.collection().updateOne(rlsFilter, { $set: set });
+		return this.findById(rlsFilter.ownerId);
 	}
 	async deleteById(id) {
-		return ((await this.db.collection("users").deleteOne({ _id: id })).deletedCount ?? 0) > 0;
+		const rlsFilter = buildUserRlsFilterById(id);
+		return ((await this.collection().deleteOne(rlsFilter)).deletedCount ?? 0) > 0;
 	}
 };
 //#endregion
@@ -38468,14 +38920,20 @@ var PasswordHasher = class {
 //#endregion
 //#region server/security/SensitiveDataCipher.ts
 var CIPHER_PREFIX = "$aes256gcm$";
+var RLS_CIPHER_PREFIX = "$aes256gcm$rls$v1$";
 var KEY_SALT = "bnb-estudos-lgpd-at-rest-key-derivation-v1";
+var BLIND_INDEX_SALT = "bnb-estudos-lgpd-blind-index-key-v1";
 /**
-* Criptografia autenticada em repouso (AES-256-GCM) para dados sensíveis (LGPD Art. 46).
+* Criptografia autenticada em repouso (AES-256-GCM) com suporte a isolamento criptográfico
+* por titular (RLS Additional Authenticated Data - AAD) e Blind Indexing determinístico (HMAC-SHA256)
+* para conformidade integral com a LGPD (Art. 6º, VII e Art. 46).
 */
 var SensitiveDataCipher = class {
 	key;
+	blindIndexKey;
 	constructor(masterSecret) {
 		this.key = scryptSync(masterSecret, KEY_SALT, 32);
+		this.blindIndexKey = scryptSync(masterSecret, BLIND_INDEX_SALT, 32);
 	}
 	encrypt(plaintext) {
 		if (!plaintext) return "";
@@ -38502,6 +38960,63 @@ var SensitiveDataCipher = class {
 		} catch {
 			return "";
 		}
+	}
+	/**
+	* Criptografa dados vinculando criptograficamente o ciphertext ao `ownerId` via AES-256-GCM AAD.
+	* Impede que dados cifrados de um titular sejam decriptados no contexto de outro titular.
+	*/
+	encryptForTenant(ownerId, plaintext) {
+		const cleanOwner = ownerId?.trim();
+		if (!cleanOwner) throw new ForbiddenError("Violação RLS: ownerId ausente para criptografia vinculada ao titular.");
+		if (plaintext.startsWith(RLS_CIPHER_PREFIX)) {
+			this.decryptForTenant(cleanOwner, plaintext);
+			return plaintext;
+		}
+		const rawPlaintext = plaintext.startsWith(CIPHER_PREFIX) ? this.decrypt(plaintext) : plaintext;
+		const iv = randomBytes(12);
+		const cipher = createCipheriv("aes-256-gcm", this.key, iv);
+		cipher.setAAD(Buffer.from(`rls:tenant:${cleanOwner}`, "utf8"));
+		const encrypted = Buffer.concat([cipher.update(rawPlaintext, "utf8"), cipher.final()]);
+		const authTag = cipher.getAuthTag();
+		return `${RLS_CIPHER_PREFIX}${iv.toString("hex")}$${authTag.toString("hex")}$${encrypted.toString("hex")}`;
+	}
+	/**
+	* Decripta dados exigindo correspondência exata do `ownerId` na verificação da tag GCM (AAD).
+	*/
+	decryptForTenant(ownerId, storedValue) {
+		const cleanOwner = ownerId?.trim();
+		if (!cleanOwner) throw new ForbiddenError("Violação RLS: ownerId ausente para decriptação vinculada ao titular.");
+		if (!storedValue) return "";
+		if (storedValue.startsWith(RLS_CIPHER_PREFIX)) {
+			const parts = storedValue.slice(18).split("$");
+			if (parts.length !== 3) throw new ForbiddenError("Violação RLS: formato de payload criptográfico inválido ou corrompido.");
+			const [ivHex, authTagHex, encryptedHex] = parts;
+			try {
+				const iv = Buffer.from(ivHex, "hex");
+				const authTag = Buffer.from(authTagHex, "hex");
+				const encrypted = Buffer.from(encryptedHex, "hex");
+				const decipher = createDecipheriv("aes-256-gcm", this.key, iv);
+				decipher.setAAD(Buffer.from(`rls:tenant:${cleanOwner}`, "utf8"));
+				decipher.setAuthTag(authTag);
+				return Buffer.concat([decipher.update(encrypted), decipher.final()]).toString("utf8");
+			} catch {
+				throw new ForbiddenError("Violação de isolamento criptográfico RLS: falha na autenticação do titular dos dados.");
+			}
+		}
+		if (storedValue.startsWith(CIPHER_PREFIX)) {
+			const legacy = this.decrypt(storedValue);
+			if (!legacy && storedValue !== CIPHER_PREFIX) throw new ForbiddenError("Violação RLS: falha ao decriptar registro criptografado legado.");
+			return legacy;
+		}
+		throw new ForbiddenError("Violação RLS: dados explícitos (plaintext) rejeitados pela camada de segurança.");
+	}
+	/**
+	* Gera um Blind Index determinístico (HMAC-SHA256) para busca indexada (ex.: e-mail)
+	* sem armazenar o valor original em texto explícito no MongoDB.
+	*/
+	blindIndex(value, namespace = "default") {
+		const normalized = value.trim().toLowerCase();
+		return createHmac("sha256", this.blindIndexKey).update(`${namespace}:${normalized}`, "utf8").digest("hex");
 	}
 };
 //#endregion
@@ -38708,7 +39223,7 @@ function createAppContainer(overrides = {}) {
 	if (env.mongoUri) {
 		const initMongo = async () => {
 			const db = await getMongoDb({ uri: env.mongoUri });
-			const mongoUserRepo = new MongoUserRepository(db);
+			const mongoUserRepo = new MongoUserRepository(db, sensitiveDataCipher);
 			const mongoStudyRepo = new MongoStudyDataRepository(db, sensitiveDataCipher);
 			await Promise.all([mongoUserRepo.initIndexes(), mongoStudyRepo.initIndexes()]);
 			return {
@@ -38788,7 +39303,7 @@ function createAppContainer(overrides = {}) {
 	}
 	const authService = new AuthService(userRepository, studyDataRepository, passwordHasher, tokenService);
 	const studyDataService = new StudyDataService(studyDataRepository);
-	const authGuard = new BearerAuthGuard(tokenService, userRepository);
+	const authGuard = new BearerAuthGuard(tokenService, userRepository, !env.mongoUri && Boolean(process.env.VERCEL));
 	const authController = new AuthController(authService);
 	const studyDataController = new StudyDataController(studyDataService);
 	const seedReady = dbReadyPromise.then(() => ensureDefaultUserAndFirefoxData({
@@ -38939,7 +39454,8 @@ async function handleApiRequest(container, req, res) {
 		}
 		const rawContestHeader = req.headers["x-contest-id"];
 		const contestIdHeader = (Array.isArray(rawContestHeader) ? rawContestHeader[0] : rawContestHeader)?.trim();
-		const studyUser = contestIdHeader && contestIdHeader !== "default" && /^[a-zA-Z0-9_-]{1,64}$/.test(contestIdHeader) ? {
+		if (contestIdHeader && contestIdHeader !== "default" && !/^[a-zA-Z0-9_-]{1,64}$/.test(contestIdHeader)) throw new DtoValidationError("Identificador de concurso (X-Contest-Id) inválido.");
+		const studyUser = contestIdHeader && contestIdHeader !== "default" ? {
 			...user,
 			id: `${user.id}::contest::${contestIdHeader}`
 		} : user;
