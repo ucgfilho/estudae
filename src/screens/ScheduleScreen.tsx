@@ -1513,10 +1513,11 @@ export function ScheduleScreen() {
                               )}
 
                               <div
-                                className="flex items-center justify-between pt-1 border-t border-border/50 text-[10px]"
+                                className="flex flex-wrap items-center justify-between gap-1 pt-1 border-t border-border/50 text-[10px]"
                               >
                                 <span
                                   className={cn(
+                                    'shrink-0',
                                     s.status === 'concluida'
                                       ? 'text-success font-semibold'
                                       : isOverdue
@@ -1536,7 +1537,7 @@ export function ScheduleScreen() {
                                 </span>
 
                                 <div
-                                  className="flex items-center gap-1"
+                                  className="ml-auto flex items-center gap-0.5 shrink-0"
                                 >
                                   {isSimulado && (
                                     <IconButton
@@ -1548,68 +1549,62 @@ export function ScheduleScreen() {
                                     />
                                   )}
                                   {(s.status === 'planejada' || s.status === 'concluida') && (
-                                    <>
-                                      <IconButton
-                                        label="Editar sessão"
-                                        icon={<Edit className="size-3 text-fg-subtle hover:text-fg" />}
-                                        size="sm"
-                                        className="!size-5"
-                                        onClick={() => {
-                                          setSessionToEdit(s);
-                                          setSessionModalDate(s.date);
-                                          setSessionModalOpen(true);
-                                        }}
-                                      />
-                                      {s.status === 'planejada' && (
-                                        <>
-                                          <IconButton
-                                            label="Concluir sessão (caso já tenha estudado sem cronômetro)"
-                                            icon={<Check className="size-3 text-success" />}
-                                            size="sm"
-                                            className="!size-5 hover:bg-success-soft"
-                                            onClick={() => void handleCompleteDirectly(s)}
-                                          />
-                                          <IconButton
-                                            label="Iniciar cronômetro para esta sessão"
-                                            icon={<Play className="size-3" />}
-                                            size="sm"
-                                            className="!size-5"
-                                            onClick={() => handleStartTimer(s)}
-                                          />
-                                        </>
-                                      )}
-                                      <IconButton
-                                        label="Excluir sessão"
-                                        icon={<Trash2 className="size-3 text-fg-subtle hover:text-danger" />}
-                                        size="sm"
-                                        className="!size-5 hover:bg-danger-soft/40"
-                                        onClick={() => {
-                                          setSessionToDelete(s);
-                                          setDeleteConfirmOpen(true);
-                                        }}
-                                      />
-                                    </>
+                                    <IconButton
+                                      label="Editar sessão"
+                                      icon={<Edit className="size-3 text-fg-subtle hover:text-fg" />}
+                                      size="sm"
+                                      className="!size-5"
+                                      onClick={() => {
+                                        setSessionToEdit(s);
+                                        setSessionModalDate(s.date);
+                                        setSessionModalOpen(true);
+                                      }}
+                                    />
+                                  )}
+                                  {s.status === 'planejada' && (
+                                    <IconButton
+                                      label="Concluir sessão (caso já tenha estudado sem cronômetro)"
+                                      icon={<Check className="size-3 text-success" />}
+                                      size="sm"
+                                      className="!size-5 hover:bg-success-soft"
+                                      onClick={() => void handleCompleteDirectly(s)}
+                                    />
+                                  )}
+                                  {s.status === 'planejada' && !isOverdue && (
+                                    <IconButton
+                                      label="Iniciar cronômetro para esta sessão"
+                                      icon={<Play className="size-3" />}
+                                      size="sm"
+                                      className="!size-5"
+                                      onClick={() => handleStartTimer(s)}
+                                    />
                                   )}
                                   {canRecover && (
-                                    <>
-                                      <IconButton
-                                        label={isLost ? 'Recuperar sessão perdida' : 'Recuperar sessão atrasada'}
-                                        icon={<RotateCcw className="size-3 text-warning" />}
-                                        size="sm"
-                                        className="!size-5"
-                                        onClick={() => openRecoverModal(s)}
-                                      />
-                                      <IconButton
-                                        label={isLost ? 'Excluir sessão perdida' : 'Excluir sessão atrasada'}
-                                        icon={<Trash2 className="size-3 text-fg-subtle hover:text-danger" />}
-                                        size="sm"
-                                        className="!size-5 hover:bg-danger-soft/40"
-                                        onClick={() => {
-                                          setSessionToDelete(s);
-                                          setDeleteConfirmOpen(true);
-                                        }}
-                                      />
-                                    </>
+                                    <IconButton
+                                      label={isLost ? 'Recuperar sessão perdida' : 'Recuperar sessão atrasada'}
+                                      icon={<RotateCcw className="size-3 text-warning" />}
+                                      size="sm"
+                                      className="!size-5 hover:bg-warning-soft/40"
+                                      onClick={() => openRecoverModal(s)}
+                                    />
+                                  )}
+                                  {(s.status === 'planejada' || s.status === 'concluida' || canRecover) && (
+                                    <IconButton
+                                      label={
+                                        isLost
+                                          ? 'Excluir sessão perdida'
+                                          : isOverdue
+                                          ? 'Excluir sessão atrasada'
+                                          : 'Excluir sessão'
+                                      }
+                                      icon={<Trash2 className="size-3 text-fg-subtle hover:text-danger" />}
+                                      size="sm"
+                                      className="!size-5 hover:bg-danger-soft/40"
+                                      onClick={() => {
+                                        setSessionToDelete(s);
+                                        setDeleteConfirmOpen(true);
+                                      }}
+                                    />
                                   )}
                                 </div>
                               </div>
