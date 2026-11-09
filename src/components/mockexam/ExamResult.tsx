@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Pie, PieChart, Cell, ResponsiveContainer, Tooltip, Bar, BarChart, XAxis, YAxis, Legend, CartesianGrid } from 'recharts';
-import { Check, CircleMinus, Minus, TrendingUp, Trophy, Undo2, X as XIcon } from 'lucide-react';
+import { CircleMinus, Minus, TrendingUp, Trophy, Undo2, X as XIcon } from 'lucide-react';
 import { Button, IconButton } from '../ui/Button';
 import { Card, StatCard } from '../ui/Display';
 import { analyzeExam, isTrueFalseExam, optionLabel, statsByDiscipline, statsByThird } from '../../domain/mockExam';
@@ -126,8 +126,8 @@ export function ExamResult({ exam, disciplines, accuracyGoal }: ExamResultProps)
         <div>
           <h3 className="mb-1 text-sm font-semibold text-fg">Questão a questão</h3>
           <p className="mb-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-fg-muted">
-            <span className="inline-flex items-center gap-1"><Check className="size-3.5 text-success" aria-hidden /> Acerto</span>
-            <span className="inline-flex items-center gap-1"><XIcon className="size-3.5 text-danger" aria-hidden /> Erro (sua resposta → correta)</span>
+            <span className="inline-flex items-center gap-1.5"><span className="size-2 rounded-full bg-success" aria-hidden /> Acerto</span>
+            <span className="inline-flex items-center gap-1.5"><span className="size-2 rounded-full bg-danger" aria-hidden /> Erro (sua resposta → correta)</span>
             <span className="inline-flex items-center gap-1"><Minus className="size-3.5" aria-hidden /> Em branco</span>
             <span className="inline-flex items-center gap-1"><CircleMinus className="size-3.5" aria-hidden /> Anulada</span>
           </p>
@@ -146,8 +146,6 @@ export function ExamResult({ exam, disciplines, accuracyGoal }: ExamResultProps)
               >
                 <span className="font-semibold">{r.number}</span>
                 <span className="inline-flex items-center gap-0.5">
-                  {r.outcome === 'correct' && <Check className="size-3" aria-label="acerto" />}
-                  {r.outcome === 'wrong' && <XIcon className="size-3" aria-label="erro" />}
                   {r.outcome === 'blank' && <Minus className="size-3" aria-label="em branco" />}
                   {r.outcome === 'annulled' && <CircleMinus className="size-3" aria-label="anulada" />}
                   {r.marked ?? ''}
