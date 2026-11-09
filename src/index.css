@@ -45,7 +45,16 @@
   --animate-popover-out: popover-out 120ms ease-in both;
   --animate-toast-in: toast-in 220ms var(--ease-emphasized) both;
   --animate-toast-out: toast-out 160ms ease-in both;
+  --animate-slot-in: slot-in 140ms ease-out both;
 
+  @keyframes slot-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
   @keyframes popover-in {
     from {
       opacity: 0;

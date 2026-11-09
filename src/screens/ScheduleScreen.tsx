@@ -1,4 +1,5 @@
-import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { useState, useMemo, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
+import { flushSync } from 'react-dom';
 import {
   Play,
   RotateCcw,
@@ -147,13 +148,30 @@ export function ScheduleScreen() {
   const [loading, setLoading] = useState(false);
 
 
-  // Drag and drop state & refs
-  const draggedIdRef = useRef<string | null>(null);
-  const dragStartRafRef = useRef<number | null>(null);
+  // Drag and drop (pointer events + FLIP): arrasto fluido com fantasma, espaço de destino e animações
+  const boardRef = useRef<HTMLDivElement>(null);
+  const flipRectsRef = useRef<Map<string, { left: number; top: number }>>(new Map());
+  const dropTargetRef = useRef<{ dayKey: string; index: number } | null>(null);
+  const dragWeekRef = useRef<number | null>(null);
+  const cancelDragRef = useRef<(() => void) | null>(null);
   const [draggedSessionId, setDraggedSessionId] = useState<string | null>(null);
-  const [dropTarget, setDropTarget] = useState<{ dayKey: string; index: number } | null>(null);
-  const [dragOverWeekIndex, setDragOverWeekIndex] = useState<number | null>(null);
+  const [dragHeight, setDragHeight] = useState(0);
+  const [dropTarget, setDropTargetState] = useState<{ dayKey: string; index: number } | null>(null);
+  const [dragOverWeekIndex, setDragOverWeekIndexState] = useState<number | null>(null);
   const [optimisticSessions, setOptimisticSessions] = useState<StudySession[] | null>(null);
+
+  const setDropTarget = useCallback((next: { dayKey: string; index: number } | null) => {
+    const prev = dropTargetRef.current;
+    if (prev?.dayKey === next?.dayKey && prev?.index === next?.index) return;
+    dropTargetRef.current = next;
+    setDropTargetState(next);
+  }, []);
+
+  const setDragOverWeekIndex = useCallback((next: number | null) => {
+    if (dragWeekRef.current === next) return;
+    dragWeekRef.current = next;
+    setDragOverWeekIndexState(next);
+  }, []);
 
   useEffect(() => {
     setOptimisticSessions(null);
@@ -162,31 +180,49 @@ export function ScheduleScreen() {
   const activeSessions = optimisticSessions ?? sessions;
 
   const clearDragState = useCallback(() => {
-    if (dragStartRafRef.current !== null) {
-      cancelAnimationFrame(dragStartRafRef.current);
-      dragStartRafRef.current = null;
-    }
-    draggedIdRef.current = null;
+    dropTargetRef.current = null;
+    dragWeekRef.current = null;
     setDraggedSessionId(null);
-    setDropTarget(null);
-    setDragOverWeekIndex(null);
+    setDropTargetState(null);
+    setDragOverWeekIndexState(null);
   }, []);
 
   useEffect(() => {
     if (!draggedSessionId) return;
-    const onWindowDragEnd = () => clearDragState();
     const onWindowKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        clearDragState();
-      }
+      if (e.key === 'Escape') cancelDragRef.current?.();
     };
-    window.addEventListener('dragend', onWindowDragEnd);
     window.addEventListener('keydown', onWindowKeyDown);
-    return () => {
-      window.removeEventListener('dragend', onWindowDragEnd);
-      window.removeEventListener('keydown', onWindowKeyDown);
-    };
-  }, [draggedSessionId, clearDragState]);
+    return () => window.removeEventListener('keydown', onWindowKeyDown);
+  }, [draggedSessionId]);
+
+  useEffect(() => () => cancelDragRef.current?.(), []);
+
+  // FLIP: anima os cards de sessão até a nova posição sempre que o layout muda
+  useLayoutEffect(() => {
+    const board = boardRef.current;
+    if (!board) return;
+    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+    const origin = board.getBoundingClientRect();
+    const next = new Map<string, { left: number; top: number }>();
+    board.querySelectorAll<HTMLElement>('[data-session-card-id]').forEach((el) => {
+      const r = el.getBoundingClientRect();
+      if (r.width === 0 && r.height === 0) return;
+      const id = el.dataset.sessionCardId as string;
+      const pos = { left: r.left - origin.left, top: r.top - origin.top };
+      next.set(id, pos);
+      const prev = flipRectsRef.current.get(id);
+      if (reduce || !prev || typeof el.animate !== 'function') return;
+      const dx = prev.left - pos.left;
+      const dy = prev.top - pos.top;
+      if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return;
+      el.animate(
+        [{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'translate(0, 0)' }],
+        { duration: 240, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' },
+      );
+    });
+    flipRectsRef.current = next;
+  });
 
   const draggedSession = useMemo(
     () => (draggedSessionId ? activeSessions.find((s) => s.id === draggedSessionId) ?? null : null),
@@ -438,106 +474,17 @@ export function ScheduleScreen() {
     [sessions]
   );
 
-  // Drag and drop handlers
-  const handleDragStart = (e: React.DragEvent<HTMLDivElement>, session: StudySession) => {
-    draggedIdRef.current = session.id;
-    e.dataTransfer.setData('text/plain', session.id);
-    e.dataTransfer.effectAllowed = 'move';
-
-    // Defer state update to next animation frame so the browser captures a crisp,
-    // full-opacity drag image and never cancels dragstart due to synchronous DOM mutation.
-    if (dragStartRafRef.current !== null) {
-      cancelAnimationFrame(dragStartRafRef.current);
-    }
-    dragStartRafRef.current = requestAnimationFrame(() => {
-      dragStartRafRef.current = null;
-      setDraggedSessionId(session.id);
-    });
-  };
-
-  const handleDragEnd = () => {
-    clearDragState();
-  };
-
-  const handleDayDragOver = (e: React.DragEvent<HTMLDivElement>, dayKey: string) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    if (dragOverWeekIndex !== null) setDragOverWeekIndex(null);
-
-    const cardEls = Array.from(
-      e.currentTarget.querySelectorAll<HTMLElement>('[data-session-card-id]')
-    );
-    let nextIndex = cardEls.length;
-    for (let idx = 0; idx < cardEls.length; idx++) {
-      const rect = cardEls[idx].getBoundingClientRect();
-      if (rect.height > 0 && e.clientY < rect.top + rect.height / 2) {
-        nextIndex = idx;
-        break;
-      }
-    }
-
-    setDropTarget((prev) =>
-      prev && prev.dayKey === dayKey && prev.index === nextIndex
-        ? prev
-        : { dayKey, index: nextIndex }
-    );
-  };
-
-  const handleDayDragLeave = (e: React.DragEvent<HTMLDivElement>, dayKey: string) => {
-    const related = e.relatedTarget as Node | null;
-    if (related && e.currentTarget.contains(related)) return;
-
-    const rect = e.currentTarget.getBoundingClientRect();
-    if (
-      rect.width > 0 &&
-      rect.height > 0 &&
-      e.clientX >= rect.left &&
-      e.clientX <= rect.right &&
-      e.clientY >= rect.top &&
-      e.clientY <= rect.bottom
-    ) {
-      return;
-    }
-
-    setDropTarget((prev) => (prev?.dayKey === dayKey ? null : prev));
-  };
-
-  const handleDropOnDay = async (e: React.DragEvent<HTMLDivElement>, targetDate: string) => {
-    e.preventDefault();
-    const sessionId =
-      e.dataTransfer.getData('text/plain') || draggedIdRef.current || draggedSessionId;
-    const rawDropIndex = dropTarget?.dayKey === targetDate ? dropTarget.index : undefined;
-    clearDragState();
-    if (!sessionId) return;
-
+  // Move (arrasto ou teclado) com atualização otimista. `targetIndex` considera apenas as demais sessões do dia.
+  const commitMove = async (sessionId: string, targetDate: string, targetIndex?: number) => {
     const s = activeSessions.find((item) => item.id === sessionId);
     if (!s) return;
-
-    const daySessions = activeSessions
-      .filter((item) => item.date === targetDate)
-      .sort(compareSessionsInDay);
-
     const isSameDay = s.date === targetDate;
-    let effectiveTargetIndex: number | undefined = rawDropIndex;
-
-    if (isSameDay) {
-      const sourceIdx = daySessions.findIndex((item) => item.id === sessionId);
-      if (
-        rawDropIndex === undefined ||
-        sourceIdx === -1 ||
-        rawDropIndex === sourceIdx ||
-        rawDropIndex === sourceIdx + 1
-      ) {
-        return;
-      }
-      effectiveTargetIndex = rawDropIndex > sourceIdx ? rawDropIndex - 1 : rawDropIndex;
-    }
 
     setActionError(null);
-    applyOptimisticMove(sessionId, targetDate, effectiveTargetIndex);
+    applyOptimisticMove(sessionId, targetDate, targetIndex);
 
     try {
-      await moveSession(sessionId, targetDate, effectiveTargetIndex);
+      await moveSession(sessionId, targetDate, targetIndex);
       const disc = discMap.get(s.disciplineId);
       const discName =
         disc?.name ?? (s.disciplineId === 'simulado' ? 'Simulado Geral BNB' : s.disciplineId);
@@ -552,13 +499,7 @@ export function ScheduleScreen() {
     }
   };
 
-  const handleDropOnWeek = async (e: React.DragEvent, targetPlan: WeeklyPlan) => {
-    e.preventDefault();
-    const sessionId =
-      e.dataTransfer.getData('text/plain') || draggedIdRef.current || draggedSessionId;
-    clearDragState();
-    if (!sessionId) return;
-
+  const dropOnWeek = async (sessionId: string, targetPlan: WeeklyPlan) => {
     const s = activeSessions.find((item) => item.id === sessionId);
     if (!s) return;
 
@@ -597,6 +538,317 @@ export function ScheduleScreen() {
       setOptimisticSessions(null);
       setActionError(errorMessage(err));
     }
+  };
+
+  // Sempre aponta para as versões mais recentes dos closures (usado pelos listeners de janela)
+  const latestRef = useRef({ commitMove, dropOnWeek, weeklyPlans, activeSessions, setSelectedWeekIndex });
+  latestRef.current = { commitMove, dropOnWeek, weeklyPlans, activeSessions, setSelectedWeekIndex };
+
+  const handleCardPointerDown = (e: React.PointerEvent<HTMLDivElement>, session: StudySession) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    if (cancelDragRef.current) return;
+    const target = e.target as HTMLElement;
+    if (target.closest('button, a, input, select, textarea')) return;
+    // Em toques, só a alça inicia o arrasto para preservar a rolagem da página
+    if (e.pointerType !== 'mouse' && !target.closest('[data-drag-handle]')) return;
+
+    const sourceEl = e.currentTarget;
+    const rect = sourceEl.getBoundingClientRect();
+    const d = {
+      id: session.id,
+      pointerId: e.pointerId,
+      startX: e.clientX,
+      startY: e.clientY,
+      offsetX: e.clientX - rect.left,
+      offsetY: e.clientY - rect.top,
+      left: rect.left,
+      top: rect.top,
+      width: rect.width,
+      height: rect.height,
+      active: false,
+      ghost: null as HTMLElement | null,
+      raf: null as number | null,
+      lastX: e.clientX,
+      lastY: e.clientY,
+      weekTimer: null as number | null,
+      prevBodyCursor: '',
+      prevBodySelect: '',
+    };
+
+    const board = () => boardRef.current;
+
+    const updateTarget = () => {
+      const b = board();
+      if (!b) return;
+      const { lastX: x, lastY: y } = d;
+
+      // Aba de semana sob o ponteiro
+      const under = document.elementFromPoint(x, y) as HTMLElement | null;
+      const weekEl = under?.closest<HTMLElement>('[data-week-index]');
+      if (weekEl) {
+        const idx = Number(weekEl.dataset.weekIndex);
+        setDragOverWeekIndex(idx);
+        setDropTarget(null);
+        if (d.weekTimer === null) {
+          // Segurar sobre uma semana a abre, permitindo escolher o dia exato
+          d.weekTimer = window.setTimeout(() => {
+            d.weekTimer = null;
+            if (dragWeekRef.current === idx) latestRef.current.setSelectedWeekIndex(idx);
+          }, 700);
+        }
+        return;
+      }
+      if (d.weekTimer !== null) {
+        clearTimeout(d.weekTimer);
+        d.weekTimer = null;
+      }
+      setDragOverWeekIndex(null);
+
+      const cols = Array.from(b.querySelectorAll<HTMLElement>('[data-day-column]'));
+      let found: HTMLElement | null = null;
+      for (const col of cols) {
+        const r = col.getBoundingClientRect();
+        if (x >= r.left - 6 && x <= r.right + 6 && y >= r.top - 48 && y <= r.bottom + 48) {
+          found = col;
+          break;
+        }
+      }
+      if (!found) {
+        setDropTarget(null);
+        return;
+      }
+      const cards = Array.from(
+        found.querySelectorAll<HTMLElement>('[data-session-card-id]:not([data-dragging])'),
+      );
+      let index = cards.length;
+      for (let i = 0; i < cards.length; i++) {
+        const r = cards[i].getBoundingClientRect();
+        if (y < r.top + r.height / 2) {
+          index = i;
+          break;
+        }
+      }
+      setDropTarget({ dayKey: found.dataset.dayColumn as string, index });
+    };
+
+    const moveGhost = () => {
+      if (!d.ghost) return;
+      const dx = d.lastX - d.offsetX - d.left;
+      const dy = d.lastY - d.offsetY - d.top;
+      d.ghost.style.transform = `translate3d(${dx}px, ${dy}px, 0) rotate(1.5deg) scale(1.03)`;
+    };
+
+    const autoScroll = () => {
+      d.raf = null;
+      if (!d.active) return;
+      const scroller = board()?.closest('main') as HTMLElement | null;
+      if (scroller) {
+        const r = scroller.getBoundingClientRect();
+        const edge = 72;
+        let speed = 0;
+        if (d.lastY < r.top + edge) speed = -Math.ceil(((r.top + edge - d.lastY) / edge) * 16);
+        else if (d.lastY > r.bottom - edge) speed = Math.ceil(((d.lastY - (r.bottom - edge)) / edge) * 16);
+        if (speed !== 0) {
+          const before = scroller.scrollTop;
+          scroller.scrollTop += speed;
+          if (scroller.scrollTop !== before) updateTarget();
+        }
+      }
+      d.raf = requestAnimationFrame(autoScroll);
+    };
+
+    const startDrag = () => {
+      d.active = true;
+      const ghost = sourceEl.cloneNode(true) as HTMLElement;
+      ghost.removeAttribute('data-session-card-id');
+      ghost.removeAttribute('data-testid');
+      ghost.removeAttribute('id');
+      ghost.setAttribute('aria-hidden', 'true');
+      ghost.removeAttribute('tabindex');
+      Object.assign(ghost.style, {
+        position: 'fixed',
+        left: `${d.left}px`,
+        top: `${d.top}px`,
+        width: `${d.width}px`,
+        height: `${d.height}px`,
+        margin: '0',
+        zIndex: '80',
+        pointerEvents: 'none',
+        cursor: 'grabbing',
+        opacity: '0.96',
+        transformOrigin: `${d.offsetX}px ${d.offsetY}px`,
+        boxShadow: '0 18px 36px -12px rgba(0,0,0,0.45)',
+        willChange: 'transform',
+        transition: 'box-shadow 160ms ease',
+      });
+      document.body.appendChild(ghost);
+      d.ghost = ghost;
+      d.prevBodyCursor = document.body.style.cursor;
+      d.prevBodySelect = document.body.style.userSelect;
+      document.body.style.cursor = 'grabbing';
+      document.body.style.userSelect = 'none';
+      (document.activeElement as HTMLElement | null)?.blur?.();
+
+      const idx = latestRef.current.activeSessions
+        .filter((s) => s.date === session.date && s.id !== session.id)
+        .sort(compareSessionsInDay)
+        .filter((s) => compareSessionsInDay(s, session) < 0).length;
+      dropTargetRef.current = { dayKey: session.date, index: idx };
+      setDragHeight(d.height);
+      setDropTarget({ dayKey: session.date, index: idx });
+      setDraggedSessionId(session.id);
+      moveGhost();
+      if (d.raf === null) d.raf = requestAnimationFrame(autoScroll);
+    };
+
+    const detach = () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onCancel);
+      if (d.raf !== null) cancelAnimationFrame(d.raf);
+      d.raf = null;
+      if (d.weekTimer !== null) clearTimeout(d.weekTimer);
+      d.weekTimer = null;
+      if (d.active) {
+        document.body.style.cursor = d.prevBodyCursor;
+        document.body.style.userSelect = d.prevBodySelect;
+      }
+      cancelDragRef.current = null;
+    };
+
+    const animateGhostTo = (dx: number, dy: number, scale: boolean, done: () => void) => {
+      const ghost = d.ghost;
+      if (!ghost) return done();
+      const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+      if (reduce || typeof ghost.animate !== 'function') {
+        ghost.remove();
+        return done();
+      }
+      const from = ghost.style.transform;
+      const anim = ghost.animate(
+        [
+          { transform: from, boxShadow: '0 18px 36px -12px rgba(0,0,0,0.45)' },
+          { transform: `translate3d(${dx}px, ${dy}px, 0) rotate(0deg) scale(${scale ? 1 : 1})`, boxShadow: '0 0 0 0 rgba(0,0,0,0)' },
+        ],
+        { duration: 200, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)', fill: 'forwards' },
+      );
+      const finish = () => {
+        ghost.remove();
+        done();
+      };
+      anim.onfinish = finish;
+      anim.oncancel = finish;
+    };
+
+    const finishDrag = (cancelled: boolean) => {
+      const wasActive = d.active;
+      const target = dropTargetRef.current;
+      const weekIdx = dragWeekRef.current;
+      detach();
+      if (!wasActive) return;
+
+      const { weeklyPlans: plans, activeSessions: all, commitMove: move, dropOnWeek: moveToWeek } = latestRef.current;
+
+      // Soltou sobre uma aba de semana
+      if (!cancelled && weekIdx !== null) {
+        const plan = plans.find((p) => p.weekIndex === weekIdx);
+        const ghost = d.ghost;
+        const finishWeek = () => {
+          flushSync(() => clearDragState());
+          if (plan) void moveToWeek(session.id, plan);
+        };
+        if (ghost?.animate) {
+          const a = ghost.animate(
+            [{ transform: ghost.style.transform, opacity: 0.96 }, { transform: `${ghost.style.transform} scale(0.6)`, opacity: 0 }],
+            { duration: 150, easing: 'ease-in', fill: 'forwards' },
+          );
+          a.onfinish = () => {
+            ghost.remove();
+            finishWeek();
+          };
+        } else {
+          ghost?.remove();
+          finishWeek();
+        }
+        return;
+      }
+
+      // Soltou numa coluna de dia: o fantasma "encaixa" no espaço reservado
+      if (!cancelled && target) {
+        const slot = board()?.querySelector<HTMLElement>('[data-drop-slot]');
+        const sameDayOthers = all
+          .filter((s) => s.date === target.dayKey && s.id !== session.id)
+          .sort(compareSessionsInDay);
+        const original = all.find((s) => s.id === session.id);
+        const sourceIdx =
+          original && original.date === target.dayKey
+            ? sameDayOthers.filter((s) => compareSessionsInDay(s, original) < 0).length
+            : -1;
+        const noop = sourceIdx === target.index;
+        const apply = () => {
+          flushSync(() => clearDragState());
+          if (!noop) void move(session.id, target.dayKey, target.index);
+        };
+        if (slot) {
+          const r = slot.getBoundingClientRect();
+          animateGhostTo(r.left - d.left, r.top - d.top, true, apply);
+        } else {
+          d.ghost?.remove();
+          apply();
+        }
+        return;
+      }
+
+      // Cancelado ou fora de qualquer coluna: volta para o lugar original
+      flushSync(() => clearDragState());
+      const back = board()?.querySelector<HTMLElement>(`[data-session-card-id="${CSS.escape(session.id)}"]`);
+      if (back) {
+        const r = back.getBoundingClientRect();
+        animateGhostTo(r.left - d.left, r.top - d.top, true, () => undefined);
+      } else {
+        d.ghost?.remove();
+      }
+    };
+
+    const onMove = (ev: PointerEvent) => {
+      if (ev.pointerId !== d.pointerId) return;
+      d.lastX = ev.clientX;
+      d.lastY = ev.clientY;
+      if (!d.active) {
+        if (Math.hypot(ev.clientX - d.startX, ev.clientY - d.startY) < 5) return;
+        startDrag();
+      }
+      ev.preventDefault();
+      moveGhost();
+      updateTarget();
+    };
+    const onUp = (ev: PointerEvent) => {
+      if (ev.pointerId !== d.pointerId) return;
+      finishDrag(false);
+    };
+    const onCancel = (ev: PointerEvent) => {
+      if (ev.pointerId !== d.pointerId) return;
+      finishDrag(true);
+    };
+
+    cancelDragRef.current = () => finishDrag(true);
+    window.addEventListener('pointermove', onMove, { passive: false });
+    window.addEventListener('pointerup', onUp);
+    window.addEventListener('pointercancel', onCancel);
+  };
+
+  // Alternativa por teclado: Alt + setas move a sessão (↑↓ reordena no dia, ←→ muda de dia)
+  const handleCardKeyDown = (e: React.KeyboardEvent<HTMLDivElement>, session: StudySession) => {
+    if (!e.altKey || e.target !== e.currentTarget) return;
+    const dayList = activeSessions.filter((s) => s.date === session.date).sort(compareSessionsInDay);
+    const idx = dayList.findIndex((s) => s.id === session.id);
+    let handled = true;
+    if (e.key === 'ArrowUp' && idx > 0) void commitMove(session.id, session.date, idx - 1);
+    else if (e.key === 'ArrowDown' && idx < dayList.length - 1) void commitMove(session.id, session.date, idx + 1);
+    else if (e.key === 'ArrowLeft' && session.date > weekStart) void commitMove(session.id, addDays(session.date, -1));
+    else if (e.key === 'ArrowRight' && session.date < weekEnd) void commitMove(session.id, addDays(session.date, 1));
+    else handled = e.key.startsWith('Arrow');
+    if (handled) e.preventDefault();
   };
 
   const totalDistMinutes = useMemo(
@@ -752,20 +1004,9 @@ export function ScheduleScreen() {
                     key={wp.id}
                     type="button"
                     onClick={() => setSelectedWeekIndex(wp.weekIndex)}
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                      e.dataTransfer.dropEffect = 'move';
-                      if (dropTarget !== null) setDropTarget(null);
-                      if (dragOverWeekIndex !== wp.weekIndex) setDragOverWeekIndex(wp.weekIndex);
-                    }}
-                    onDragLeave={(e) => {
-                      const related = e.relatedTarget as Node | null;
-                      if (related && e.currentTarget.contains(related)) return;
-                      if (dragOverWeekIndex === wp.weekIndex) setDragOverWeekIndex(null);
-                    }}
-                    onDrop={(e) => void handleDropOnWeek(e, wp)}
+                    data-week-index={isSelected ? undefined : wp.weekIndex}
                     className={cn(
-                      'flex flex-col items-center justify-center rounded-lg px-3 py-1.5 text-xs font-medium transition-all shrink-0',
+                      'flex flex-col items-center justify-center rounded-lg px-3 py-1.5 text-xs font-medium transition-[transform,background-color,color,box-shadow] duration-150 shrink-0',
                       isWeekDropTarget &&
                         'ring-2 ring-primary bg-primary-soft/60 text-primary scale-105 border-dashed border-primary shadow-sm',
                       isSelected
@@ -775,7 +1016,7 @@ export function ScheduleScreen() {
                     )}
                     title={
                       draggedSessionId
-                        ? `Soltar aqui para mover sessão para Semana ${wp.weekIndex}`
+                        ? `Solte para mover para a Semana ${wp.weekIndex} (mesmo dia da semana) ou segure para abrir a semana`
                         : undefined
                     }
                   >
@@ -991,7 +1232,7 @@ export function ScheduleScreen() {
             </span>
           </div>
 
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-7">
+          <div ref={boardRef} className="grid grid-cols-1 gap-3 md:grid-cols-7">
             {Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)).map((dayKey) => {
               const daySessions = weekSessions.filter((s) => s.date === dayKey);
               const isToday = dayKey === today;
@@ -999,18 +1240,7 @@ export function ScheduleScreen() {
 
               const isHoveredDay = dropTarget?.dayKey === dayKey && Boolean(draggedSession);
               const isCrossDayHover = isHoveredDay && draggedSession?.date !== dayKey;
-              const draggedSourceIdx =
-                isHoveredDay && draggedSession?.date === dayKey
-                  ? daySessions.findIndex((s) => s.id === draggedSession.id)
-                  : -1;
-              const isSameDayReorderHover =
-                isHoveredDay &&
-                draggedSession?.date === dayKey &&
-                draggedSourceIdx !== -1 &&
-                dropTarget.index !== draggedSourceIdx &&
-                dropTarget.index !== draggedSourceIdx + 1;
-
-              const isActiveDropColumn = isCrossDayHover || isSameDayReorderHover;
+              const isActiveDropColumn = isHoveredDay;
               const projectedDayMinutes = isCrossDayHover
                 ? totalDayPlanned + (draggedSession?.plannedMinutes ?? 0)
                 : totalDayPlanned;
@@ -1025,15 +1255,18 @@ export function ScheduleScreen() {
                     : draggedSession.disciplineId)
                 : '';
 
+              // `slotIdx` conta apenas as demais sessões do dia (a arrastada fica oculta)
               const renderDropPreviewSlot = (slotIdx: number) => {
-                if (!isActiveDropColumn || dropTarget?.index !== slotIdx || !draggedSession) {
+                if (!isHoveredDay || dropTarget?.index !== slotIdx || !draggedSession) {
                   return null;
                 }
                 return (
                   <div
-                    key={`drop-slot-${dayKey}-${slotIdx}`}
+                    key={`drop-slot-${dayKey}`}
+                    data-drop-slot
                     data-testid={`drop-preview-${dayKey}`}
-                    className="pointer-events-none rounded-lg border-2 border-dashed border-primary bg-primary-soft/30 px-2.5 py-2 text-xs font-medium text-primary flex items-center justify-between gap-1.5 shadow-2xs transition-all"
+                    style={{ height: dragHeight || undefined }}
+                    className="pointer-events-none animate-slot-in rounded-lg border-2 border-dashed border-primary bg-primary-soft/30 px-2.5 py-2 text-xs font-medium text-primary flex items-start justify-between gap-1.5"
                   >
                     <span className="flex items-center gap-1.5 truncate">
                       <DisciplineDot color={draggedDisc?.color ?? '#A6193C'} />
@@ -1046,14 +1279,13 @@ export function ScheduleScreen() {
                 );
               };
 
+              let othersCount = 0;
+
               return (
                 <div
                   key={dayKey}
                   data-testid={`day-column-${dayKey}`}
-                  onDragOver={(e) => handleDayDragOver(e, dayKey)}
-                  onDragEnter={(e) => handleDayDragOver(e, dayKey)}
-                  onDragLeave={(e) => handleDayDragLeave(e, dayKey)}
-                  onDrop={(e) => void handleDropOnDay(e, dayKey)}
+                  data-day-column={dayKey}
                   className={cn(
                     'rounded-xl border p-3 flex flex-col justify-between min-h-[220px] transition-colors duration-150',
                     isActiveDropColumn
@@ -1101,28 +1333,29 @@ export function ScheduleScreen() {
                     </div>
 
                     {/* Sessions in day */}
-                    <div className="mt-2 space-y-1.5">
-                      {daySessions.map((s, idx) => {
+                    <div className="mt-2 flex flex-col gap-1.5">
+                      {daySessions.map((s) => {
                         const d = discMap.get(s.disciplineId);
                         const isSimulado = s.disciplineId === 'simulado';
                         const isOverdue = s.status === 'planejada' && s.date < today;
                         const isLost = s.status === 'perdida';
                         const canRecover = isOverdue || isLost;
                         const isDragging = draggedSessionId === s.id;
+                        const slotIdx = isDragging ? -1 : othersCount++;
 
                         return (
-                          <div key={s.id} className="space-y-1.5">
-                            {renderDropPreviewSlot(idx)}
+                          <div key={s.id} className={cn('flex flex-col gap-1.5', isDragging && 'hidden')}>
+                            {renderDropPreviewSlot(slotIdx)}
                             <div
                               data-session-card-id={s.id}
-                              draggable
-                              onDragStart={(e) => handleDragStart(e, s)}
-                              onDragEnd={handleDragEnd}
-                              title="Arraste para mover para qualquer dia, semana ou posição"
+                              data-dragging={isDragging ? '' : undefined}
+                              tabIndex={0}
+                              onPointerDown={(e) => handleCardPointerDown(e, s)}
+                              onKeyDown={(e) => handleCardKeyDown(e, s)}
+                              title="Arraste para mover (dia, posição ou aba de semana) — ou use Alt + setas"
+                              style={{ touchAction: 'pan-y' }}
                               className={cn(
-                                'group rounded-lg border p-2 text-xs space-y-1 cursor-grab active:cursor-grabbing transition-all select-none',
-                                isDragging &&
-                                  'opacity-40 border-dashed border-primary ring-1 ring-primary/60 bg-primary-soft/10',
+                                'group rounded-lg border p-2 text-xs space-y-1 cursor-grab select-none transition-[border-color,box-shadow,background-color] duration-150 focus-visible:outline-2 focus-visible:outline-primary',
                                 isSimulado &&
                                   'border-primary/40 bg-primary-soft/15 ring-1 ring-primary/30',
                                 s.status === 'concluida'
@@ -1134,13 +1367,16 @@ export function ScheduleScreen() {
                               )}
                             >
                               <div
-                                className={cn(
-                                  'flex items-center justify-between gap-1',
-                                  Boolean(draggedSessionId) && 'pointer-events-none'
-                                )}
+                                className="flex items-center justify-between gap-1"
                               >
                                 <span className="font-semibold flex items-center gap-1.5 truncate">
-                                  <GripVertical className="size-3.5 text-fg-subtle shrink-0 group-hover:text-primary transition-colors cursor-grab" />
+                                  <span
+                                    data-drag-handle
+                                    style={{ touchAction: 'none' }}
+                                    className="-m-1 inline-flex size-6 shrink-0 items-center justify-center rounded text-fg-subtle group-hover:text-primary transition-colors"
+                                  >
+                                    <GripVertical className="size-3.5" aria-hidden />
+                                  </span>
                                   {d ? (
                                     <DisciplineDot color={d.color} />
                                   ) : isSimulado ? (
@@ -1159,21 +1395,13 @@ export function ScheduleScreen() {
                               </div>
 
                               {s.objective && (
-                                <p
-                                  className={cn(
-                                    'text-[11px] text-fg-muted truncate',
-                                    Boolean(draggedSessionId) && 'pointer-events-none'
-                                  )}
-                                >
+                                <p className="text-[11px] text-fg-muted truncate">
                                   {s.objective}
                                 </p>
                               )}
 
                               <div
-                                className={cn(
-                                  'flex items-center justify-between pt-1 border-t border-border/50 text-[10px]',
-                                  Boolean(draggedSessionId) && 'pointer-events-none'
-                                )}
+                                className="flex items-center justify-between pt-1 border-t border-border/50 text-[10px]"
                               >
                                 <span
                                   className={cn(
@@ -1197,12 +1425,6 @@ export function ScheduleScreen() {
 
                                 <div
                                   className="flex items-center gap-1"
-                                  draggable={false}
-                                  onDragStart={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                  }}
-                                  onMouseDown={(e) => e.stopPropagation()}
                                 >
                                   {isSimulado && (
                                     <IconButton
@@ -1283,11 +1505,11 @@ export function ScheduleScreen() {
                           </div>
                         );
                       })}
-                      {renderDropPreviewSlot(daySessions.length)}
+                      {renderDropPreviewSlot(othersCount)}
                     </div>
                   </div>
 
-                  {daySessions.length === 0 && !isActiveDropColumn && (
+                  {daySessions.length === 0 && !isHoveredDay && (
                     <p className="py-4 text-center text-xs text-fg-subtle">Livre</p>
                   )}
                 </div>
