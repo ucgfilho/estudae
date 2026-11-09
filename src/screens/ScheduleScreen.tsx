@@ -1447,6 +1447,9 @@ export function ScheduleScreen() {
                           }
                         }
 
+                        const discColor = d?.color ?? (isSimulado ? '#A6193C' : '#71717A');
+                        const discName = d?.name ?? (isSimulado ? 'Simulado Geral BNB' : s.disciplineId);
+
                         return (
                           <div
                             key={s.id}
@@ -1457,7 +1460,11 @@ export function ScheduleScreen() {
                             onDragStart={(e) => e.preventDefault()}
                             onPointerDown={(e) => handleCardPointerDown(e, s)}
                             onKeyDown={(e) => handleCardKeyDown(e, s)}
-                            title="Arraste para mover (dia, posição ou aba de semana) — ou use Alt + setas"
+                            title={
+                              s.objective
+                                ? `${discName} (${s.plannedMinutes}m) — ${s.objective}`
+                                : `${discName} (${s.plannedMinutes}m)`
+                            }
                             style={{
                               touchAction: 'pan-y',
                               transform: shiftY ? `translate3d(0, ${shiftY}px, 0)` : 'translate3d(0, 0, 0)',
@@ -1466,149 +1473,149 @@ export function ScheduleScreen() {
                                 : 'transform 220ms cubic-bezier(0.22, 1, 0.36, 1), opacity 150ms ease, border-color 150ms ease, box-shadow 150ms ease, background-color 150ms ease',
                             }}
                             className={cn(
-                              'group rounded-lg border p-2 text-xs space-y-1 cursor-grab select-none will-change-transform focus-visible:outline-2 focus-visible:outline-primary',
+                              'group relative overflow-hidden rounded-xl border p-2.5 text-xs flex flex-col justify-between gap-2 cursor-grab select-none will-change-transform focus-visible:outline-2 focus-visible:outline-primary',
                               isDragging && 'opacity-0 pointer-events-none',
                               isSimulado &&
-                                'border-primary/40 bg-primary-soft/15 ring-1 ring-primary/30',
+                                'border-primary/40 bg-primary-soft/15 ring-1 ring-primary/25',
                               s.status === 'concluida'
-                                ? 'border-success/30 bg-success-soft/30'
+                                ? 'border-success/30 bg-success-soft/20'
                                 : isOverdue
-                                ? 'border-warning/40 bg-warning-soft/40'
+                                ? 'border-warning/40 bg-warning-soft/25'
+                                : isLost
+                                ? 'border-danger/35 bg-danger-soft/20'
                                 : !isSimulado &&
-                                  'border-border bg-surface hover:border-primary/50 hover:shadow-xs'
+                                  'border-border/80 bg-surface-elevated/40 hover:border-border-strong hover:bg-surface-elevated/80'
                             )}
                           >
-                              <div
-                                className="flex items-center justify-between gap-1"
-                              >
-                                <span className="font-semibold flex items-center gap-1.5 truncate">
-                                  <span
-                                    data-drag-handle
-                                    style={{ touchAction: 'none' }}
-                                    className="-m-1 inline-flex size-6 shrink-0 items-center justify-center rounded text-fg-subtle group-hover:text-primary transition-colors"
-                                  >
-                                    <GripVertical className="size-3.5" aria-hidden />
-                                  </span>
-                                  {d ? (
-                                    <DisciplineDot color={d.color} />
-                                  ) : isSimulado ? (
-                                    <DisciplineDot color="#A6193C" />
-                                  ) : null}
-                                  <span className="truncate">
-                                    {d?.name ?? (isSimulado ? 'Simulado Geral BNB' : s.disciplineId)}
-                                  </span>
-                                </span>
-                                <Badge
-                                  tone={isSimulado ? 'primary' : 'neutral'}
-                                  className="text-[10px] px-1 py-0 font-bold shrink-0"
-                                >
-                                  {s.plannedMinutes}m
-                                </Badge>
-                              </div>
+                            {/* Barra lateral cromática da disciplina */}
+                            <span
+                              aria-hidden
+                              className="pointer-events-none absolute inset-y-2 left-0 w-[3px] rounded-r-full"
+                              style={{ backgroundColor: discColor }}
+                            />
 
-                              {s.objective && (
-                                <p className="text-[11px] text-fg-muted truncate">
-                                  {s.objective}
-                                </p>
-                              )}
-
-                              <div
-                                className="flex flex-wrap items-center justify-between gap-1 pt-1 border-t border-border/50 text-[10px]"
+                            {/* Topo: Alça sutil à esquerda · Duração/Status à direita */}
+                            <div className="flex items-center justify-between gap-1 pl-1">
+                              <span
+                                data-drag-handle
+                                style={{ touchAction: 'none' }}
+                                className="-ml-1 inline-flex size-4 shrink-0 items-center justify-center rounded text-fg-subtle/50 group-hover:text-fg-muted transition-colors"
                               >
-                                <span
-                                  className={cn(
-                                    'shrink-0',
-                                    s.status === 'concluida'
-                                      ? 'text-success font-semibold'
-                                      : isOverdue
-                                      ? 'text-warning font-semibold'
-                                      : isLost
-                                      ? 'text-danger font-semibold'
-                                      : 'text-fg-subtle'
-                                  )}
-                                >
-                                  {s.status === 'concluida'
-                                    ? 'Concluída'
+                                <GripVertical className="size-3" aria-hidden />
+                              </span>
+                              <span
+                                className={cn(
+                                  'inline-flex items-center gap-1 rounded px-1.5 py-0.5 font-mono text-[10px] font-semibold tabular-nums leading-none shrink-0',
+                                  s.status === 'concluida'
+                                    ? 'bg-success-soft/60 text-success'
                                     : isOverdue
-                                    ? 'Atrasada'
+                                    ? 'bg-warning-soft/60 text-warning'
                                     : isLost
-                                    ? 'Perdida'
-                                    : ''}
-                                </span>
-
-                                <div
-                                  className="ml-auto flex items-center gap-0.5 shrink-0"
-                                >
-                                  {isSimulado && (
-                                    <IconButton
-                                      label="Ir para tela de Simulados"
-                                      icon={<ClipboardList className="size-3 text-primary" />}
-                                      size="sm"
-                                      className="!size-5"
-                                      onClick={() => navigate('/simulados')}
-                                    />
-                                  )}
-                                  {(s.status === 'planejada' || s.status === 'concluida') && (
-                                    <IconButton
-                                      label="Editar sessão"
-                                      icon={<Edit className="size-3 text-fg-subtle hover:text-fg" />}
-                                      size="sm"
-                                      className="!size-5"
-                                      onClick={() => {
-                                        setSessionToEdit(s);
-                                        setSessionModalDate(s.date);
-                                        setSessionModalOpen(true);
-                                      }}
-                                    />
-                                  )}
-                                  {s.status === 'planejada' && (
-                                    <IconButton
-                                      label="Concluir sessão (caso já tenha estudado sem cronômetro)"
-                                      icon={<Check className="size-3 text-success" />}
-                                      size="sm"
-                                      className="!size-5 hover:bg-success-soft"
-                                      onClick={() => void handleCompleteDirectly(s)}
-                                    />
-                                  )}
-                                  {s.status === 'planejada' && !isOverdue && (
-                                    <IconButton
-                                      label="Iniciar cronômetro para esta sessão"
-                                      icon={<Play className="size-3" />}
-                                      size="sm"
-                                      className="!size-5"
-                                      onClick={() => handleStartTimer(s)}
-                                    />
-                                  )}
-                                  {canRecover && (
-                                    <IconButton
-                                      label={isLost ? 'Recuperar sessão perdida' : 'Recuperar sessão atrasada'}
-                                      icon={<RotateCcw className="size-3 text-warning" />}
-                                      size="sm"
-                                      className="!size-5 hover:bg-warning-soft/40"
-                                      onClick={() => openRecoverModal(s)}
-                                    />
-                                  )}
-                                  {(s.status === 'planejada' || s.status === 'concluida' || canRecover) && (
-                                    <IconButton
-                                      label={
-                                        isLost
-                                          ? 'Excluir sessão perdida'
-                                          : isOverdue
-                                          ? 'Excluir sessão atrasada'
-                                          : 'Excluir sessão'
-                                      }
-                                      icon={<Trash2 className="size-3 text-fg-subtle hover:text-danger" />}
-                                      size="sm"
-                                      className="!size-5 hover:bg-danger-soft/40"
-                                      onClick={() => {
-                                        setSessionToDelete(s);
-                                        setDeleteConfirmOpen(true);
-                                      }}
-                                    />
-                                  )}
-                                </div>
-                              </div>
+                                    ? 'bg-danger-soft/60 text-danger'
+                                    : isSimulado
+                                    ? 'bg-primary-soft/60 text-primary'
+                                    : 'bg-surface-muted text-fg-muted'
+                                )}
+                              >
+                                {(s.status === 'concluida' || isOverdue || isLost) && (
+                                  <span
+                                    className={cn(
+                                      'size-1.5 rounded-full shrink-0',
+                                      s.status === 'concluida'
+                                        ? 'bg-success'
+                                        : isOverdue
+                                        ? 'bg-warning'
+                                        : 'bg-danger'
+                                    )}
+                                  />
+                                )}
+                                {s.plannedMinutes}m
+                              </span>
                             </div>
+
+                            {/* Corpo: Nome completo da disciplina ocupando 100% da largura do card */}
+                            <p
+                              className={cn(
+                                'pl-1 text-[11.5px] font-semibold leading-snug tracking-tight line-clamp-2 break-words',
+                                s.status === 'concluida' ? 'text-fg-muted' : 'text-fg'
+                              )}
+                            >
+                              {discName}
+                            </p>
+
+                            {/* Rodapé: Ações essenciais alinhadas com respiração e lixeira isolada à direita */}
+                            <div className="flex items-center justify-between pl-1 pt-1.5 border-t border-border/40">
+                              <div className="flex items-center gap-1">
+                                {isSimulado && (
+                                  <IconButton
+                                    label="Ir para tela de Simulados"
+                                    icon={<ClipboardList className="size-3 text-primary" />}
+                                    size="sm"
+                                    className="!size-5"
+                                    onClick={() => navigate('/simulados')}
+                                  />
+                                )}
+                                {s.status === 'planejada' && !isOverdue && (
+                                  <IconButton
+                                    label="Iniciar cronômetro para esta sessão"
+                                    icon={<Play className="size-3 text-primary" />}
+                                    size="sm"
+                                    className="!size-5 hover:bg-primary-soft/40"
+                                    onClick={() => handleStartTimer(s)}
+                                  />
+                                )}
+                                {canRecover && (
+                                  <IconButton
+                                    label={isLost ? 'Recuperar sessão perdida' : 'Recuperar sessão atrasada'}
+                                    icon={<RotateCcw className="size-3 text-warning" />}
+                                    size="sm"
+                                    className="!size-5 hover:bg-warning-soft/40"
+                                    onClick={() => openRecoverModal(s)}
+                                  />
+                                )}
+                                {s.status === 'planejada' && (
+                                  <IconButton
+                                    label="Concluir sessão (caso já tenha estudado sem cronômetro)"
+                                    icon={<Check className="size-3 text-success" />}
+                                    size="sm"
+                                    className="!size-5 hover:bg-success-soft"
+                                    onClick={() => void handleCompleteDirectly(s)}
+                                  />
+                                )}
+                                {(s.status === 'planejada' || s.status === 'concluida') && (
+                                  <IconButton
+                                    label="Editar sessão"
+                                    icon={<Edit className="size-3 text-fg-subtle hover:text-fg" />}
+                                    size="sm"
+                                    className="!size-5"
+                                    onClick={() => {
+                                      setSessionToEdit(s);
+                                      setSessionModalDate(s.date);
+                                      setSessionModalOpen(true);
+                                    }}
+                                  />
+                                )}
+                              </div>
+                              {(s.status === 'planejada' || s.status === 'concluida' || canRecover) && (
+                                <IconButton
+                                  label={
+                                    isLost
+                                      ? 'Excluir sessão perdida'
+                                      : isOverdue
+                                      ? 'Excluir sessão atrasada'
+                                      : 'Excluir sessão'
+                                  }
+                                  icon={<Trash2 className="size-3 text-fg-subtle hover:text-danger" />}
+                                  size="sm"
+                                  className="!size-5 hover:bg-danger-soft/40"
+                                  onClick={() => {
+                                    setSessionToDelete(s);
+                                    setDeleteConfirmOpen(true);
+                                  }}
+                                />
+                              )}
+                            </div>
+                          </div>
                         );
                       })}
                     </div>
