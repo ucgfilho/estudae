@@ -168,7 +168,7 @@ export function ExamErrorNotebooks({ exam, disciplines }: { exam: MockExam; disc
                   <div
                     key={note.id}
                     className={cn(
-                      'rounded-xl border p-4 bg-surface transition-all flex flex-col gap-3',
+                      'rounded-xl border border-border p-4 bg-surface transition-all flex flex-col gap-3',
                       note.status === 'revisar'
                         ? 'border-l-4 border-l-warning'
                         : note.status === 'revisado'
