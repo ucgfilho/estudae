@@ -208,6 +208,7 @@ export function ScheduleScreen() {
     board.querySelectorAll<HTMLElement>('[data-session-card-id]').forEach((el) => {
       const r = el.getBoundingClientRect();
       if (r.width === 0 && r.height === 0) return;
+      if (el.dataset.dragging !== undefined) return;
       const id = el.dataset.sessionCardId as string;
       const pos = { left: r.left - origin.left, top: r.top - origin.top };
       next.set(id, pos);
@@ -698,6 +699,16 @@ export function ScheduleScreen() {
       setDropTarget({ dayKey: session.date, index: idx });
       setDraggedSessionId(session.id);
       moveGhost();
+      if (typeof ghost.animate === 'function' && !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+        // "Levantar" o card: de parado a flutuando (escala, inclinação e sombra)
+        ghost.animate(
+          [
+            { transform: 'translate3d(0, 0, 0) rotate(0deg) scale(1)', boxShadow: '0 0 0 0 rgba(0,0,0,0)' },
+            { transform: ghost.style.transform, boxShadow: '0 18px 36px -12px rgba(0,0,0,0.45)' },
+          ],
+          { duration: 160, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' },
+        );
+      }
       if (d.raf === null) d.raf = requestAnimationFrame(autoScroll);
     };
 
@@ -1265,8 +1276,8 @@ export function ScheduleScreen() {
                     key={`drop-slot-${dayKey}`}
                     data-drop-slot
                     data-testid={`drop-preview-${dayKey}`}
-                    style={{ height: dragHeight || undefined }}
-                    className="pointer-events-none animate-slot-in rounded-lg border-2 border-dashed border-primary bg-primary-soft/30 px-2.5 py-2 text-xs font-medium text-primary flex items-start justify-between gap-1.5"
+                    style={{ height: dragHeight || undefined, ['--slot-h' as string]: `${dragHeight}px` }}
+                    className="pointer-events-none animate-slot-in overflow-hidden rounded-lg border-2 border-dashed border-primary bg-primary-soft/30 px-2.5 py-2 text-xs font-medium text-primary flex items-start justify-between gap-1.5"
                   >
                     <span className="flex items-center gap-1.5 truncate">
                       <DisciplineDot color={draggedDisc?.color ?? '#A6193C'} />
@@ -1344,8 +1355,19 @@ export function ScheduleScreen() {
                         const slotIdx = isDragging ? -1 : othersCount++;
 
                         return (
-                          <div key={s.id} className={cn('flex flex-col gap-1.5', isDragging && 'hidden')}>
+                          <div
+                            key={s.id}
+                            className={cn(
+                              'flex flex-col gap-1.5 transition-[margin] duration-200 ease-out',
+                              isDragging && '-mb-1.5 pointer-events-none',
+                            )}
+                          >
                             {renderDropPreviewSlot(slotIdx)}
+                            <div
+                              className="grid transition-[grid-template-rows,opacity] duration-200 ease-out"
+                              style={{ gridTemplateRows: isDragging ? '0fr' : '1fr', opacity: isDragging ? 0 : 1 }}
+                            >
+                            <div className="-m-0.5 min-h-0 overflow-hidden p-0.5">
                             <div
                               data-session-card-id={s.id}
                               data-dragging={isDragging ? '' : undefined}
@@ -1501,6 +1523,8 @@ export function ScheduleScreen() {
                                   )}
                                 </div>
                               </div>
+                            </div>
+                            </div>
                             </div>
                           </div>
                         );
