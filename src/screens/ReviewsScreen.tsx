@@ -118,7 +118,7 @@ export function ReviewsScreen() {
         description="Fixação de conteúdo a longo prazo através de repetições espaçadas programadas."
         actions={
           <Button
-            variant="primary"
+            variant={currentList.some((r) => r.status === 'pendente') ? 'secondary' : 'primary'}
             size="sm"
             icon={<Plus className="size-4" />}
             onClick={() => setCreateModalOpen(true)}
@@ -153,7 +153,7 @@ export function ReviewsScreen() {
       {/* List Card */}
       <div className="space-y-3">
         {currentList.length > 0 ? (
-          currentList.map((review) => {
+          currentList.map((review, idx) => {
             const d = discMap.get(review.disciplineId);
             const t = review.topicId ? topicMap.get(review.topicId) : null;
             const isOverdue = review.status === 'pendente' && review.dueDate < today;
@@ -223,7 +223,7 @@ export function ReviewsScreen() {
                   {review.status === 'pendente' ? (
                     <>
                       <Button
-                        variant="primary"
+                        variant={idx === 0 ? 'primary' : 'secondary'}
                         size="sm"
                         icon={<Check className="size-4" />}
                         onClick={() => handleComplete(review)}
@@ -281,7 +281,7 @@ export function ReviewsScreen() {
             }
             action={
               <Button
-                variant="primary"
+                variant="secondary"
                 size="sm"
                 icon={<Plus className="size-4" />}
                 onClick={() => setCreateModalOpen(true)}

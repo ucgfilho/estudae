@@ -81,19 +81,10 @@ export function ContestSelectorScreen({ onSelectContest }: ContestSelectorScreen
   return (
     <div
       data-testid="contest-selector-screen"
-      className="min-h-screen flex flex-col justify-between bg-canvas text-fg relative overflow-hidden"
+      className="min-h-screen flex flex-col justify-between bg-canvas text-fg"
     >
-      {/* Fundo decorativo com a paleta estudaê (#c20018 / #a6193c / #f68b1f) */}
-      <div
-        className="pointer-events-none absolute inset-x-0 top-0 h-96 sm:h-[450px] md:h-[520px] opacity-25 dark:opacity-40"
-        style={{
-          background:
-            'radial-gradient(ellipse 90% 80% at 50% 0%, #c20018 0%, #a6193c 40%, rgba(122, 16, 43, 0.4) 70%, transparent 100%)',
-        }}
-      />
-
       {/* Topo com Logo estudaê e botão Sair */}
-      <header className="relative z-10 flex items-center justify-between px-4 sm:px-8 py-4 sm:py-6 max-w-6xl w-full mx-auto">
+      <header className="flex items-center justify-between px-4 sm:px-8 py-4 sm:py-6 max-w-6xl w-full mx-auto border-b border-border">
         <div className="flex items-center gap-3">
           <BnbLogo className="size-10 rounded-xl shadow-md" />
           <div>
@@ -170,11 +161,11 @@ export function ContestSelectorScreen({ onSelectContest }: ContestSelectorScreen
                   }
                 }}
                 className={cn(
-                  'group relative w-full max-w-[240px] rounded-2xl border bg-surface p-5 flex flex-col items-center text-center transition-all duration-200 cursor-pointer select-none',
-                  'hover:-translate-y-1.5 hover:shadow-xl hover:border-primary',
+                  'group relative w-full max-w-[240px] rounded-xl border bg-surface p-5 flex flex-col items-center text-center transition-colors duration-150 cursor-pointer select-none',
+                  'hover:border-primary hover:bg-surface-muted/20',
                   isCurrent
-                    ? 'border-primary/60 ring-2 ring-primary/20 shadow-md'
-                    : 'border-border-strong shadow-xs',
+                    ? 'border-primary ring-2 ring-primary/20'
+                    : 'border-border',
                   isLoading && 'opacity-75 pointer-events-none',
                 )}
               >
@@ -189,17 +180,17 @@ export function ContestSelectorScreen({ onSelectContest }: ContestSelectorScreen
                   </button>
                 )}
 
-                {/* Avatar grande estilo Netflix */}
+                {/* Emblema do concurso */}
                 <div
-                  className="size-20 sm:size-24 rounded-2xl flex flex-col items-center justify-center text-white font-extrabold shadow-md mb-3.5 transition-transform duration-200 group-hover:scale-105 relative overflow-hidden"
+                  className="size-20 sm:size-24 rounded-xl flex flex-col items-center justify-center text-white font-bold mb-3.5 relative overflow-hidden"
                   style={{
-                    background: `linear-gradient(135deg, ${contest.accentColor} 0%, #a6193c 100%)`,
+                    backgroundColor: contest.accentColor || '#8E1532',
                   }}
                 >
-                  <span className="text-xl sm:text-2xl tracking-tight drop-shadow-xs">
+                  <span className="text-xl sm:text-2xl tracking-tight">
                     {contest.shortName}
                   </span>
-                  <span className="mt-1 rounded-full bg-black/25 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider">
+                  <span className="mt-1 rounded-full bg-black/25 px-2 py-0.5 text-[10px] font-medium">
                     {contest.examBoard}
                   </span>
                 </div>
@@ -231,15 +222,15 @@ export function ContestSelectorScreen({ onSelectContest }: ContestSelectorScreen
             );
           })}
 
-          {/* Card "+ Novo concurso" estilo Adicionar Perfil Netflix */}
+          {/* Card "+ Novo concurso" */}
           <button
             type="button"
             data-testid="new-contest-card-button"
             onClick={() => setShowNewModal(true)}
-            className="group w-full max-w-[240px] rounded-2xl border-2 border-dashed border-border-strong hover:border-primary bg-surface/50 hover:bg-primary-soft/15 p-5 flex flex-col items-center justify-center text-center transition-all duration-200 hover:-translate-y-1.5 cursor-pointer min-h-[210px]"
+            className="group w-full max-w-[240px] rounded-xl border border-dashed border-border-strong hover:border-primary bg-surface/50 hover:bg-primary-soft/15 p-5 flex flex-col items-center justify-center text-center transition-colors duration-150 cursor-pointer min-h-[210px]"
           >
-            <div className="size-20 sm:size-24 rounded-2xl bg-surface-muted group-hover:bg-primary/15 text-fg-muted group-hover:text-primary flex items-center justify-center mb-3.5 transition-all duration-200 group-hover:scale-105">
-              <Plus className="size-10 stroke-[2.2]" />
+            <div className="size-20 sm:size-24 rounded-xl bg-surface-muted group-hover:bg-primary/15 text-fg-muted group-hover:text-primary flex items-center justify-center mb-3.5 transition-colors duration-150">
+              <Plus className="size-9 stroke-[2]" />
             </div>
             <div className="font-bold text-sm sm:text-base text-fg group-hover:text-primary transition">
               Novo concurso

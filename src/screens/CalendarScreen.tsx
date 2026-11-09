@@ -432,7 +432,7 @@ export function CalendarScreen() {
           description={`Meta diária de estudo: ${formatMinutes(dailyGoal)} | Estudado hoje: ${formatMinutes(Math.round((secondsByDate.get(currentDate) ?? 0) / 60))}`}
           actions={
             <Button
-              variant="primary"
+              variant="secondary"
               size="sm"
               icon={<Plus className="size-4" />}
               onClick={() => openNewSession(currentDate)}
@@ -533,7 +533,7 @@ export function CalendarScreen() {
           <div className="space-y-4 text-sm">
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
-                <span className="text-xs text-fg-subtle uppercase font-semibold">Disciplina</span>
+                <span className="text-xs text-fg-muted font-medium">Disciplina</span>
                 <div className="font-medium text-fg flex items-center gap-2 mt-0.5">
                   {discMap.get(selectedSessionDetail.disciplineId) ? (
                     <DisciplineDot color={discMap.get(selectedSessionDetail.disciplineId)!.color} />
@@ -546,7 +546,7 @@ export function CalendarScreen() {
               </div>
 
               <div>
-                <span className="text-xs text-fg-subtle uppercase font-semibold">Tópico</span>
+                <span className="text-xs text-fg-muted font-medium">Tópico</span>
                 <div className="font-medium text-fg mt-0.5">
                   {selectedSessionDetail.topicId
                     ? topicMap.get(selectedSessionDetail.topicId)?.title ?? '—'
@@ -557,17 +557,17 @@ export function CalendarScreen() {
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <div>
-                <span className="text-xs text-fg-subtle uppercase font-semibold">Duração Planejada</span>
-                <div className="font-medium text-fg mt-0.5">{selectedSessionDetail.plannedMinutes} min</div>
+                <span className="text-xs text-fg-muted font-medium">Duração planejada</span>
+                <div className="font-medium text-fg mt-0.5 tabular-nums">{selectedSessionDetail.plannedMinutes} min</div>
               </div>
               <div>
-                <span className="text-xs text-fg-subtle uppercase font-semibold">Tempo Realizado</span>
-                <div className="font-medium text-fg mt-0.5">
+                <span className="text-xs text-fg-muted font-medium">Tempo realizado</span>
+                <div className="font-medium text-fg mt-0.5 tabular-nums">
                   {Math.round(selectedSessionDetail.actualSeconds / 60)} min
                 </div>
               </div>
               <div>
-                <span className="text-xs text-fg-subtle uppercase font-semibold">Status Atual</span>
+                <span className="text-xs text-fg-muted font-medium">Status atual</span>
                 <div className="mt-0.5">
                   <Badge
                     tone={
@@ -578,7 +578,11 @@ export function CalendarScreen() {
                         : 'primary'
                     }
                   >
-                    {selectedSessionDetail.status.toUpperCase()}
+                    {selectedSessionDetail.status === 'concluida'
+                      ? 'Concluída'
+                      : selectedSessionDetail.status === 'perdida'
+                      ? 'Perdida'
+                      : 'Planejada'}
                   </Badge>
                 </div>
               </div>
@@ -586,8 +590,8 @@ export function CalendarScreen() {
 
             {selectedSessionDetail.objective && (
               <div>
-                <span className="text-xs text-fg-subtle uppercase font-semibold">Objetivo da Sessão</span>
-                <p className="mt-0.5 text-fg bg-surface-muted/30 p-2.5 rounded-lg border border-border">
+                <span className="text-xs text-fg-muted font-medium">Objetivo da sessão</span>
+                <p className="mt-1 text-fg bg-surface-muted/30 p-2.5 rounded-lg border border-border">
                   {selectedSessionDetail.objective}
                 </p>
               </div>
@@ -595,8 +599,8 @@ export function CalendarScreen() {
 
             {selectedSessionDetail.notes && (
               <div>
-                <span className="text-xs text-fg-subtle uppercase font-semibold">Anotações</span>
-                <p className="mt-0.5 whitespace-pre-line text-fg-muted bg-surface-muted/30 p-2.5 rounded-lg border border-border">
+                <span className="text-xs text-fg-muted font-medium">Anotações</span>
+                <p className="mt-1 whitespace-pre-line text-fg-muted bg-surface-muted/30 p-2.5 rounded-lg border border-border">
                   {selectedSessionDetail.notes}
                 </p>
               </div>
@@ -604,9 +608,11 @@ export function CalendarScreen() {
 
             {/* Execution History */}
             {selectedSessionDetail.history?.length > 0 && (
-              <div>
-                <span className="text-xs text-fg-subtle uppercase font-semibold">Histórico de Alterações</span>
-                <div className="mt-1 space-y-1 text-xs text-fg-muted max-h-32 overflow-y-auto">
+              <details className="group rounded-lg border border-border bg-surface-muted/20 p-2.5">
+                <summary className="cursor-pointer text-xs font-medium text-fg-muted select-none">
+                  Histórico de alterações ({selectedSessionDetail.history.length})
+                </summary>
+                <div className="mt-2 space-y-1 text-xs text-fg-muted max-h-32 overflow-y-auto">
                   {selectedSessionDetail.history.map((h, i) => (
                     <div key={i} className="flex items-center gap-2">
                       <span className="font-mono text-fg-subtle">
@@ -617,7 +623,7 @@ export function CalendarScreen() {
                     </div>
                   ))}
                 </div>
-              </div>
+              </details>
             )}
 
             {/* Actions Bar */}

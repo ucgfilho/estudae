@@ -4,8 +4,8 @@ import {
   BookMarked,
   Calendar,
   CalendarClock,
-  FolderPlus,
   LayoutDashboard,
+  Timer,
 } from 'lucide-react';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
@@ -106,6 +106,7 @@ export function AppLayout({ onSwitchContestScreen }: AppLayoutProps) {
 
   const mobileQuickLinks = [
     { to: '/', label: 'Início', icon: LayoutDashboard },
+    { to: '/estudar-agora', label: 'Foco', icon: Timer },
     { to: '/cronograma', label: '24 sem.', icon: CalendarClock },
     { to: '/calendario', label: 'Agenda', icon: Calendar },
     { to: '/disciplinas', label: 'Edital', icon: BookMarked },
@@ -113,6 +114,9 @@ export function AppLayout({ onSwitchContestScreen }: AppLayoutProps) {
 
   return (
     <div className="flex h-dvh overflow-hidden bg-canvas text-fg">
+      <a href="#main-content" className="skip-link">
+        Pular para o conteúdo principal
+      </a>
       <Sidebar
         mobileOpen={mobileMenuOpen}
         onCloseMobile={() => setMobileMenuOpen(false)}
@@ -127,10 +131,11 @@ export function AppLayout({ onSwitchContestScreen }: AppLayoutProps) {
           activeContest={activeContest}
         />
         <main
-          className="flex-1 overflow-y-auto p-3 sm:p-6 pb-20 lg:pb-6 focus:outline-hidden"
+          id="main-content"
+          className="flex-1 overflow-y-auto px-3 py-4 sm:px-6 sm:py-6 pb-24 lg:pb-8 focus:outline-hidden"
           tabIndex={-1}
         >
-          <div className="mx-auto max-w-7xl">
+          <div className="mx-auto max-w-6xl">
             <Outlet />
           </div>
         </main>
@@ -138,7 +143,7 @@ export function AppLayout({ onSwitchContestScreen }: AppLayoutProps) {
         {/* Barra inferior de acesso rápido em dispositivos Mobile */}
         <nav
           aria-label="Acesso rápido mobile"
-          className="lg:hidden fixed bottom-0 inset-x-0 z-20 flex items-center justify-around border-t border-border bg-surface/95 backdrop-blur-md px-1 py-1.5 shadow-lg"
+          className="lg:hidden fixed bottom-0 inset-x-0 z-20 flex items-center justify-around border-t border-border bg-surface px-1 py-1"
         >
           {mobileQuickLinks.map((item) => {
             const Icon = item.icon;
@@ -149,24 +154,16 @@ export function AppLayout({ onSwitchContestScreen }: AppLayoutProps) {
                 end={item.to === '/'}
                 className={({ isActive }) =>
                   cn(
-                    'flex flex-col items-center justify-center gap-0.5 rounded-lg px-2.5 py-1 text-[10px] font-medium transition min-w-[58px]',
-                    isActive ? 'text-primary font-semibold' : 'text-fg-muted hover:text-fg',
+                    'flex min-h-11 min-w-[60px] flex-col items-center justify-center gap-0.5 rounded-lg px-2 py-1 text-[11px] font-medium transition-colors',
+                    isActive ? 'text-primary font-semibold bg-primary-soft/50' : 'text-fg-muted hover:text-fg',
                   )
                 }
               >
-                <Icon className="size-4" />
+                <Icon className="size-4" aria-hidden="true" />
                 <span className="truncate">{item.label}</span>
               </NavLink>
             );
           })}
-          <button
-            type="button"
-            onClick={() => setNewContestModalOpen(true)}
-            className="flex flex-col items-center justify-center gap-0.5 rounded-lg px-2.5 py-1 text-[10px] font-semibold text-primary hover:bg-primary-soft/30 transition min-w-[58px]"
-          >
-            <FolderPlus className="size-4" />
-            <span>+ Concurso</span>
-          </button>
         </nav>
       </div>
       <CelebrationLayer />

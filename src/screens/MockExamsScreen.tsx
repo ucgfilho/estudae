@@ -32,7 +32,7 @@ export function MockExamsScreen() {
         description="Envie a prova e o gabarito, marque suas respostas e receba a correção com análise de desempenho."
         actions={
           selected && (
-            <Button icon={<Plus className="size-4" />} onClick={() => setSelectedId(null)}>
+            <Button variant="secondary" size="sm" icon={<Plus className="size-4" />} onClick={() => setSelectedId(null)}>
               Novo simulado
             </Button>
           )

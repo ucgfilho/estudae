@@ -271,17 +271,13 @@ export function StudyNowScreen() {
           <Card
             title={
               <div className="flex items-center gap-2">
-                <span className="relative flex size-3">
-                  {activeTimer.status === 'running' && (
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
+                <span
+                  className={cn(
+                    'inline-flex size-2.5 rounded-full',
+                    activeTimer.status === 'running' ? 'bg-primary' : 'bg-warning'
                   )}
-                  <span
-                    className={cn(
-                      'relative inline-flex size-3 rounded-full',
-                      activeTimer.status === 'running' ? 'bg-primary' : 'bg-warning'
-                    )}
-                  />
-                </span>
+                  aria-hidden
+                />
                 <span>
                   {activeTimer.status === 'running' ? 'Sessão em Andamento' : 'Sessão Pausada'}
                 </span>
@@ -399,11 +395,12 @@ export function StudyNowScreen() {
                 </Button>
 
                 <Button
-                  variant="danger"
+                  variant="ghost"
                   size="md"
                   icon={<Trash2 className="size-4" />}
                   onClick={() => setDiscardConfirmOpen(true)}
                   disabled={loading}
+                  className="text-fg-muted hover:text-danger"
                 >
                   Descartar
                 </Button>
@@ -441,7 +438,7 @@ export function StudyNowScreen() {
               <div className="space-y-4">
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                   <div className="rounded-lg bg-surface-muted/50 p-3">
-                    <p className="text-xs font-medium tracking-wide text-fg-subtle uppercase">Hoje</p>
+                    <p className="text-xs font-medium text-fg-muted">Hoje</p>
                     <p className="mt-1 text-lg font-semibold tabular-nums text-fg">
                       {formatMinutes(todayMinutes)}
                       <span className="text-sm font-normal text-fg-muted"> / {formatMinutes(dailyGoal)}</span>
@@ -456,7 +453,7 @@ export function StudyNowScreen() {
                     />
                   </div>
                   <div className="rounded-lg bg-surface-muted/50 p-3">
-                    <p className="text-xs font-medium tracking-wide text-fg-subtle uppercase">Cronograma do dia</p>
+                    <p className="text-xs font-medium text-fg-muted">Cronograma do dia</p>
                     <p className="mt-1 text-lg font-semibold tabular-nums text-fg">
                       {dayProgress.scheduled.length > 0
                         ? `${dayProgress.scheduledDone} de ${dayProgress.scheduled.length} blocos`
@@ -473,7 +470,7 @@ export function StudyNowScreen() {
                     )}
                   </div>
                   <div className="rounded-lg bg-surface-muted/50 p-3">
-                    <p className="text-xs font-medium tracking-wide text-fg-subtle uppercase">Sequência</p>
+                    <p className="text-xs font-medium text-fg-muted">Sequência</p>
                     <p className="mt-1 flex items-center gap-1.5 text-lg font-semibold tabular-nums text-fg">
                       <Flame className="size-4 text-accent" aria-hidden />
                       {streak} {streak === 1 ? 'dia' : 'dias'}
@@ -520,10 +517,86 @@ export function StudyNowScreen() {
           )}
 
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            {/* Option A: Start Ad-Hoc Session */}
+            {/* Option A: Start Planned Session (Prioritized when schedule exists — Decision Reduction) */}
+            <Card
+              title="Iniciar Sessão Planejada"
+              description="Execute o bloco recomendado do seu cronograma sem precisar escolher do zero."
+              className={cn(plannedCandidates.length > 0 && 'border-primary/40')}
+            >
+              {plannedCandidates.length > 0 ? (
+                <div className="space-y-4">
+                  <Field label="Selecione a sessão planejada" required>
+                    <Select
+                      value={selectedPlannedSessionId}
+                      onChange={(e) => setSelectedPlannedSessionId(e.target.value)}
+                    >
+                      <option value="">Selecione uma sessão...</option>
+                      {plannedCandidates.map((s) => {
+                        const d = discMap.get(s.disciplineId);
+                        const isSimulado = s.disciplineId === 'simulado';
+                        const isToday = s.date === today;
+                        const label = d?.name ?? (isSimulado ? 'Simulado Geral BNB' : s.disciplineId);
+                        return (
+                          <option key={s.id} value={s.id}>
+                            {isToday ? '[HOJE]' : `[${s.date}]`} {label} ({s.plannedMinutes} min){' '}
+                            {s.objective ? `— ${s.objective}` : ''}
+                          </option>
+                        );
+                      })}
+                    </Select>
+                  </Field>
+
+                  {selectedPlannedSessionId && (
+                    <div className="rounded-lg border border-border bg-surface-muted/30 p-3.5 text-xs space-y-1.5">
+                      {(() => {
+                        const s = sessions.find((x) => x.id === selectedPlannedSessionId);
+                        if (!s) return null;
+                        const d = discMap.get(s.disciplineId);
+                        const isSimulado = s.disciplineId === 'simulado';
+                        return (
+                          <>
+                            <div className="font-semibold text-sm text-fg flex items-center gap-2">
+                              {d ? (
+                                <DisciplineDot color={d.color} />
+                              ) : isSimulado ? (
+                                <DisciplineDot color="#A6193C" />
+                              ) : null}
+                              {d?.name ?? (isSimulado ? 'Simulado Geral BNB' : s.disciplineId)}
+                            </div>
+                            <div className="text-fg-muted">Duração planejada: {s.plannedMinutes} min</div>
+                            {s.objective && <div className="text-fg-muted">Objetivo: {s.objective}</div>}
+                          </>
+                        );
+                      })()}
+                    </div>
+                  )}
+
+                  <Button
+                    variant="primary"
+                    className="w-full"
+                    icon={<Play className="size-4" />}
+                    onClick={handleStartPlanned}
+                    disabled={!selectedPlannedSessionId || loading}
+                    loading={loading}
+                  >
+                    Iniciar Sessão Selecionada
+                  </Button>
+                </div>
+              ) : (
+                <div className="py-10 text-center space-y-3">
+                  <Calendar className="mx-auto size-8 text-fg-subtle" />
+                  <p className="text-sm font-medium text-fg">Nenhuma sessão planejada pendente</p>
+                  <p className="text-xs text-fg-muted max-w-xs mx-auto">
+                    Você pode planejar novas sessões pelo Calendário ou Cronograma, ou iniciar uma sessão avulsa ao lado.
+                  </p>
+                </div>
+              )}
+            </Card>
+
+            {/* Option B: Start Ad-Hoc Session */}
             <Card
               title="Iniciar Sessão Avulsa"
-              description="Comece a estudar imediatamente qualquer disciplina sem planejamento prévio."
+              description="Estude livremente qualquer disciplina fora do cronograma do dia."
             >
               <div className="space-y-4">
                 <Field label="Disciplina" required>
@@ -631,7 +704,7 @@ export function StudyNowScreen() {
                 </Field>
 
                 <Button
-                  variant="primary"
+                  variant={plannedCandidates.length > 0 ? 'secondary' : 'primary'}
                   className="w-full"
                   icon={<Play className="size-4" />}
                   onClick={handleStartAdHoc}
@@ -640,81 +713,6 @@ export function StudyNowScreen() {
                   Começar a Estudar Agora
                 </Button>
               </div>
-            </Card>
-
-            {/* Option B: Start Planned Session */}
-            <Card
-              title="Iniciar Sessão Planejada"
-              description="Execute um bloco previamente cadastrado no seu calendário ou cronograma."
-            >
-              {plannedCandidates.length > 0 ? (
-                <div className="space-y-4">
-                  <Field label="Selecione a sessão planejada" required>
-                    <Select
-                      value={selectedPlannedSessionId}
-                      onChange={(e) => setSelectedPlannedSessionId(e.target.value)}
-                    >
-                      <option value="">Selecione uma sessão...</option>
-                      {plannedCandidates.map((s) => {
-                        const d = discMap.get(s.disciplineId);
-                        const isSimulado = s.disciplineId === 'simulado';
-                        const isToday = s.date === today;
-                        const label = d?.name ?? (isSimulado ? 'Simulado Geral BNB' : s.disciplineId);
-                        return (
-                          <option key={s.id} value={s.id}>
-                            {isToday ? '[HOJE]' : `[${s.date}]`} {label} ({s.plannedMinutes} min){' '}
-                            {s.objective ? `— ${s.objective}` : ''}
-                          </option>
-                        );
-                      })}
-                    </Select>
-                  </Field>
-
-                  {selectedPlannedSessionId && (
-                    <div className="rounded-lg border border-border bg-surface-muted/30 p-3 text-xs space-y-1">
-                      {(() => {
-                        const s = sessions.find((x) => x.id === selectedPlannedSessionId);
-                        if (!s) return null;
-                        const d = discMap.get(s.disciplineId);
-                        const isSimulado = s.disciplineId === 'simulado';
-                        return (
-                          <>
-                            <div className="font-semibold text-fg flex items-center gap-2">
-                              {d ? (
-                                <DisciplineDot color={d.color} />
-                              ) : isSimulado ? (
-                                <DisciplineDot color="#A6193C" />
-                              ) : null}
-                              {d?.name ?? (isSimulado ? 'Simulado Geral BNB' : s.disciplineId)}
-                            </div>
-                            <div className="text-fg-muted">Duração planejada: {s.plannedMinutes} min</div>
-                            {s.objective && <div className="text-fg-muted">Objetivo: {s.objective}</div>}
-                          </>
-                        );
-                      })()}
-                    </div>
-                  )}
-
-                  <Button
-                    variant="primary"
-                    className="w-full"
-                    icon={<Play className="size-4" />}
-                    onClick={handleStartPlanned}
-                    disabled={!selectedPlannedSessionId || loading}
-                    loading={loading}
-                  >
-                    Iniciar Sessão Selecionada
-                  </Button>
-                </div>
-              ) : (
-                <div className="py-10 text-center space-y-3">
-                  <Calendar className="mx-auto size-8 text-fg-subtle" />
-                  <p className="text-sm font-medium text-fg">Nenhuma sessão planejada pendente</p>
-                  <p className="text-xs text-fg-muted max-w-xs mx-auto">
-                    Você pode planejar novas sessões pelo Calendário ou Cronograma, ou iniciar uma sessão avulsa ao lado.
-                  </p>
-                </div>
-              )}
             </Card>
           </div>
         </div>

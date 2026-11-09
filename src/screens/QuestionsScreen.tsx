@@ -384,7 +384,7 @@ export function QuestionsScreen() {
         {filteredLogs.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="border-b border-border bg-surface-muted/40 text-xs font-semibold uppercase text-fg-subtle">
+              <thead className="border-b border-border bg-surface-muted/40 text-xs font-semibold text-fg-muted">
                 <tr>
                   <th className="py-2.5 px-3">Data</th>
                   <th className="py-2.5 px-3">Disciplina / Conteúdo</th>
@@ -516,7 +516,7 @@ export function QuestionsScreen() {
                   Limpar Filtros
                 </Button>
               ) : (
-                <Button variant="primary" size="sm" icon={<Plus className="size-4" />} onClick={openNewLog}>
+                <Button variant="secondary" size="sm" icon={<Plus className="size-4" />} onClick={openNewLog}>
                   Registrar Primeira Bateria
                 </Button>
               )

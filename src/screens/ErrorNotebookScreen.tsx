@@ -172,7 +172,7 @@ export function ErrorNotebookScreen() {
               : 'border-border bg-surface hover:bg-surface-muted/60'
           )}
         >
-          <div className="text-xs font-semibold uppercase text-fg-subtle">Total de Registros</div>
+          <div className="text-xs font-medium text-fg-muted">Total de registros</div>
           <div className="text-2xl font-bold text-fg mt-1 tabular-nums">{counts.total}</div>
         </button>
 
@@ -186,7 +186,7 @@ export function ErrorNotebookScreen() {
               : 'border-warning/30 bg-warning-soft/20 hover:bg-warning-soft/30'
           )}
         >
-          <div className="text-xs font-semibold uppercase text-warning">A Revisar</div>
+          <div className="text-xs font-medium text-warning">A revisar</div>
           <div className="text-2xl font-bold text-warning mt-1 tabular-nums">{counts.revisar}</div>
         </button>
 
@@ -200,7 +200,7 @@ export function ErrorNotebookScreen() {
               : 'border-info/30 bg-info-soft/20 hover:bg-info-soft/30'
           )}
         >
-          <div className="text-xs font-semibold uppercase text-info">Revisados</div>
+          <div className="text-xs font-medium text-info">Revisados</div>
           <div className="text-2xl font-bold text-info mt-1 tabular-nums">{counts.revisado}</div>
         </button>
 
@@ -214,7 +214,7 @@ export function ErrorNotebookScreen() {
               : 'border-success/30 bg-success-soft/20 hover:bg-success-soft/30'
           )}
         >
-          <div className="text-xs font-semibold uppercase text-success">Dominados</div>
+          <div className="text-xs font-medium text-success">Dominados</div>
           <div className="text-2xl font-bold text-success mt-1 tabular-nums">{counts.dominado}</div>
         </button>
       </div>
@@ -413,8 +413,8 @@ export function ErrorNotebookScreen() {
                   )}
 
                   <div className="rounded-lg bg-surface-muted/40 p-3 text-fg border border-border/60">
-                    <div className="text-xs font-semibold uppercase text-fg-subtle mb-1">
-                      Explicação Correta e Aprendizado:
+                    <div className="text-xs font-medium text-fg-muted mb-1">
+                      Explicação correta e aprendizado
                     </div>
                     <FormattedText text={note.explanation} />
                   </div>
@@ -462,7 +462,7 @@ export function ErrorNotebookScreen() {
             description="Cadastre questões que errou ou geraram dúvidas para agendar revisões espaçadas automáticas."
             action={
               <Button
-                variant="primary"
+                variant="secondary"
                 size="sm"
                 icon={<Plus className="size-4" />}
                 onClick={openNewNote}

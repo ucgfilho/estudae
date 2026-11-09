@@ -90,7 +90,7 @@ export function RankCard(input: RankInput) {
             <Icon className={cn('size-10', tier.color)} aria-hidden />
           </div>
           <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-fg-subtle">Patente atual</p>
+            <p className="text-xs font-medium text-fg-muted">Patente atual</p>
             <p className="text-xl font-bold text-fg">{rank.name}</p>
             <p className="text-sm tabular-nums text-fg-muted">{formatInteger(state.xp)} XP</p>
           </div>

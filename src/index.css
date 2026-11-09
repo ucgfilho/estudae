@@ -11,6 +11,7 @@
   --color-fg-muted: var(--fg-muted);
   --color-fg-subtle: var(--fg-subtle);
   --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
   --color-primary-fg: var(--primary-fg);
   --color-primary-soft: var(--primary-soft);
   --color-accent: var(--accent);
@@ -25,8 +26,8 @@
   --color-info: var(--info);
   --color-info-soft: var(--info-soft);
   --color-ring: var(--ring);
-  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  --font-mono: ui-monospace, 'SF Mono', 'Cascadia Mono', 'Roboto Mono', Menlo, monospace;
+  --font-sans: 'Plus Jakarta Sans', 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', 'Cascadia Mono', 'Roboto Mono', Menlo, monospace;
 }
 
 /*
@@ -172,63 +173,65 @@
 
 @layer base {
   :root {
-    --canvas: #f6f6f4;
+    --canvas: #f7f7f5;
     --surface: #ffffff;
-    --surface-muted: #eeeee9;
+    --surface-muted: #f0f0ec;
     --surface-elevated: #ffffff;
-    --border: #dfdfda;
-    --border-strong: #c8c8c4;
-    --fg: #1a1a1a;
-    --fg-muted: #595959;
-    --fg-subtle: #82827c;
+    --border: #e4e4df;
+    --border-strong: #cfcfc8;
+    --fg: #141413;
+    --fg-muted: #52524e;
+    --fg-subtle: #70706a;
 
-    --primary: #c20018;
+    --primary: #b8001f;
+    --primary-hover: #9a001a;
     --primary-fg: #ffffff;
-    --primary-soft: #fde8eb;
-    --accent: #f28500;
+    --primary-soft: #fcecef;
+    --accent: #e07200;
     --accent-fg: #ffffff;
-    --accent-soft: #fff1e0;
+    --accent-soft: #fff2e2;
 
-    --success: #1b7a3e;
-    --success-soft: #e5f6eb;
-    --warning: #b36b00;
-    --warning-soft: #fff4e0;
+    --success: #16793b;
+    --success-soft: #e6f5ec;
+    --warning: #a86200;
+    --warning-soft: #fef3dc;
     --danger: #b91c1c;
     --danger-soft: #fde8e8;
-    --info: #1769aa;
-    --info-soft: #e8f4fd;
+    --info: #1565a3;
+    --info-soft: #e6f2fc;
 
-    --ring: #c20018;
+    --ring: #b8001f;
   }
 
   .dark {
-    --canvas: #121212;
-    --surface: #1a1a1a;
-    --surface-muted: #242424;
-    --surface-elevated: #282828;
-    --border: #333333;
-    --border-strong: #505050;
-    --fg: #f2f2ee;
-    --fg-muted: #b0b0a8;
-    --fg-subtle: #7a7a72;
+    --canvas: #0f0f0e;
+    --surface: #171716;
+    --surface-muted: #21211f;
+    --surface-elevated: #262624;
+    --border: #2c2c29;
+    --border-strong: #42423d;
+    --fg: #f3f3ef;
+    --fg-muted: #b5b5ad;
+    --fg-subtle: #85857c;
 
-    --primary: #e02438;
+    --primary: #e02841;
+    --primary-hover: #f03a53;
     --primary-fg: #ffffff;
-    --primary-soft: #381216;
+    --primary-soft: #331217;
     --accent: #ff9a1f;
     --accent-fg: #121212;
-    --accent-soft: #3b2508;
+    --accent-soft: #382309;
 
-    --success: #2ea057;
-    --success-soft: #12301c;
-    --warning: #e08a00;
-    --warning-soft: #382405;
-    --danger: #e03e3e;
-    --danger-soft: #3b1414;
-    --info: #3894dc;
-    --info-soft: #0d283f;
+    --success: #2ea85c;
+    --success-soft: #112d1b;
+    --warning: #e59212;
+    --warning-soft: #332207;
+    --danger: #e54848;
+    --danger-soft: #361414;
+    --info: #4299e1;
+    --info-soft: #0f263c;
 
-    --ring: #e02438;
+    --ring: #e02841;
   }
 
   html {
@@ -283,6 +286,9 @@
  * sempre vençam. Borda fixa de 1px e foco só com ring (sem mudar o tamanho).
  */
 @layer components {
+  .skip-link {
+    @apply sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-md focus:bg-primary focus:px-3.5 focus:py-2 focus:text-xs focus:font-semibold focus:text-primary-fg focus:shadow-md focus:outline-2 focus:outline-offset-2 focus:outline-ring;
+  }
   .input-base {
     @apply w-full rounded-md border border-border bg-surface px-3 py-1.5 text-sm text-fg transition-colors placeholder:text-fg-subtle focus-visible:border-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-50;
   }

@@ -1,648 +1,422 @@
-# PROMPT DE ENGENHARIA DE SOFTWARE — DASHBOARD DE ESTUDOS BNB
+# REFATORAÇÃO COMPLETA DE UX/UI — PLATAFORMA DE GERENCIAMENTO DE ESTUDOS
 
-<!-- Otimizado para Claude Opus 5.5 | Implementação full-stack/frontend | Execução autônoma -->
+<PRICE>
+  <PERSONA>
+    Você é um Senior Product Designer e Senior Frontend Engineer, especialista em UX/UI, Design Systems, interfaces SaaS, acessibilidade e produtos digitais focados em produtividade.
 
-<project_specification version="1.0" language="pt-BR">
-<role>
-Você é um engenheiro de software sênior, arquiteto de aplicações e
-especialista em UX/UI para produtos SaaS. Sua responsabilidade é projetar,
-implementar, testar e entregar uma aplicação funcional de gerenciamento de
-estudos, com qualidade de produto comercial.
-</role>
+    Você possui experiência em projetar plataformas educacionais, ferramentas de gerenciamento de tarefas e aplicações que exigem utilização frequente e prolongada.
 
-  <mission>
-    <primary_goal>
-      Construir um dashboard pessoal de estudos para o concurso do Banco do
-      Nordeste do Brasil (BNB), com foco exclusivo no cargo Analista de Sistemas
-      — Desenvolvimento de Sistemas.
-    </primary_goal>
-    <expected_product>
-      Uma aplicação funcional, responsiva, visualmente refinada, persistente e
-      interativa. Não entregar somente um protótipo, landing page, wireframe ou
-      demonstração estática.
-    </expected_product>
-    <execution_mode>
-      Inspecione o repositório existente, planeje a implementação, desenvolva as
-      funcionalidades, execute os testes e corrija os problemas encontrados.
-      Continue até entregar uma versão utilizável.
-    </execution_mode>
-  </mission>
+    Sua responsabilidade é analisar, planejar, implementar e validar uma refatoração completa da experiência do usuário e da interface desta aplicação.
 
-<user_context>
-<exam>Concurso do Banco do Nordeste do Brasil (BNB)</exam>
-<target_position >Analista de Sistemas — Desenvolvimento de Sistemas</target_position >
-<daily_study_availability>120 minutos</daily_study_availability>
-<weekly_study_availability>840 minutos</weekly_study_availability>
-<initial_planning_horizon>24 semanas</initial_planning_horizon>
-<primary_goal >Buscar a primeira colocação por meio de preparação disciplinada,
-mensurável e orientada a desempenho.</primary_goal >
-<interface_language>Português brasileiro</interface_language>
-<date_locale>pt-BR</date_locale>
-<timezone>America/Bahia</timezone>
-<important_constraint>
-Não garantir aprovação, não presumir uma data de prova e não confundir o
-conteúdo do cargo pretendido com o de Analista Bancário 1.
-</important_constraint>
-</user_context>
+  </PERSONA>
 
-  <disciplines>
-    <discipline id="portugues">Língua Portuguesa</discipline>
-    <discipline id="raciocinio">Raciocínio Lógico e Quantitativo</discipline>
-    <discipline id="logica-programacao">Lógica de Programação</discipline>
-    <discipline id="arquitetura">Arquitetura de Software</discipline>
-    <discipline id="engenharia">Engenharia de Software</discipline>
-    <discipline id="linguagens"
-      >Linguagens e Tecnologias de Programação</discipline
-    >
-    <discipline id="banco-dados">Banco de Dados</discipline>
-    <discipline id="nuvem">Computação em Nuvem</discipline>
-  </disciplines>
+  <CONTEXT>
+    A aplicação é uma plataforma de gerenciamento de estudos voltada para pessoas que estão se preparando para concursos públicos.
 
-<content_integrity>
-<rule
-      >As oito disciplinas acima devem existir desde a primeira
-inicialização.</rule
-    >
-<rule
-      >Permitir cadastrar, editar, excluir, reorganizar e desativar tópicos e
-subtópicos.</rule
-    >
-<rule
-      >Não inventar conteúdos específicos do edital nem afirmar cobertura
-integral sem conferência.</rule
-    >
-<rule
-      >Se houver checklist ou edital disponível no repositório, inspecioná-lo e
-utilizá-lo como fonte principal do conteúdo programático.</rule
-    >
-<rule
-      >Se não houver arquivo acessível, iniciar com as oito disciplinas e
-permitir a inclusão manual dos tópicos.</rule
-    >
-<rule
-      >Se for implementada importação de checklist, apresentar uma prévia para
-validação antes de salvar.</rule
-    >
-</content_integrity>
+    Seu propósito é centralizar o planejamento, a execução, o acompanhamento e a análise dos estudos, permitindo que o estudante organize disciplinas, assuntos, cronogramas, questões, revisões, cadernos de erros, simulados e desempenho.
 
-<product_design>
-<product_type >Dashboard pessoal de produtividade e preparação para
-concurso.</product_type >
-<visual_direction>
-Desenvolva uma interface SaaS moderna, profissional, minimalista e
-funcional. A aparência deve transmitir organização, concentração e
-clareza, sem parecer um template genérico.
-</visual_direction>
-<layout>
-<item>Sidebar para navegação principal.</item>
-<item
-        >Cabeçalho compacto com data atual, busca e acesso às
-configurações.</item
-      >
-<item>Área central organizada por hierarquia visual.</item>
-<item
-        >Cards de métricas compactos e gráficos com finalidade prática.</item
-      >
-<item>Layout responsivo para desktop, tablet e celular.</item>
-</layout>
-<design_system>
-<item
-        >Paleta neutra, com uma cor primária e cores semânticas discretas.</item
-      >
-<item>Suporte a tema claro e escuro.</item>
-<item
-        >Tipografia legível, espaçamento consistente e componentes
-reutilizáveis.</item
-      >
-<item
-        >Evitar sombras exageradas, excesso de gradientes, decoração
-desnecessária e poluição visual.</item
-      >
-<item>Não utilizar emojis na interface.</item>
-<item>Utilizar ícones consistentes e acessíveis.</item>
-</design_system>
-<accessibility>
-Garantir contraste adequado, foco visível, navegação por teclado, rótulos
-claros, mensagens de validação compreensíveis e controles acessíveis. Não
-utilizar apenas cores para comunicar estados.
-</accessibility>
-</product_design>
+    O principal objetivo desta refatoração é transformar a plataforma em um ambiente extremamente intuitivo, minimalista, funcional e livre de distrações.
 
-  <navigation>
-    <item>Visão geral</item>
-    <item>Calendário</item>
-    <item>Cronograma</item>
-    <item>Estudar agora</item>
-    <item>Questões</item>
-    <item>Caderno de erros</item>
-    <item>Revisões</item>
-    <item>Disciplinas e conteúdos</item>
-    <item>Relatórios</item>
-    <item>Configurações</item>
-  </navigation>
+    A filosofia central é o MINIMALISMO FUNCIONAL.
 
-  <dashboard>
-    <purpose>
-      Mostrar rapidamente o estado real da preparação e ajudar o usuário a
-      decidir o que estudar em seguida.
-    </purpose>
-    <metrics>
-      <metric>Tempo estudado hoje versus meta diária de 120 minutos.</metric>
-      <metric>Tempo estudado na semana versus meta de 840 minutos.</metric>
-      <metric>Total de questões respondidas.</metric>
-      <metric>Total de acertos e erros.</metric>
-      <metric>Percentual de acerto geral.</metric>
-      <metric>Percentual de acerto por disciplina.</metric>
-      <metric>Sequência de dias estudados.</metric>
-      <metric>Progresso dos tópicos cadastrados.</metric>
-      <metric>Próxima sessão planejada.</metric>
-      <metric>Revisões pendentes ou vencidas.</metric>
-    </metrics>
-    <charts>
-      <chart>Tempo de estudo por dia e semana.</chart>
-      <chart>Percentual de acerto por disciplina.</chart>
-      <chart>Evolução do desempenho ao longo do tempo.</chart>
-      <chart>Tempo planejado versus tempo realizado.</chart>
-    </charts>
-    <data_rules>
-      Todos os indicadores devem ser calculados a partir dos dados persistidos.
-      Em estado vazio, mostrar instruções e estados vazios adequados. Nunca
-      apresentar dados fictícios como resultados reais.
-    </data_rules>
-  </dashboard>
+    A plataforma não deve parecer um dashboard administrativo cheio de informações, mas uma ferramenta de execução de estudos.
 
-  <calendar>
-    <views>
-      <view>Mensal</view>
-      <view>Semanal</view>
-      <view>Diária</view>
-    </views>
-    <features>
-      <feature
-        >Criar, editar, mover, reagendar e excluir sessões de estudo.</feature
-      >
-      <feature>Navegar entre períodos e retornar à data atual.</feature>
-      <feature
-        >Vincular sessões a uma disciplina e, opcionalmente, a um tópico ou
-        subtópico.</feature
-      >
-      <feature>Definir data, horário previsto, duração e observações.</feature>
-      <feature>Marcar sessões como planejadas, concluídas ou perdidas.</feature>
-      <feature
-        >Exibir visualmente os dias estudados e as metas diárias.</feature
-      >
-      <feature
-        >Abrir os detalhes da sessão e iniciar o cronômetro diretamente pelo
-        calendário.</feature
-      >
-      <feature
-        >Reagendar uma sessão sem apagar seu histórico de execução.</feature
-      >
-    </features>
-    <exam_date>
-      A data da prova deve ser opcional e configurável. Não presumir que exista
-      uma data oficial definida.
-    </exam_date>
-  </calendar>
+    O estudante deve conseguir entrar na aplicação e identificar rapidamente:
 
-<study_schedule>
-<duration>24 semanas</duration>
-<weekly_goal_minutes>840</weekly_goal_minutes>
-<initial_distribution>
-<technical_disciplines_minutes>600</technical_disciplines_minutes>
-<general_disciplines_minutes>240</general_disciplines_minutes>
-</initial_distribution>
-<requirements>
-<item>Apresentar o cronograma por semana, dia e disciplina.</item>
-<item>Permitir editar livremente a distribuição dos estudos.</item>
-<item
-        >Definir objetivos semanais, conteúdos planejados, status e
-observações.</item
-      >
-<item
-        >Mostrar horas planejadas, horas realizadas e percentual de
-cumprimento.</item
-      >
-<item
-        >Permitir reorganizar sessões por arrastar e soltar ou por controles
-acessíveis.</item
-      >
-<item
-        >Identificar sessões atrasadas e excesso de carga com avisos
-discretos.</item
-      >
-<item
-        >Permitir recuperar sessões não concluídas sem apagar o histórico.</item
-      >
-</requirements>
-<initial_strategy>
-Distribuição inicial sugerida de 10 horas semanais para disciplinas
-técnicas e 4 horas para Língua Portuguesa e Raciocínio Lógico e
-Quantitativo. Essa distribuição deve ser editável e ajustável conforme o
-desempenho.
-</initial_strategy>
-<constraint>
-O cronograma de 24 semanas é um ponto de partida editável, não uma
-afirmação de que todos os tópicos do edital estão cobertos.
-</constraint>
-</study_schedule>
+    - O que precisa estudar.
+    - Qual é sua próxima tarefa.
+    - Quanto já estudou.
+    - O que está pendente.
+    - Qual deve ser seu próximo passo.
 
-<study_session>
-<purpose>
-Permitir selecionar um conteúdo e começar a estudar imediatamente, sem
-depender de uma sessão previamente planejada.
-</purpose>
-<fields>
-<field>Disciplina</field>
-<field>Tópico e subtópico</field>
-<field>Objetivo da sessão</field>
-<field>Duração pretendida</field>
-<field>Notas rápidas</field>
-</fields>
-<actions>
-<action>Iniciar sessão planejada.</action>
-<action>Iniciar sessão avulsa.</action>
-<action>Registrar notas durante o estudo.</action>
-<action>Finalizar e salvar a sessão.</action>
-<action>Registrar questões respondidas após a sessão.</action>
-<action>Registrar acertos, erros e conteúdos para revisar.</action>
-</actions>
-<empty_topics>
-Caso não existam tópicos cadastrados, permitir selecionar a disciplina e
-criar um tópico rapidamente.
-</empty_topics>
-</study_session>
+    A interface deve reduzir decisões, não criar novas.
 
-  <timer>
-    <controls>
-      <control>Iniciar</control>
-      <control>Pausar</control>
-      <control>Continuar</control>
-      <control>Finalizar</control>
-      <control>Descartar</control>
-    </controls>
-    <requirements>
-      <item>Exibir tempo decorrido e duração planejada.</item>
-      <item>Mostrar o progresso em relação à duração pretendida.</item>
-      <item
-        >Persistir o estado do cronômetro durante recarregamentos
-        acidentais.</item
-      >
-      <item>Não contar o tempo durante pausas.</item>
-      <item
-        >Permitir continuar estudando após atingir a duração planejada.</item
-      >
-      <item>Mostrar aviso visual ao atingir a meta da sessão.</item>
-      <item>Salvar o tempo efetivamente estudado ao finalizar.</item>
-      <item>Evitar duplicação de sessões por cliques repetidos.</item>
-      <item
-        >Solicitar confirmação antes de descartar uma sessão em andamento.</item
-      >
-    </requirements>
-    <technical_constraint>
-      Calcular o tempo com base em timestamps persistidos e no tempo acumulado.
-      Não depender exclusivamente de um contador incrementado a cada segundo,
-      pois a aba pode ficar inativa ou o navegador pode suspender a execução.
-    </technical_constraint>
-  </timer>
+    Cada clique desnecessário, informação redundante, notificação irrelevante ou decisão visual desnecessária representa uma possível distração.
 
-<question_tracking>
-<purpose>
-Registrar o desempenho diário em questões, individualmente por disciplina
-e opcionalmente por tópico.
-</purpose>
-<fields>
-<field name="date">Data de resolução</field>
-<field name="discipline">Disciplina</field>
-<field name="topic">Tópico ou subtópico opcional</field>
-<field name="source">Banca ou fonte opcional</field>
-<field name="total">Total de questões</field>
-<field name="correct">Acertos</field>
-<field name="incorrect">Erros</field>
-<field name="blank">Questões em branco, opcional</field>
-<field name="duration">Tempo gasto, opcional</field>
-<field name="notes">Observações</field>
-</fields>
-<validation>
-<rule
-        >Todos os valores quantitativos devem ser inteiros não negativos.</rule
-      >
-<rule
-        >Acertos, erros e questões em branco devem ser consistentes com o total
-informado.</rule
-      >
-<rule
-        >Se o usuário informar somente acertos e erros, calcular o total
-automaticamente.</rule
-      >
-<rule
-        >Se o total for maior que a quantidade classificada, informar quantas
-questões ainda não foram classificadas.</rule
-      >
-<rule>Permitir editar e excluir lançamentos.</rule>
-<rule>Não criar lançamentos duplicados silenciosamente.</rule>
-</validation>
-<metrics>
-<metric>Total de questões respondidas.</metric>
-<metric>Total de acertos.</metric>
-<metric>Total de erros.</metric>
-<metric>Total de questões em branco.</metric>
-<metric>Percentual de acerto por disciplina.</metric>
-<metric>Percentual de acerto por tópico.</metric>
-<metric>Evolução do desempenho ao longo do tempo.</metric>
-</metrics>
-<accuracy_formula>
-Percentual de acerto = acertos / (acertos + erros) \* 100. Questões em
-branco não entram no denominador. Se não houver questões corrigidas,
-exibir “—”.
-</accuracy_formula>
-<filters>
-<filter>Intervalo de datas</filter>
-<filter>Disciplina</filter>
-<filter>Tópico</filter>
-<filter>Banca ou fonte</filter>
-</filters>
-</question_tracking>
+  </CONTEXT>
 
-<error_notebook>
-<purpose
-      >Transformar erros recorrentes em conteúdos específicos de
-revisão.</purpose
-    >
-<fields>
-<field>Disciplina</field>
-<field>Tópico ou subtópico</field>
-<field>Referência ou link da questão</field>
-<field>Motivo do erro</field>
-<field>Explicação correta ou resumo do aprendizado</field>
-<field>Data do erro</field>
-<field>Status</field>
-<field>Próxima data de revisão</field>
-</fields>
-<error_categories>
-<category>Falta de conteúdo</category>
-<category>Interpretação</category>
-<category>Desatenção</category>
-<category>Confusão entre alternativas</category>
-<category>Outro</category>
-</error_categories>
-<statuses>
-<status>Revisar</status>
-<status>Revisado</status>
-<status>Dominado</status>
-</statuses>
-</error_notebook>
+  <REQUIREMENTS>
 
-<spaced_repetition>
-<default_intervals_days>
-<interval>1</interval>
-<interval>7</interval>
-<interval>30</interval>
-</default_intervals_days>
-<features>
-<feature>Gerar revisões futuras associadas a tópicos ou erros.</feature>
-<feature>Mostrar revisões vencidas, de hoje e próximas.</feature>
-<feature>Marcar revisão como concluída.</feature>
-<feature>Adiar revisão.</feature>
-<feature>Permitir ajustar os intervalos nas configurações.</feature>
-</features>
-<constraint>
-Os intervalos são valores iniciais editáveis, não uma regra universal.
-</constraint>
-</spaced_repetition>
+    <UX_PRINCIPLES>
+      A refatoração deve respeitar rigorosamente os dez princípios abaixo.
 
-  <goals>
-    <daily_study_minutes default="120"
-      >Meta diária de estudo.</daily_study_minutes
-    >
-    <weekly_study_minutes default="840"
-      >Meta semanal de estudo.</weekly_study_minutes
-    >
-    <daily_question_goal configurable="true"
-      >Meta diária de questões definida pelo usuário.</daily_question_goal
-    >
-    <accuracy_goal default="80"
-      >Meta operacional inicial de 80% de acerto.</accuracy_goal
-    >
-    <topic_completion_goal configurable="true"
-      >Meta de conclusão de tópicos.</topic_completion_goal
-    >
-    <rule>
-      Comparar metas configuradas com resultados efetivamente registrados. Não
-      confundir metas com resultados alcançados.
-    </rule>
-  </goals>
+      <PRINCIPLE id="1" name="Regra dos 3 segundos">
+        O estudante deve identificar sua próxima tarefa em poucos segundos.
 
-  <reports>
-    <report>Tempo de estudo diário, semanal e mensal.</report>
-    <report>Questões resolvidas por disciplina e período.</report>
-    <report>Acertos, erros e percentual de acerto.</report>
-    <report>Conteúdos com pior desempenho.</report>
-    <report>Evolução do percentual de acerto.</report>
-    <report>Tempo planejado versus tempo realizado.</report>
-    <report>Revisões pendentes e tópicos dominados.</report>
-    <report>Exportação de dados para análise.</report>
-  </reports>
+        - Priorize informações importantes.
+        - Destaque claramente a atividade atual.
+        - Evite exigir navegação para descobrir o que precisa ser feito.
+      </PRINCIPLE>
 
-<persistence_and_privacy>
-<requirements>
-<item
-        >Todos os registros devem permanecer disponíveis após fechar e reabrir a
-aplicação.</item
-      >
-<item
-        >Se não houver backend, usar IndexedDB ou outra solução local
-robusta.</item
-      >
-<item>Não depender apenas do estado em memória.</item>
-<item>Oferecer exportação e importação de backup JSON.</item>
-<item
-        >Validar o arquivo importado e solicitar confirmação antes de
-sobrescrever informações.</item
-      >
-<item
-        >Exibir mensagens claras em caso de falha de salvamento ou
-importação.</item
-      >
-<item
-        >Solicitar confirmação antes de apagar registros ou reiniciar o
-sistema.</item
-      >
-<item
-        >Não transmitir dados pessoais ou de estudo para serviços externos sem
-consentimento explícito.</item
-      >
-<item>Não expor segredos ou credenciais no frontend.</item>
-</requirements>
-</persistence_and_privacy>
+      <PRINCIPLE id="2" name="Uma ação principal por tela">
+        Cada página deve possuir uma ação principal claramente identificável.
 
-<technical_architecture>
-<initial_inspection>
-Antes de criar ou modificar arquivos, inspecione o repositório, a stack
-existente, a estrutura de diretórios, as dependências e os comandos
-disponíveis. Preserve convenções e componentes úteis.
-</initial_inspection>
-<fallback_stack>
-Se o repositório estiver vazio, use React, TypeScript, Vite, Tailwind CSS,
-componentes acessíveis, biblioteca consolidada de gráficos e IndexedDB
-para persistência local.
-</fallback_stack>
-<engineering_rules>
-<rule>Separar a aplicação por funcionalidades.</rule>
-<rule>Usar tipos explícitos e validação consistente.</rule>
-<rule>Implementar componentes reutilizáveis.</rule>
-<rule
-        >Centralizar cálculos de métricas para evitar resultados divergentes
-entre telas.</rule
-      >
-<rule>Tratar datas e fusos horários consistentemente.</rule>
-<rule>Implementar estados de carregamento, vazio, sucesso e erro.</rule>
-<rule>Todos os botões e controles devem executar ações reais.</rule>
-<rule
-        >Não simular persistência nem indicar sucesso antes de salvar os
-dados.</rule
-      >
-<rule
-        >Não instalar dependências desnecessárias se o projeto já tiver
-alternativas adequadas.</rule
-      >
-</engineering_rules>
-</technical_architecture>
+        - Evite múltiplos botões disputando atenção.
+        - Reduza ações concorrentes.
+        - Mantenha ações secundárias visualmente discretas.
+      </PRINCIPLE>
 
-<suggested_data_model>
-<entity name="Discipline"> id, name, color, active </entity>
-<entity name="Topic">
-id, disciplineId, title, parentTopicId opcional, status, notes
-</entity>
-<entity name="StudySession">
-id, date, disciplineId, topicId opcional, plannedStart, plannedMinutes,
-actualSeconds, status, notes, startedAt, endedAt
-</entity>
-<entity name="TimerState">
-sessionId, status, startedAt, accumulatedSeconds, plannedSeconds,
-updatedAt
-</entity>
-<entity name="QuestionLog">
-id, date, disciplineId, topicId opcional, source, total, correct,
-incorrect, blank, durationMinutes, notes
-</entity>
-<entity name="ErrorNote">
-id, questionLogId opcional, disciplineId, topicId opcional,
-sourceReference, errorType, explanation, errorDate, status, nextReviewDate
-</entity>
-<entity name="ReviewTask">
-id, disciplineId, topicId opcional, errorNoteId opcional, dueDate,
-intervalDays, status, completedAt
-</entity>
-<entity name="WeeklyPlan">
-id, weekStart, objectives, plannedMinutes, status, notes
-</entity>
-<entity name="Settings">
-dailyGoalMinutes, weeklyGoalMinutes, dailyQuestionGoal, accuracyGoal,
-reviewIntervals, theme, examDate opcional
-</entity>
-<constraint>
-Ajuste o modelo se necessário e implemente versionamento do armazenamento
-ou estratégia de migração.
-</constraint>
-</suggested_data_model>
+      <PRINCIPLE id="3" name="Sem notificações desnecessárias">
+        Preserve somente notificações relevantes.
 
-<acceptance_criteria>
-<criterion>As oito disciplinas estão cadastradas inicialmente.</criterion>
-<criterion
-      >O usuário consegue criar, editar e excluir tópicos e
-subtópicos.</criterion
-    >
-<criterion
-      >O calendário permite planejar, editar e reagendar sessões.</criterion
-    >
-<criterion>O cronograma de 24 semanas é editável.</criterion>
-<criterion
-      >O cronômetro funciona corretamente em iniciar, pausar, retomar, finalizar
-e descartar.</criterion
-    >
-<criterion
-      >O tempo real estudado é salvo e refletido no dashboard.</criterion
-    >
-<criterion
-      >O usuário consegue registrar questões por data, disciplina e
-tópico.</criterion
-    >
-<criterion
-      >Acertos, erros, percentuais e gráficos são calculados a partir dos dados
-reais.</criterion
-    >
-<criterion>O caderno de erros e as revisões funcionam.</criterion>
-<criterion>Os dados persistem após reiniciar o navegador.</criterion>
-<criterion>Backup e restauração funcionam e validam os dados.</criterion>
-<criterion>A interface é responsiva e navegável por teclado.</criterion>
-<criterion
-      >Não existem botões inertes ou métricas fictícias apresentadas como
-reais.</criterion
-    >
-<criterion
-      >Lint, testes e build são executados e terminam sem erros.</criterion
-    >
-</acceptance_criteria>
+        - Revisões vencidas.
+        - Pendências importantes.
+        - Metas não cumpridas.
+        - Eventos que realmente exigem atenção.
 
-<execution_plan>
-<step order="1"
-      >Inspecionar o repositório e resumir brevemente a stack e a estratégia de
-implementação.</step
-    >
-<step order="2"
-      >Definir o modelo de dados, a persistência e a arquitetura.</step
-    >
-<step order="3">Implementar layout, design system e navegação.</step>
-<step order="4"
-      >Implementar disciplinas, tópicos, calendário e cronograma.</step
-    >
-<step order="5">Implementar cronômetro e persistência das sessões.</step>
-<step order="6"
-      >Implementar registro de questões, métricas e caderno de erros.</step
-    >
-<step order="7"
-      >Implementar revisões espaçadas, metas, dashboard e relatórios.</step
-    >
-<step order="8"
-      >Implementar configurações, importação, exportação e acessibilidade.</step
-    >
-<step order="9"
-      >Criar e executar testes; rodar lint e build; corrigir os problemas
-encontrados.</step
-    >
-<step order="10"
-      >Entregar resumo das funcionalidades, instruções para executar e
-limitações remanescentes.</step
-    >
-</execution_plan>
+        Evite interrupções durante sessões de estudo.
+      </PRINCIPLE>
 
-<final_instructions>
-<instruction
-      >Não pare após criar um mockup, uma tela estática ou um plano de
-implementação.</instruction
-    >
-<instruction
-      >Implemente as funcionalidades no repositório atual.</instruction
-    >
-<instruction
-      >Não remova funcionalidades existentes sem necessidade
-justificada.</instruction
-    >
-<instruction
-      >Não afirme que testes passaram sem realmente executá-los.</instruction
-    >
-<instruction
-      >Se houver uma ambiguidade não crítica, escolha a alternativa mais
-simples, segura e coerente, documentando a decisão.</instruction
-    >
-<instruction
-      >Priorize primeiro os fluxos essenciais: persistência, cronômetro,
-calendário e registro de questões.</instruction
-    >
-<instruction
-      >Ao finalizar, informe claramente o que foi implementado, quais comandos
-foram executados e quais limitações ainda existem.</instruction
-    >
-</final_instructions>
-</project_specification>
+      <PRINCIPLE id="4" name="Sem conteúdo infinito">
+        Não implemente feeds, murais ou recomendações intermináveis.
+
+        Evite mecanismos que incentivem navegação sem propósito.
+      </PRINCIPLE>
+
+      <PRINCIPLE id="5" name="Hierarquia visual">
+        Utilize tipografia, tamanho, peso, espaçamento e contraste para estabelecer prioridades.
+
+        Não atribua o mesmo peso visual a todos os componentes.
+      </PRINCIPLE>
+
+      <PRINCIPLE id="6" name="Consistência">
+        Padronize botões, campos, cards, tabelas, modais, menus, espaçamentos e tipografia.
+
+        Componentes semelhantes devem apresentar comportamentos semelhantes.
+      </PRINCIPLE>
+
+      <PRINCIPLE id="7" name="Informações progressivas">
+        Apresente inicialmente somente as informações necessárias.
+
+        Utilize expansões, tooltips, modais e painéis secundários para informações complementares.
+      </PRINCIPLE>
+
+      <PRINCIPLE id="8" name="Poucas cores">
+        Trabalhe com uma paleta reduzida e consistente.
+
+        Reserve cores de destaque para ações principais, estados, alertas e indicadores relevantes.
+      </PRINCIPLE>
+
+      <PRINCIPLE id="9" name="Responsividade">
+        Garanta uma experiência consistente em desktops, tablets e smartphones.
+
+        Reorganize os componentes conforme o espaço disponível. Não apenas comprima a interface desktop.
+      </PRINCIPLE>
+
+      <PRINCIPLE id="10" name="Baixa carga cognitiva">
+        Reduza a quantidade de informações que o estudante precisa processar simultaneamente.
+
+        Utilize textos objetivos, nomenclaturas intuitivas e componentes visualmente simples.
+      </PRINCIPLE>
+    </UX_PRINCIPLES>
+
+    <COGNITIVE_LOAD_REDUCTION>
+      <OBJECTIVE>
+        Reduzir o esforço mental necessário para utilizar a plataforma.
+
+        O estudante não deve precisar interpretar dezenas de informações, escolher entre várias possibilidades ou navegar por diferentes páginas para descobrir o que precisa fazer.
+      </OBJECTIVE>
+
+      <DASHBOARD_RESTRICTIONS>
+        Os seguintes elementos NÃO devem disputar espaço no dashboard principal:
+
+        - Calendário mensal completo.
+        - Gráficos detalhados de todas as disciplinas.
+        - Histórico completo de atividades.
+        - Ranking de estudantes.
+        - Mural de conquistas.
+        - Notícias sobre concursos.
+        - Dicas e recomendações aleatórias.
+        - Listagens extensas de conteúdos.
+        - Indicadores secundários sem utilidade imediata.
+
+        Essas funcionalidades podem continuar existindo em páginas específicas, mas não devem competir com as atividades prioritárias do dia.
+      </DASHBOARD_RESTRICTIONS>
+
+      <DASHBOARD_PRIORITIES>
+        O dashboard deve funcionar como um painel de execução.
+
+        Priorize:
+
+        1. Próxima tarefa de estudo.
+        2. Progresso da meta diária.
+        3. Tempo estudado no dia.
+        4. Revisões realmente pendentes.
+        5. Pendências importantes do cronograma.
+
+        Não apresente todas as informações com o mesmo destaque.
+
+        A próxima tarefa deve ser o elemento de maior prioridade visual.
+      </DASHBOARD_PRIORITIES>
+
+      <DECISION_REDUCTION>
+        Aplique as seguintes regras:
+
+        - Evite apresentar várias alternativas quando uma recomendação objetiva puder resolver a situação.
+        - Não obrigue o estudante a escolher manualmente o próximo assunto quando o cronograma já determinar essa informação.
+        - Utilize padrões e configurações inteligentes para evitar decisões repetitivas.
+        - Agrupe informações relacionadas.
+        - Oculte funcionalidades secundárias até que sejam necessárias.
+        - Evite confirmações para operações simples e reversíveis.
+        - Não apresente sugestões sem contexto ou relevância.
+        - Evite menus excessivamente profundos.
+        - Não solicite informações que a aplicação já possui.
+      </DECISION_REDUCTION>
+
+      <CONTEXT_SEPARATION>
+        Diferencie dois contextos de utilização:
+
+        <MODE name="Execução">
+          Quando o estudante estiver estudando, a interface deve ser minimalista, apresentar a tarefa atual e reduzir interrupções.
+        </MODE>
+
+        <MODE name="Acompanhamento">
+          Quando o estudante desejar analisar seu desempenho, poderá consultar gráficos, histórico, conquistas, rankings e estatísticas detalhadas.
+
+          Essas informações devem ficar em páginas específicas.
+        </MODE>
+
+        Não misture os dois contextos desnecessariamente.
+      </CONTEXT_SEPARATION>
+
+      <COMPONENT_EVALUATION>
+        Antes de manter, adicionar ou destacar qualquer componente, avalie:
+
+        1. Isso ajuda o estudante a executar sua próxima tarefa?
+        2. Isso é necessário neste momento?
+        3. Essa informação já está disponível em outro lugar?
+        4. Sua presença reduz ou aumenta a carga cognitiva?
+        5. O benefício justifica o espaço visual ocupado?
+
+        Se um componente não apresentar benefício claro para o contexto atual, não o coloque em destaque.
+      </COMPONENT_EVALUATION>
+    </COGNITIVE_LOAD_REDUCTION>
+
+    <DESIGN_SYSTEM>
+      Crie ou consolide um Design System consistente para toda a aplicação.
+
+      Padronize:
+
+      - Cores e tokens semânticos.
+      - Tipografia e hierarquia textual.
+      - Espaçamentos.
+      - Bordas e arredondamentos.
+      - Botões e suas variações.
+      - Inputs e formulários.
+      - Cards.
+      - Tabelas.
+      - Modais e drawers.
+      - Tooltips.
+      - Badges e indicadores.
+      - Estados de interação.
+      - Breakpoints responsivos.
+
+      Evite componentes duplicados com pequenas diferenças visuais.
+
+      Priorize reutilização, manutenção e consistência.
+    </DESIGN_SYSTEM>
+
+    <VISUAL_GUIDELINES>
+      A interface deve apresentar:
+
+      - Visual limpo e profissional.
+      - Espaçamento adequado.
+      - Tipografia legível.
+      - Hierarquia visual clara.
+      - Componentes compactos.
+      - Contraste adequado.
+      - Ícones intuitivos e moderados.
+      - Animações discretas e funcionais.
+      - Feedback visual claro.
+      - Estados de carregamento, erro, sucesso e vazio bem projetados.
+
+      Evite:
+
+      - Gradientes excessivos.
+      - Sombras exageradas.
+      - Cards desnecessários.
+      - Bordas em todos os elementos.
+      - Animações decorativas.
+      - Textos explicativos longos.
+      - Informações repetidas.
+      - Elementos visuais sem finalidade funcional.
+
+      Não transforme minimalismo em uma interface vazia. Preserve todas as funcionalidades importantes com a menor complexidade visual possível.
+    </VISUAL_GUIDELINES>
+
+    <FUNCTIONAL_PRESERVATION>
+      Esta é uma refatoração de UX/UI, não uma reescrita da aplicação.
+
+      Regras obrigatórias:
+
+      - Preserve a arquitetura atual.
+      - Preserve as regras de negócio.
+      - Preserve autenticação e autorização.
+      - Preserve integrações e comunicação com APIs.
+      - Preserve rotas e funcionalidades existentes.
+      - Não altere contratos de API sem necessidade comprovada.
+      - Não remova funcionalidades importantes.
+      - Não substitua dados reais por dados fictícios.
+      - Não implemente elementos visuais sem funcionalidade.
+      - Não crie dependências desnecessárias.
+
+      Priorize a reutilização e melhoria dos componentes existentes.
+
+      Se alguma alteração visual exigir mudança de comportamento, avalie cuidadosamente seus impactos.
+    </FUNCTIONAL_PRESERVATION>
+
+    <ACCESSIBILITY_AND_PERFORMANCE>
+      Garanta:
+
+      - Navegação por teclado.
+      - Estados de foco visíveis.
+      - Contraste adequado.
+      - Hierarquia semântica correta.
+      - Labels acessíveis.
+      - Compatibilidade com leitores de tela.
+      - Respeito à preferência por redução de movimento.
+      - Boa performance de renderização.
+      - Ausência de mudanças inesperadas de layout.
+      - Responsividade em diferentes resoluções.
+    </ACCESSIBILITY_AND_PERFORMANCE>
+
+  </REQUIREMENTS>
+
+  <FORMAT>
+    Organize a execução do trabalho nas seguintes etapas:
+
+    <PHASE id="1" name="Auditoria">
+      Antes de modificar qualquer código:
+
+      1. Analise toda a estrutura do projeto.
+      2. Identifique todas as páginas, rotas e componentes.
+      3. Examine a hierarquia de navegação.
+      4. Identifique inconsistências visuais.
+      5. Localize elementos redundantes e desnecessários.
+      6. Identifique páginas com excesso de informações.
+      7. Avalie os principais fluxos de utilização.
+      8. Examine a experiência em diferentes resoluções.
+
+      Elabore internamente um diagnóstico dos problemas encontrados e estabeleça prioridades.
+    </PHASE>
+
+    <PHASE id="2" name="Planejamento visual">
+      Defina:
+
+      - Direção visual.
+      - Hierarquia de informações.
+      - Estrutura de navegação.
+      - Design System.
+      - Padrões de interação.
+      - Organização das páginas.
+
+      Utilize a estrutura e a identidade visual existentes como referência quando forem adequadas.
+    </PHASE>
+
+    <PHASE id="3" name="Implementação">
+      Execute a refatoração nesta ordem:
+
+      1. Design System e componentes globais.
+      2. Navegação global.
+      3. Dashboard principal.
+      4. Páginas de gerenciamento.
+      5. Páginas de aprendizado.
+      6. Páginas de desempenho.
+      7. Páginas de gamificação.
+      8. Formulários, modais, menus e estados auxiliares.
+      9. Responsividade de todas as páginas.
+    </PHASE>
+
+    <PHASE id="4" name="Validação">
+      1. Execute os testes existentes.
+      2. Valide os principais fluxos de utilização.
+      3. Verifique a responsividade.
+      4. Identifique regressões funcionais.
+      5. Corrija inconsistências visuais.
+      6. Verifique acessibilidade.
+      7. Utilize Playwright, quando disponível, para validar visualmente as páginas e interações.
+
+      Não considere uma página concluída apenas porque ela compila.
+    </PHASE>
+
+    <PHASE id="5" name="Relatório final">
+      Ao concluir, apresente um resumo contendo:
+
+      - Principais problemas identificados.
+      - Páginas e componentes refatorados.
+      - Melhorias de UX/UI implementadas.
+      - Componentes reutilizáveis criados ou aprimorados.
+      - Testes executados.
+      - Problemas encontrados e limitações restantes.
+
+      Informe claramente qualquer funcionalidade que não tenha sido possível validar.
+    </PHASE>
+
+  </FORMAT>
+
+  <INSTRUCTIONS>
+
+    <EXECUTION_RULES>
+      - Não se limite a apresentar sugestões ou relatórios.
+      - Execute efetivamente as alterações no código-fonte.
+      - Não interrompa o trabalho após refatorar o dashboard.
+      - Analise e refatore toda a experiência da aplicação.
+      - Não invente funcionalidades sem necessidade.
+      - Não remova funcionalidades para facilitar a implementação.
+      - Não utilize dados fictícios para simular funcionalidades existentes.
+      - Não altere tecnologias ou arquitetura sem justificativa técnica.
+      - Não introduza dependências sem necessidade.
+      - Priorize qualidade, consistência e manutenção.
+    </EXECUTION_RULES>
+
+    <AUTONOMY>
+      Tenha autonomia para tomar decisões de UX/UI e resolver problemas encontrados durante a implementação.
+
+      Não solicite aprovação para cada pequena alteração visual.
+
+      Quando encontrar uma limitação técnica, procure uma solução compatível com a arquitetura existente.
+
+      Se alguma decisão exigir mudança estrutural ou representar risco às regras de negócio, preserve o comportamento atual e registre a limitação.
+    </AUTONOMY>
+
+    <ACCEPTANCE_CRITERIA>
+      A refatoração será considerada concluída quando:
+
+      - O estudante conseguir identificar rapidamente sua próxima tarefa.
+      - A interface não apresentar elementos disputando atenção sem necessidade.
+      - O dashboard estiver orientado à execução.
+      - As páginas apresentarem consistência visual.
+      - A navegação for intuitiva e previsível.
+      - As informações estiverem organizadas por prioridade.
+      - As funcionalidades importantes continuarem operacionais.
+      - A aplicação funcionar em diferentes resoluções.
+      - Não houver regressões funcionais conhecidas.
+      - A interface apresentar baixa carga cognitiva.
+      - A plataforma reduzir decisões e distrações desnecessárias.
+    </ACCEPTANCE_CRITERIA>
+
+    <FINAL_DIRECTIVE>
+      Pense como alguém que está projetando uma ferramenta para pessoas que precisam estudar durante várias horas por dia e manter a concentração por meses até serem aprovadas em um concurso público.
+
+      Não projete uma plataforma que queira prender a atenção do estudante.
+
+      Projete uma plataforma que ajude o estudante a direcionar sua atenção para aquilo que realmente importa: estudar e ser aprovado.
+
+      Cada elemento deve ter uma finalidade.
+
+      Cada página deve ter uma hierarquia clara.
+
+      Cada interação deve ser intuitiva.
+
+      Cada decisão visual deve reduzir a complexidade, nunca aumentá-la.
+
+      MENOS DECISÕES.
+      MENOS DISTRAÇÕES.
+      MENOS COMPLEXIDADE.
+      MAIS TEMPO EFETIVAMENTE DEDICADO AOS ESTUDOS.
+
+      Execute a refatoração completa respeitando a arquitetura, as funcionalidades e os princípios estabelecidos neste documento.
+    </FINAL_DIRECTIVE>
+
+  </INSTRUCTIONS>
+</PRICE>

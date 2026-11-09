@@ -469,41 +469,51 @@ export function SettingsScreen() {
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-lg border border-danger/30 bg-danger-soft/10 p-4">
-            <div>
-              <div className="font-semibold text-sm text-danger">Reiniciar o Sistema</div>
-              <p className="text-xs text-fg-muted mt-0.5">
-                Apaga todos os registros de estudo, questões e sessões e recria as oito disciplinas iniciais.
-              </p>
-            </div>
-            <Button
-              variant="danger"
-              size="sm"
-              icon={<RotateCcw className="size-4" />}
-              onClick={() => setResetConfirmOpen(true)}
-            >
-              Reiniciar Sistema
-            </Button>
-          </div>
-
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-lg border border-danger/40 bg-danger-soft/20 p-4">
-            <div>
-              <div className="font-semibold text-sm text-danger">
-                Excluir Minha Conta e Dados Pessoais (LGPD — Art. 18, VI)
+          <details className="group rounded-lg border border-danger/30 bg-danger-soft/5 p-4">
+            <summary className="cursor-pointer text-xs font-semibold text-danger select-none flex items-center justify-between">
+              <span>Zona de risco — Reinicialização e exclusão permanente de dados</span>
+              <span className="text-[11px] font-normal text-fg-muted group-open:hidden">Expandir opções</span>
+            </summary>
+            <div className="mt-4 space-y-3 border-t border-danger/20 pt-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-lg border border-danger/25 bg-surface p-3.5">
+                <div>
+                  <div className="font-semibold text-sm text-fg">Reiniciar o Sistema</div>
+                  <p className="text-xs text-fg-muted mt-0.5">
+                    Apaga todos os registros de estudo, questões e sessões e recria as disciplinas iniciais.
+                  </p>
+                </div>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  icon={<RotateCcw className="size-4 text-danger" />}
+                  onClick={() => setResetConfirmOpen(true)}
+                  className="text-danger border-danger/30 hover:bg-danger-soft/30"
+                >
+                  Reiniciar Sistema
+                </Button>
               </div>
-              <p className="text-xs text-fg-muted mt-0.5">
-                Elimina permanentemente seu cadastro e todos os dados vinculados no banco de dados.
-              </p>
+
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-lg border border-danger/25 bg-surface p-3.5">
+                <div>
+                  <div className="font-semibold text-sm text-fg">
+                    Excluir Minha Conta e Dados Pessoais (LGPD — Art. 18, VI)
+                  </div>
+                  <p className="text-xs text-fg-muted mt-0.5">
+                    Elimina permanentemente seu cadastro e todos os dados vinculados no banco de dados.
+                  </p>
+                </div>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  icon={<Trash2 className="size-4 text-danger" />}
+                  onClick={() => setDeleteAccountConfirmOpen(true)}
+                  className="text-danger border-danger/30 hover:bg-danger-soft/30"
+                >
+                  Excluir Conta e Dados
+                </Button>
+              </div>
             </div>
-            <Button
-              variant="danger"
-              size="sm"
-              icon={<Trash2 className="size-4" />}
-              onClick={() => setDeleteAccountConfirmOpen(true)}
-            >
-              Excluir Conta e Dados
-            </Button>
-          </div>
+          </details>
         </div>
       </Card>
 

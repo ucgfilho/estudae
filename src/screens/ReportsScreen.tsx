@@ -26,8 +26,10 @@ import {
   useSessions,
   useQuestionLogs,
   useReviews,
+  useSettings,
   useToday,
 } from '../hooks/useData';
+import { RankCard } from '../components/motivation/RankCard';
 import {
   sumQuestions,
   accuracyByDiscipline,
@@ -50,6 +52,7 @@ export function ReportsScreen() {
   const sessions = useSessions();
   const questionLogs = useQuestionLogs();
   const reviews = useReviews();
+  const settings = useSettings();
 
   const [timeGranularity, setTimeGranularity] = useState<Granularity>('week');
   const [periodDays, setPeriodDays] = useState<'30' | '60' | '90' | 'all'>('60');
@@ -171,7 +174,7 @@ export function ReportsScreen() {
       {/* Granularity & Time Filter Bar */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold text-fg-subtle uppercase">Agrupamento:</span>
+          <span className="text-xs font-medium text-fg-muted">Agrupamento:</span>
           <Segmented
             label="Agrupamento do relatório"
             value={timeGranularity}
@@ -185,7 +188,7 @@ export function ReportsScreen() {
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold text-fg-subtle uppercase">Janela:</span>
+          <span className="text-xs font-medium text-fg-muted">Janela:</span>
           <Segmented
             label="Período do relatório"
             value={periodDays}
@@ -342,6 +345,14 @@ export function ReportsScreen() {
           )}
         </Card>
       </div>
+
+      {/* Gamification & Consistency Progression (Acompanhamento) */}
+      <RankCard
+        sessions={sessions}
+        reviews={reviews}
+        settings={settings}
+        today={today}
+      />
     </div>
   );
 }

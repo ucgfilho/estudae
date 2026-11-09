@@ -87,21 +87,9 @@ export function AuthScreen({ onAuthenticated }: AuthScreenProps) {
 
   return (
     <div className="min-h-screen flex flex-col lg:flex-row bg-canvas text-fg">
-      {/* Coluna Institucional / Identidade Visual estudaê (mesma paleta e template) */}
-      <div
-        className="lg:w-5/12 xl:w-1/2 p-6 sm:p-10 lg:p-12 flex flex-col justify-between text-white relative overflow-hidden"
-        style={{
-          background: 'linear-gradient(145deg, #c20018 0%, #a6193c 55%, #7a102b 100%)',
-        }}
-      >
-        <div
-          className="pointer-events-none absolute -right-20 -bottom-20 size-96 rounded-full opacity-15"
-          style={{
-            background: 'radial-gradient(circle, #f68b1f 0%, transparent 70%)',
-          }}
-        />
-
-        <div className="flex items-center gap-3.5 relative z-10">
+      {/* Coluna Institucional / Identidade Visual estudaê */}
+      <div className="lg:w-5/12 xl:w-1/2 p-6 sm:p-10 lg:p-12 flex flex-col justify-between text-white bg-[#8E1532] border-b lg:border-b-0 lg:border-r border-white/10">
+        <div className="flex items-center gap-3.5">
           <BnbLogo className="size-11 rounded-xl shadow-md" />
           <div>
             <div className="text-lg sm:text-xl font-bold tracking-tight">estudaê</div>

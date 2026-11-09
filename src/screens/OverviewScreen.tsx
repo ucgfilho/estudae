@@ -1,28 +1,27 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  LineChart,
-  Line,
-  CartesianGrid,
-} from 'recharts';
-import {
   Clock,
   CheckCircle,
   BookOpen,
   Calendar,
-  AlertCircle,
   Plus,
   ArrowRight,
   TrendingUp,
+  Check,
+  BarChart3,
+  Trophy,
 } from 'lucide-react';
 import { Button } from '../components/ui/Button';
-import { Card, PageHeader, StatCard, ProgressBar, EmptyState, Badge, DisciplineDot, Alert } from '../components/ui/Display';
+import {
+  Card,
+  PageHeader,
+  StatCard,
+  ProgressBar,
+  Badge,
+  DisciplineDot,
+  Alert,
+} from '../components/ui/Display';
 import { SessionModal } from '../components/modals/SessionModal';
 import { QuestionModal } from '../components/modals/QuestionModal';
 import { ErrorNoteModal } from '../components/modals/ErrorNoteModal';
@@ -38,20 +37,18 @@ import {
   useToday,
 } from '../hooks/useData';
 import {
-  studiedMinutesInRange,
   weekScheduleMetrics,
   sumQuestions,
   studyStreak,
   topicProgress,
   nextPlannedSession,
   reviewBuckets,
-  accuracyByDiscipline,
-  studyTimeSeries,
-  accuracySeries,
+  supersededSessionIds,
 } from '../domain/metrics';
 import { formatMinutes, formatPercent, formatInteger } from '../lib/format';
-import { startOfWeek, endOfWeek, addDays, formatDate } from '../lib/dates';
+import { startOfWeek, endOfWeek, formatDate } from '../lib/dates';
 import { startPlannedTimer } from '../services/timer';
+import { completeReview } from '../services/performance';
 import { errorMessage } from '../lib/utils';
 import { useSuccessToast } from '../components/ui/Toast';
 
@@ -72,22 +69,16 @@ export function OverviewScreen() {
   const [actionError, setActionError] = useState<string | null>(null);
   const setActionSuccess = useSuccessToast();
 
-
-  const dailyGoal = settings?.dailyGoalMinutes ?? 120;
   const weeklyGoal = settings?.weeklyGoalMinutes ?? 840;
 
-  // Week bounds
+  // Limites da semana atual
   const currentWeekStart = useMemo(() => startOfWeek(today), [today]);
   const currentWeekEnd = useMemo(() => endOfWeek(today), [today]);
 
-  // Metrics
-  const todayDoneMinutes = useMemo(
-    () => studiedMinutesInRange(sessions, today, today),
-    [sessions, today]
-  );
+  // Métricas essenciais de execução
   const currentWeekMetrics = useMemo(
     () => weekScheduleMetrics(sessions, currentWeekStart, currentWeekEnd),
-    [sessions, currentWeekStart, currentWeekEnd]
+    [sessions, currentWeekStart, currentWeekEnd],
   );
   const weekDoneMinutes = currentWeekMetrics.doneMinutes;
   const weekPlannedMinutes = currentWeekMetrics.plannedMinutes;
@@ -98,48 +89,26 @@ export function OverviewScreen() {
   const nextSession = useMemo(() => nextPlannedSession(sessions), [sessions]);
   const revBuckets = useMemo(() => reviewBuckets(reviews, today), [reviews, today]);
 
-  const discMap = useMemo(() => new Map(disciplines.map((d) => [d.id, d])), [disciplines]);
-  const nextSessionDiscipline = nextSession
-    ? (discMap.get(nextSession.disciplineId) ??
-      (nextSession.disciplineId === 'simulado'
-        ? { id: 'simulado', name: 'Simulado Geral BNB', color: '#A6193C', active: true, order: 99, kind: 'technical' as const }
-        : null))
-    : null;
-
-  // Chart data: 14 days time series
-  const last14DaysStart = useMemo(() => addDays(today, -13), [today]);
-  const studyChartData = useMemo(
-    () => studyTimeSeries(sessions, last14DaysStart, today, 'day'),
-    [sessions, last14DaysStart, today]
-  );
-
-  // Chart data: accuracy by discipline
-  const discAccData = useMemo(
+  const superseded = useMemo(() => supersededSessionIds(sessions), [sessions]);
+  const overdueSessionsInWeek = useMemo(
     () =>
-      accuracyByDiscipline(questionLogs, disciplines).map((d) => ({
-        name: d.name,
-        fullName: d.name,
-        accuracy: d.accuracy ?? 0,
-        hasQuestions: d.accuracy !== null,
-        total: d.total,
-        color: d.color,
-      })),
-    [questionLogs, disciplines]
-  );
-
-  // Chart data: accuracy evolution
-  const accuracyEvolutionData = useMemo(
-    () =>
-      accuracySeries(questionLogs, last14DaysStart, today, 'day').filter(
-        (p) => p.accuracy !== null
+      sessions.filter(
+        (s) =>
+          s.status === 'planejada' &&
+          !superseded.has(s.id) &&
+          s.date >= currentWeekStart &&
+          s.date < today,
       ),
-    [questionLogs, last14DaysStart, today]
+    [sessions, superseded, currentWeekStart, today],
   );
 
-  const handleStartNextSession = async () => {
-    if (!nextSession) return;
-    await handleStartBlock(nextSession.id);
-  };
+  const urgentReviews = useMemo(
+    () => [...revBuckets.overdue, ...revBuckets.today].slice(0, 4),
+    [revBuckets.overdue, revBuckets.today],
+  );
+  const totalUrgentReviews = revBuckets.overdue.length + revBuckets.today.length;
+
+  const discMap = useMemo(() => new Map(disciplines.map((d) => [d.id, d])), [disciplines]);
 
   const handleStartBlock = async (sessionId: string) => {
     setActionError(null);
@@ -151,21 +120,31 @@ export function OverviewScreen() {
     }
   };
 
+  const handleCompleteUrgentReview = async (reviewId: string) => {
+    setActionError(null);
+    try {
+      await completeReview(reviewId);
+      setActionSuccess('Revisão concluída!');
+    } catch (err) {
+      setActionError(errorMessage(err));
+    }
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Visão Geral"
         description={
           settings?.contestName
-            ? `Acompanhamento do seu desempenho para ${settings.contestName}${settings.contestRole ? ` (${settings.contestRole})` : ''}.`
-            : 'Acompanhamento do seu desempenho para o concurso do BNB (Analista de Sistemas — Desenvolvimento).'
+            ? `Painel diário de execução para ${settings.contestName}${settings.contestRole ? ` (${settings.contestRole})` : ''}.`
+            : 'Painel diário de execução — identifique sua próxima tarefa e avance no cronograma.'
         }
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Button
               variant="secondary"
               size="sm"
-              icon={<Plus className="size-4" />}
+              icon={<Plus className="size-4" aria-hidden="true" />}
               onClick={() => setSessionModalOpen(true)}
             >
               Planejar Sessão
@@ -173,18 +152,10 @@ export function OverviewScreen() {
             <Button
               variant="secondary"
               size="sm"
-              icon={<CheckCircle className="size-4" />}
+              icon={<CheckCircle className="size-4" aria-hidden="true" />}
               onClick={() => setQuestionModalOpen(true)}
             >
               Lançar Questões
-            </Button>
-            <Button
-              variant="primary"
-              size="sm"
-              icon={<Clock className="size-4" />}
-              onClick={() => navigate('/estudar-agora')}
-            >
-              Estudar Agora
             </Button>
           </div>
         }
@@ -196,8 +167,7 @@ export function OverviewScreen() {
         </Alert>
       )}
 
-
-      {/* Daily mission: goal-gradient + today's checklist + next step */}
+      {/* Prioridades #1, #2 e #3: Próxima Tarefa, Meta Diária e Tempo Estudado Hoje */}
       <DailyMissionCard
         sessions={sessions}
         logs={questionLogs}
@@ -205,37 +175,152 @@ export function OverviewScreen() {
         disciplines={disciplines}
         today={today}
         streak={streak}
+        nextPlanned={nextSession}
         onStartBlock={handleStartBlock}
         onStudyNow={() => navigate('/estudar-agora')}
         onOpenSettings={() => navigate('/configuracoes')}
       />
 
-      <RankCard sessions={sessions} reviews={reviews} settings={settings} today={today} />
-
-      {/* Primary KPI Grid */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {/* Metric 1: Today study time */}
-        <StatCard
-          label="Tempo Hoje"
-          value={formatMinutes(todayDoneMinutes)}
-          hint={`Meta diária: ${formatMinutes(dailyGoal)}`}
-          icon={<Clock className="size-4" />}
+      {/* Prioridades #4 e #5: Revisões realmente pendentes e Pendências importantes do cronograma */}
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+        {/* Revisões realmente pendentes (vencidas + hoje) */}
+        <Card
+          title="Revisões Pendentes"
+          description={
+            totalUrgentReviews > 0
+              ? `${totalUrgentReviews} revisão(ões) exigem atenção hoje`
+              : 'Ciclo de retenção em dia — nenhuma revisão vencida ou prevista para hoje'
+          }
+          actions={
+            <button
+              type="button"
+              onClick={() => navigate('/revisoes')}
+              className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+            >
+              Ver todas <ArrowRight className="size-3" aria-hidden="true" />
+            </button>
+          }
         >
-          <ProgressBar
-            value={todayDoneMinutes}
-            max={dailyGoal}
-            label="Tempo estudado hoje em relação à meta diária"
-            tone={todayDoneMinutes >= dailyGoal ? 'success' : 'primary'}
-            showOverflow
-          />
-        </StatCard>
+          {urgentReviews.length > 0 ? (
+            <ul className="divide-y divide-border">
+              {urgentReviews.map((rev) => {
+                const disc = discMap.get(rev.disciplineId);
+                const isOverdue = rev.dueDate < today;
+                return (
+                  <li key={rev.id} className="flex items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 text-xs">
+                        {disc && <DisciplineDot color={disc.color} />}
+                        <span className="font-medium text-fg-muted truncate">{disc?.name ?? 'Disciplina'}</span>
+                        <Badge tone={isOverdue ? 'danger' : 'warning'}>
+                          {isOverdue ? 'Vencida' : 'Para hoje'}
+                        </Badge>
+                      </div>
+                      <p className="mt-0.5 truncate text-sm font-medium text-fg">{rev.title}</p>
+                    </div>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      icon={<Check className="size-3.5 text-success" aria-hidden="true" />}
+                      onClick={() => void handleCompleteUrgentReview(rev.id)}
+                    >
+                      Concluir
+                    </Button>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <div className="flex items-center justify-between rounded-lg bg-surface-muted/50 px-3.5 py-3 text-sm">
+              <span className="flex items-center gap-2 text-fg-muted">
+                <CheckCircle className="size-4 text-success shrink-0" aria-hidden="true" />
+                Nenhuma revisão pendente para hoje.
+              </span>
+              {revBuckets.upcoming.length > 0 && (
+                <span className="text-xs text-fg-subtle tabular-nums">
+                  {revBuckets.upcoming.length} próxima(s) agendada(s)
+                </span>
+              )}
+            </div>
+          )}
+        </Card>
 
-        {/* Metric 2: Week study time */}
+        {/* Pendências importantes do cronograma */}
+        <Card
+          title="Pendências do Cronograma"
+          description={
+            overdueSessionsInWeek.length > 0
+              ? `${overdueSessionsInWeek.length} bloco(s) de dias anteriores aguardam execução nesta semana`
+              : 'Cronograma da semana sem blocos atrasados'
+          }
+          actions={
+            <button
+              type="button"
+              onClick={() => navigate('/cronograma')}
+              className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+            >
+              Abrir cronograma <ArrowRight className="size-3" aria-hidden="true" />
+            </button>
+          }
+        >
+          {overdueSessionsInWeek.length > 0 ? (
+            <ul className="divide-y divide-border">
+              {overdueSessionsInWeek.slice(0, 3).map((s) => {
+                const disc = discMap.get(s.disciplineId);
+                return (
+                  <li key={s.id} className="flex items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 text-xs">
+                        {disc && <DisciplineDot color={disc.color} />}
+                        <span className="font-semibold text-fg truncate">
+                          {disc?.name ?? (s.disciplineId === 'simulado' ? 'Simulado Geral BNB' : 'Sessão')}
+                        </span>
+                        <span className="text-warning font-medium tabular-nums">
+                          {formatDate(s.date)} · {s.plannedMinutes} min
+                        </span>
+                      </div>
+                      {s.objective && (
+                        <p className="mt-0.5 truncate text-xs text-fg-muted">{s.objective}</p>
+                      )}
+                    </div>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => void handleStartBlock(s.id)}
+                    >
+                      Iniciar
+                    </Button>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <div className="flex items-center justify-between rounded-lg bg-surface-muted/50 px-3.5 py-3 text-sm">
+              <span className="flex items-center gap-2 text-fg-muted">
+                <Calendar className="size-4 text-primary shrink-0" aria-hidden="true" />
+                {currentWeekMetrics.totalSessions > 0
+                  ? `${currentWeekMetrics.completedSessions} de ${currentWeekMetrics.totalSessions} blocos da semana concluídos.`
+                  : 'Nenhuma sessão planejada para esta semana.'}
+              </span>
+              <button
+                type="button"
+                onClick={() => navigate('/calendario')}
+                className="text-xs font-medium text-fg-muted hover:text-fg"
+              >
+                Ver agenda
+              </button>
+            </div>
+          )}
+        </Card>
+      </div>
+
+      {/* Resumo enxuto de ritmo e progresso (Informações Progressivas — sem gráficos pesados no painel de execução) */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatCard
-          label="Tempo na Semana"
+          label="Ritmo na semana"
           value={formatMinutes(weekDoneMinutes)}
-          hint={`Meta: ${formatMinutes(weeklyGoal)} • Planejado: ${formatMinutes(weekPlannedMinutes)}`}
-          icon={<Calendar className="size-4" />}
+          hint={`Meta: ${formatMinutes(weeklyGoal)} · Planejado: ${formatMinutes(weekPlannedMinutes)}`}
+          icon={<Clock className="size-4" />}
         >
           <ProgressBar
             value={weekDoneMinutes}
@@ -246,326 +331,54 @@ export function OverviewScreen() {
           />
         </StatCard>
 
-        {/* Metric 3: Question accuracy */}
         <StatCard
-          label="Desempenho em Questões"
+          label="Precisão em questões"
           value={formatPercent(questionTotals.accuracy)}
-          hint={`${formatInteger(questionTotals.correct)} acertos / ${formatInteger(questionTotals.incorrect)} erros (${formatInteger(questionTotals.total)} total)`}
+          hint={`${formatInteger(questionTotals.correct)} acertos em ${formatInteger(questionTotals.total)} resolvidas`}
           icon={<TrendingUp className="size-4" />}
         >
-          <div className="text-xs text-fg-subtle">
-            Meta operacional: {settings?.accuracyGoal ?? 80}%
+          <div className="flex items-center justify-between text-xs text-fg-subtle">
+            <span>Meta: {settings?.accuracyGoal ?? 80}%</span>
+            <button
+              type="button"
+              onClick={() => navigate('/relatorios')}
+              className="font-medium text-primary hover:underline inline-flex items-center gap-1"
+            >
+              <BarChart3 className="size-3" aria-hidden="true" />
+              Ver gráficos
+            </button>
           </div>
+        </StatCard>
+
+        <StatCard
+          label="Cobertura do edital"
+          value={formatPercent(topicsProg.percent)}
+          hint={`${topicsProg.completed} de ${topicsProg.total} tópicos concluídos`}
+          icon={<BookOpen className="size-4" />}
+        >
+          <ProgressBar
+            value={topicsProg.completed}
+            max={topicsProg.total || 1}
+            label="Progresso geral de tópicos"
+            tone="success"
+          />
         </StatCard>
       </div>
 
-      {/* Next Planned Session Banner */}
-      <Card
-        title="Próxima Sessão Planejada"
-        description="Foco recomendado para o seu próximo bloco de estudo"
-        actions={
-          nextSession && (
-            <Button
-              variant="primary"
-              size="sm"
-              icon={<Clock className="size-4" />}
-              onClick={handleStartNextSession}
-            >
-              Iniciar Esta Sessão
-            </Button>
-          )
-        }
-      >
-        {nextSession ? (
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                {nextSessionDiscipline && (
-                  <DisciplineDot color={nextSessionDiscipline.color} />
-                )}
-                <span className="font-semibold text-fg">
-                  {nextSessionDiscipline?.name ?? 'Disciplina'}
-                </span>
-                <Badge tone="primary">{nextSession.plannedMinutes} min</Badge>
-                {nextSession.plannedStart && (
-                  <Badge tone="neutral">às {nextSession.plannedStart}</Badge>
-                )}
-                <Badge tone="neutral">{formatDate(nextSession.date)}</Badge>
-              </div>
-              <p className="text-sm text-fg-muted">
-                {nextSession.objective || 'Nenhum objetivo específico registrado para esta sessão.'}
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => navigate('/calendario')}
-              >
-                Ver no Calendário
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <EmptyState
-            icon={<Calendar className="size-6" />}
-            title="Nenhuma sessão futura planejada"
-            description="Organize seus blocos no calendário ou gere o cronograma de 24 semanas para manter a consistência."
-            action={
-              <Button
-                variant="secondary"
-                size="sm"
-                icon={<Plus className="size-4" />}
-                onClick={() => setSessionModalOpen(true)}
-              >
-                Planejar uma Sessão
-              </Button>
-            }
-          />
-        )}
-      </Card>
-
-      {/* Charts Row */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* Chart 1: Study time (last 14 days) */}
-        <Card
-          title="Tempo de Estudo — Últimos 14 Dias"
-          description="Comparação entre tempo efetivamente realizado e tempo planejado (minutos)"
-        >
-          {studyChartData.some((d) => d.studiedMinutes > 0 || d.plannedMinutes > 0) ? (
-            <div className="h-64 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={studyChartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="label" tickLine={false} />
-                  <YAxis tickLine={false} width={44} />
-                  <Tooltip
-                    formatter={(value) => [`${value} min`, '']}
-                    labelFormatter={(label) => `Data: ${label}`}
-                  />
-                  <Bar
-                    dataKey="studiedMinutes"
-                    name="Realizado"
-                    fill="var(--primary)"
-                    radius={[4, 4, 0, 0]}
-                  />
-                  <Bar
-                    dataKey="plannedMinutes"
-                    name="Planejado"
-                    fill="var(--accent)"
-                    radius={[4, 4, 0, 0]}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          ) : (
-            <EmptyState
-              icon={<Clock className="size-6" />}
-              title="Sem dados de estudo nos últimos 14 dias"
-              description="Quando você concluir sessões no cronômetro ou registrar tempo estudado, o gráfico exibirá seu ritmo aqui."
-            />
-          )}
-        </Card>
-
-        {/* Chart 2: Accuracy by Discipline */}
-        <Card
-          title="Percentual de Acerto por Disciplina"
-          description="Desempenho apurado a partir das questões resolvidas e corrigidas"
-        >
-          {discAccData.some((d) => d.hasQuestions) ? (
-            <div className="h-64 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={discAccData.filter((d) => d.hasQuestions)}
-                  layout="vertical"
-                  margin={{ top: 10, right: 20, left: 10, bottom: 0 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                  <XAxis type="number" domain={[0, 100]} unit="%" tickLine={false} />
-                  <YAxis
-                    type="category"
-                    dataKey="name"
-                    tickLine={false}
-                    width={200}
-                    tick={{ fontSize: 11 }}
-                  />
-                  <Tooltip
-                    formatter={(value) => [formatPercent(Number(value)), 'Acerto']}
-                    labelFormatter={(_, payload) => payload?.[0]?.payload?.fullName ?? ''}
-                  />
-                  <Bar dataKey="accuracy" name="% Acerto" fill="var(--primary)" radius={[0, 4, 4, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          ) : (
-            <EmptyState
-              icon={<TrendingUp className="size-6" />}
-              title="Nenhuma questão lançada ainda"
-              description="Registre suas baterias de questões para visualizar a distribuição de acertos por disciplina."
-              action={
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  icon={<Plus className="size-4" />}
-                  onClick={() => setQuestionModalOpen(true)}
-                >
-                  Lançar Questões
-                </Button>
-              }
-            />
-          )}
-        </Card>
-      </div>
-
-      {/* Secondary Row: Accuracy Evolution & Topic Progress */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Evolution Chart (2 cols) */}
-        <Card
-          as="section"
-          className="lg:col-span-2"
-          title="Evolução do Desempenho ao Longo do Tempo"
-          description="Percentual de acerto diário nas baterias de questões respondidas"
-        >
-          {accuracyEvolutionData.length > 0 ? (
-            <div className="h-64 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={accuracyEvolutionData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="label" tickLine={false} />
-                  <YAxis domain={[0, 100]} unit="%" tickLine={false} width={48} />
-                  <Tooltip formatter={(value) => [formatPercent(Number(value)), 'Acerto']} />
-                  <Line
-                    type="monotone"
-                    dataKey="accuracy"
-                    name="% Acerto"
-                    stroke="var(--primary)"
-                    strokeWidth={2}
-                    dot={{ r: 4 }}
-                    activeDot={{ r: 6 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          ) : (
-            <EmptyState
-              icon={<TrendingUp className="size-6" />}
-              title="Sem histórico de acertos no período recente"
-              description="Lançamentos diários de questões construirão a sua curva de evolução."
-            />
-          )}
-        </Card>
-
-        {/* Topic Progress & Pending Reviews (1 col) */}
-        <div className="space-y-6">
-          <Card
-            title="Progresso dos Tópicos"
-            description="Status dos conteúdos cadastrados no edital"
-            actions={
-              <button
-                type="button"
-                onClick={() => navigate('/disciplinas')}
-                className="text-xs font-medium text-primary hover:underline flex items-center gap-1"
-              >
-                Gerenciar <ArrowRight className="size-3" />
-              </button>
-            }
-          >
-            {topicsProg.total > 0 ? (
-              <div className="space-y-3">
-                <div className="flex items-baseline justify-between">
-                  <span className="text-2xl font-bold tabular-nums text-fg">
-                    {formatPercent(topicsProg.percent)}
-                  </span>
-                  <span className="text-xs text-fg-muted">
-                    {topicsProg.completed} de {topicsProg.total} tópicos concluídos
-                  </span>
-                </div>
-                <ProgressBar
-                  value={topicsProg.completed}
-                  max={topicsProg.total}
-                  label="Progresso geral de tópicos"
-                  tone="success"
-                />
-                <div className="grid grid-cols-2 gap-2 pt-2 text-xs text-fg-subtle">
-                  <div>• Em andamento: {topicsProg.inProgress}</div>
-                  <div>• Dominados: {topicsProg.mastered}</div>
-                </div>
-              </div>
-            ) : (
-              <EmptyState
-                icon={<BookOpen className="size-5" />}
-                title="Nenhum tópico cadastrado"
-                description="Cadastre tópicos ou importe o checklist das disciplinas."
-                action={
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => navigate('/disciplinas')}
-                  >
-                    Ir para Conteúdos
-                  </Button>
-                }
-              />
-            )}
-          </Card>
-
-          <Card
-            title="Revisões Espaçadas"
-            description="Status do ciclo de retenção da memória"
-            actions={
-              <button
-                type="button"
-                onClick={() => navigate('/revisoes')}
-                className="text-xs font-medium text-primary hover:underline flex items-center gap-1"
-              >
-                Ver todas <ArrowRight className="size-3" />
-              </button>
-            }
-          >
-            <div className="space-y-2 text-sm">
-              <button
-                type="button"
-                onClick={() => navigate('/revisoes')}
-                className="w-full flex items-center justify-between p-2 rounded-lg bg-surface-muted/40 hover:bg-surface-muted/80 transition-colors text-left"
-              >
-                <span className="flex items-center gap-2 text-danger font-medium">
-                  <AlertCircle className="size-4" /> Vencidas / Atrasadas
-                </span>
-                <div className="flex items-center gap-1.5 font-bold tabular-nums">
-                  <span>{revBuckets.overdue.length}</span>
-                  <ArrowRight className="size-3.5 text-fg-subtle" />
-                </div>
-              </button>
-              <button
-                type="button"
-                onClick={() => navigate('/revisoes')}
-                className="w-full flex items-center justify-between p-2 rounded-lg bg-surface-muted/40 hover:bg-surface-muted/80 transition-colors text-left"
-              >
-                <span className="flex items-center gap-2 text-warning font-medium">
-                  <Clock className="size-4" /> Para Hoje
-                </span>
-                <div className="flex items-center gap-1.5 font-bold tabular-nums">
-                  <span>{revBuckets.today.length}</span>
-                  <ArrowRight className="size-3.5 text-fg-subtle" />
-                </div>
-              </button>
-              <button
-                type="button"
-                onClick={() => navigate('/revisoes')}
-                className="w-full flex items-center justify-between p-2 rounded-lg bg-surface-muted/40 hover:bg-surface-muted/80 transition-colors text-left"
-              >
-                <span className="flex items-center gap-2 text-fg-muted font-medium">
-                  <Calendar className="size-4" /> Próximas
-                </span>
-                <div className="flex items-center gap-1.5 font-bold tabular-nums">
-                  <span>{revBuckets.upcoming.length}</span>
-                  <ArrowRight className="size-3.5 text-fg-subtle" />
-                </div>
-              </button>
-            </div>
-          </Card>
+      {/* Gamificação em expansão progressiva para não competir com a execução do dia */}
+      <details className="group rounded-xl border border-border bg-surface">
+        <summary className="flex cursor-pointer items-center justify-between gap-2 px-4 py-3 text-sm font-medium text-fg-muted hover:text-fg select-none">
+          <span className="flex items-center gap-2">
+            <Trophy className="size-4 text-primary" aria-hidden="true" />
+            <span>Patente, constância e regras de XP</span>
+          </span>
+          <span className="text-xs text-fg-subtle group-open:hidden">Expandir</span>
+          <span className="text-xs text-fg-subtle hidden group-open:inline">Recolher</span>
+        </summary>
+        <div className="border-t border-border p-4">
+          <RankCard sessions={sessions} reviews={reviews} settings={settings} today={today} />
         </div>
-      </div>
+      </details>
 
       {/* Modals */}
       <SessionModal

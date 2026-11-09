@@ -145,21 +145,35 @@ export function Header({
           )}
         </div>
 
-        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           {timer && (
             <button
               type="button"
               onClick={() => navigate('/estudar-agora')}
-              className="inline-flex items-center gap-1.5 sm:gap-2 rounded-full border border-primary/30 bg-primary-soft px-2.5 sm:px-3 py-1 text-xs font-semibold text-primary transition-colors hover:brightness-95 animate-pulse"
+              className="inline-flex h-8 items-center gap-1.5 sm:gap-2 rounded-md border border-primary/30 bg-primary-soft px-2.5 text-xs font-semibold text-primary transition-colors hover:brightness-95"
               title="Sessão de estudo em andamento — Clique para abrir o cronômetro"
             >
-              <TimerIcon className="size-3.5" />
+              <TimerIcon className="size-3.5" aria-hidden="true" />
               <span className="hidden sm:inline">
-                {timer.status === 'paused' ? 'Pausado' : 'Estudando'}
+                {timer.status === 'paused' ? 'Pausado' : 'Em foco'}
               </span>
               <span className="tabular-nums font-mono">{formatClock(timerSeconds)}</span>
             </button>
           )}
+
+          <button
+            type="button"
+            onClick={() => setSearchOpen(true)}
+            aria-label="Buscar conteúdo (Ctrl+K ou /)"
+            title="Buscar conteúdo (Ctrl+K ou /)"
+            className="inline-flex h-8 items-center gap-2 rounded-md border border-border bg-surface-muted/60 hover:bg-surface-muted px-2.5 text-xs text-fg-muted hover:text-fg transition-colors"
+          >
+            <Search className="size-3.5" aria-hidden="true" />
+            <span className="hidden sm:inline">Buscar</span>
+            <kbd className="hidden md:inline-block rounded border border-border bg-surface px-1 py-0.5 font-mono text-[10px] text-fg-subtle">
+              /
+            </kbd>
+          </button>
 
           {authUser && (
             <button
@@ -167,21 +181,15 @@ export function Header({
               data-testid="header-profile-button"
               onClick={() => setProfileOpen(true)}
               title={`Editar perfil (${authUser.name} · ${authUser.email})`}
-              className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-surface-muted/70 hover:bg-surface-muted hover:border-primary/40 px-2 sm:px-2.5 text-xs font-medium text-fg transition cursor-pointer"
+              className="inline-flex h-8 items-center gap-2 rounded-md border border-border bg-surface hover:bg-surface-muted px-2 text-xs font-medium text-fg transition-colors cursor-pointer"
             >
               <Avatar name={authUser.name || authUser.email} src={authUser.avatarUrl} size="sm" />
-              <span className="hidden md:inline-block max-w-32 truncate font-semibold text-fg">
+              <span className="hidden md:inline-block max-w-28 truncate font-medium text-fg">
                 {authUser.name}
               </span>
-              <Pencil className="hidden sm:block size-3 text-fg-subtle shrink-0" />
+              <Pencil className="hidden sm:block size-3 text-fg-subtle shrink-0" aria-hidden="true" />
             </button>
           )}
-
-          <IconButton
-            label="Buscar conteúdo (Ctrl+K ou /)"
-            icon={<Search className="size-4" />}
-            onClick={() => setSearchOpen(true)}
-          />
 
           <IconButton
             label={`Alterar tema (atual: ${settings?.theme ?? 'sistema'})`}

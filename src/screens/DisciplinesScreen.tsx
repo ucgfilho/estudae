@@ -236,8 +236,9 @@ export function DisciplinesScreen() {
           currentDiscipline && (
             <div className="flex flex-wrap items-center gap-2">
               <Button
-                variant="danger"
+                variant="ghost"
                 size="sm"
+                className="text-fg-muted hover:text-danger"
                 icon={<Trash2 className="size-4" />}
                 onClick={() => {
                   setDeleteAllScope('current');

@@ -36432,6 +36432,8 @@ var errorNoteDtoSchema = object({
 		"dominado"
 	]),
 	nextReviewDate: nullableDateKey,
+	mockExamId: string().max(128).nullable().optional(),
+	mockExamTitle: string().max(500).nullable().optional(),
 	createdAt: iso,
 	updatedAt: iso
 });
@@ -36811,6 +36813,8 @@ CREATE TABLE IF NOT EXISTS error_notes (
   error_date TEXT NOT NULL,
   status TEXT NOT NULL CHECK (status IN ('revisar', 'revisado', 'dominado')),
   next_review_date TEXT NULL,
+  mock_exam_id TEXT NULL,
+  mock_exam_title TEXT NULL,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
   PRIMARY KEY (user_id, id),
@@ -36924,6 +36928,9 @@ var SqliteDatabaseClient = class {
 			"edital_file_name"
 		]) try {
 			this.db.exec(`ALTER TABLE user_settings ADD COLUMN ${col} TEXT NULL;`);
+		} catch {}
+		for (const col of ["mock_exam_id", "mock_exam_title"]) try {
+			this.db.exec(`ALTER TABLE error_notes ADD COLUMN ${col} TEXT NULL;`);
 		} catch {}
 		for (const col of ["exam_date", "session_id"]) try {
 			this.db.exec(`ALTER TABLE mock_exams ADD COLUMN ${col} TEXT NULL;`);
@@ -38326,9 +38333,11 @@ var SqlStudyDataRepository = class {
 		for (const e of items) this.db.run(`INSERT INTO error_notes (
            user_id, id, question_log_id, discipline_id, topic_id,
            source_reference, error_type, explanation, error_date,
-           status, next_review_date, created_at, updated_at
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           status, next_review_date, mock_exam_id, mock_exam_title, created_at, updated_at
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(user_id, id) DO UPDATE SET
+           mock_exam_id = excluded.mock_exam_id,
+           mock_exam_title = excluded.mock_exam_title,
            question_log_id = excluded.question_log_id,
            discipline_id = excluded.discipline_id,
            topic_id = excluded.topic_id,
@@ -38351,6 +38360,8 @@ var SqlStudyDataRepository = class {
 			e.errorDate,
 			e.status,
 			e.nextReviewDate,
+			e.mockExamId ?? null,
+			e.mockExamTitle ?? null,
 			e.createdAt,
 			e.updatedAt
 		]);
@@ -38622,7 +38633,7 @@ var SqlStudyDataRepository = class {
 	getErrorNotes(userId) {
 		return this.db.all(`SELECT id, question_log_id, discipline_id, topic_id, source_reference,
               error_type, explanation, error_date, status, next_review_date,
-              created_at, updated_at
+              mock_exam_id, mock_exam_title, created_at, updated_at
        FROM error_notes
        WHERE user_id = ?
        ORDER BY error_date DESC, created_at DESC`, [userId]).map((r) => ({
@@ -38636,6 +38647,10 @@ var SqlStudyDataRepository = class {
 			errorDate: r.error_date,
 			status: r.status,
 			nextReviewDate: r.next_review_date,
+			...r.mock_exam_id ? {
+				mockExamId: r.mock_exam_id,
+				mockExamTitle: r.mock_exam_title
+			} : {},
 			createdAt: r.created_at,
 			updatedAt: r.updated_at
 		}));

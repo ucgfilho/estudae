@@ -238,12 +238,12 @@ export function Alert({
 
 export function PageHeader({ title, description, actions }: { title: string; description?: ReactNode; actions?: ReactNode }) {
   return (
-    <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
-      <div className="min-w-0">
-        <h1 className="text-xl font-semibold tracking-tight text-fg">{title}</h1>
-        {description && <p className="mt-1 text-sm text-fg-muted">{description}</p>}
+    <div className="mb-5 flex flex-wrap items-start justify-between gap-4 border-b border-border/80 pb-4">
+      <div className="min-w-0 space-y-1">
+        <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-fg leading-tight">{title}</h1>
+        {description && <p className="max-w-2xl text-sm text-fg-muted leading-relaxed">{description}</p>}
       </div>
-      {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+      {actions && <div className="flex flex-wrap items-center gap-2 shrink-0">{actions}</div>}
     </div>
   );
 }
@@ -262,13 +262,13 @@ export function StatCard({
   children?: ReactNode;
 }) {
   return (
-    <div className="flex flex-col gap-2 rounded-xl border border-border bg-surface p-4">
+    <div className="flex flex-col justify-between gap-2 rounded-xl border border-border bg-surface p-4">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-xs font-medium tracking-wide text-fg-subtle uppercase">{label}</p>
-        {icon && <span className="text-fg-subtle" aria-hidden>{icon}</span>}
+        <p className="text-xs font-medium text-fg-muted">{label}</p>
+        {icon && <span className="text-fg-subtle" aria-hidden="true">{icon}</span>}
       </div>
-      <p className="text-2xl font-semibold tracking-tight text-fg tabular-nums">{value}</p>
-      {hint && <div className="text-xs text-fg-muted">{hint}</div>}
+      <p className="text-2xl font-bold tracking-tight text-fg tabular-nums leading-none">{value}</p>
+      {hint && <div className="text-xs text-fg-subtle">{hint}</div>}
       {children}
     </div>
   );

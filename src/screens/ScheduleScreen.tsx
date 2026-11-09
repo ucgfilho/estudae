@@ -610,36 +610,11 @@ export function ScheduleScreen() {
         title="Cronograma de Estudos (24 Semanas)"
         description={
           settings?.contestName
-            ? `Planejamento estruturado gerado por IA adaptado ao Edital Verticalizado de ${settings.contestName}${settings.contestRole ? ` (${settings.contestRole})` : ''}: 2h diárias e sábados de questões/simulados.`
-            : 'Planejamento estruturado gerado exclusivamente por IA com foco nas especificidades da prova do BNB (Analista de TI), 2h diárias e sábados de questões/simulados.'
+            ? `Planejamento semanal adaptado ao edital de ${settings.contestName}${settings.contestRole ? ` (${settings.contestRole})` : ''}.`
+            : 'Planejamento estruturado de 24 semanas com blocos diários e revisões práticas.'
         }
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <Button
-              variant="primary"
-              size="sm"
-              icon={<Plus className="size-4" />}
-              onClick={() => openNewSession()}
-            >
-              Planejar Sessão
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              icon={<Sliders className="size-4" />}
-              onClick={openDistributionModal}
-            >
-              Editar Distribuição
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              icon={<RotateCcw className="size-4" />}
-              onClick={handleReapplyWeek}
-              disabled={!currentPlan}
-            >
-              Reaplicar na Semana
-            </Button>
             <Button
               variant="secondary"
               size="sm"
@@ -654,11 +629,37 @@ export function ScheduleScreen() {
             <Button
               variant="secondary"
               size="sm"
-              icon={<Trash2 className="size-4 text-danger" />}
+              icon={<Sliders className="size-4" />}
+              onClick={openDistributionModal}
+            >
+              Editar Distribuição
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              icon={<RotateCcw className="size-4" />}
+              onClick={handleReapplyWeek}
+              disabled={!currentPlan}
+            >
+              Reaplicar na Semana
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-fg-muted hover:text-danger"
+              icon={<Trash2 className="size-4" />}
               onClick={() => setClearConfirmOpen(true)}
               disabled={weeklyPlans.length === 0}
             >
               Limpar Cronograma
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              icon={<Plus className="size-4" />}
+              onClick={() => openNewSession()}
+            >
+              Planejar Sessão
             </Button>
           </div>
         }
@@ -830,14 +831,6 @@ export function ScheduleScreen() {
                   {WEEKLY_PLAN_STATUS_LABELS[effectivePlanStatus]}
                 </Badge>
                 <Button
-                  variant="primary"
-                  size="sm"
-                  icon={<Plus className="size-3.5" />}
-                  onClick={() => openNewSession()}
-                >
-                  Planejar Sessão
-                </Button>
-                <Button
                   variant="secondary"
                   size="sm"
                   icon={<Edit className="size-3.5" />}
@@ -878,8 +871,8 @@ export function ScheduleScreen() {
 
               <div className="rounded-xl border border-border bg-surface-muted/30 p-3 flex flex-col justify-between">
                 <div>
-                  <div className="text-xs font-semibold uppercase text-fg-subtle mb-1">
-                    Objetivos da Semana
+                  <div className="text-xs font-medium text-fg-muted mb-1">
+                    Objetivos da semana
                   </div>
                   <p className="text-xs text-fg-muted line-clamp-3">
                     {currentPlan.objectives || 'Nenhum objetivo registrado para esta semana. Clique em "Editar Objetivos" para adicionar.'}
@@ -985,16 +978,16 @@ export function ScheduleScreen() {
         {/* Days and Sessions List for the selected week */}
         <div className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-fg-subtle">
-              Programação dos Dias da Semana
+            <h3 className="text-sm font-semibold text-fg">
+              Programação dos dias da semana
             </h3>
             <span className="text-xs text-fg-muted flex items-center gap-1.5">
-              <span className="inline-flex items-center gap-1 text-primary font-medium bg-primary-soft/30 px-2 py-0.5 rounded-full">
+              <span className="inline-flex items-center gap-1 text-fg-muted bg-surface-muted px-2 py-0.5 rounded-full">
                 <GripVertical className="size-3" />
-                Arraste as sessões livremente entre dias, posições e semanas
+                Arraste sessões entre dias ou semanas
               </span>
               <span>·</span>
-              <span>{weekSessions.length} sessão(ões) na semana</span>
+              <span className="tabular-nums">{weekSessions.length} sessão(ões) na semana</span>
             </span>
           </div>
 
