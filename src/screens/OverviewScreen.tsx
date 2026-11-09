@@ -33,6 +33,7 @@ import {
   useSessions,
   useQuestionLogs,
   useReviews,
+  useErrorNotes,
   useSettings,
   useToday,
 } from '../hooks/useData';
@@ -48,7 +49,7 @@ import {
 import { formatMinutes, formatPercent, formatInteger } from '../lib/format';
 import { startOfWeek, endOfWeek, formatDate } from '../lib/dates';
 import { startPlannedTimer } from '../services/timer';
-import { completeReview } from '../services/performance';
+import { completeReview, resolveReviewDisplayTitle } from '../services/performance';
 import { errorMessage } from '../lib/utils';
 import { useSuccessToast } from '../components/ui/Toast';
 
@@ -61,6 +62,7 @@ export function OverviewScreen() {
   const sessions = useSessions();
   const questionLogs = useQuestionLogs();
   const reviews = useReviews();
+  const errorNotes = useErrorNotes();
   const settings = useSettings();
 
   const [sessionModalOpen, setSessionModalOpen] = useState(false);
@@ -68,6 +70,8 @@ export function OverviewScreen() {
   const [errorModalOpen, setErrorModalOpen] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const setActionSuccess = useSuccessToast();
+
+  const errorNoteMap = useMemo(() => new Map(errorNotes.map((e) => [e.id, e])), [errorNotes]);
 
   const weeklyGoal = settings?.weeklyGoalMinutes ?? 840;
 
@@ -205,6 +209,8 @@ export function OverviewScreen() {
             <ul className="divide-y divide-border">
               {urgentReviews.map((rev) => {
                 const disc = discMap.get(rev.disciplineId);
+                const linkedNote = rev.errorNoteId ? errorNoteMap.get(rev.errorNoteId) : undefined;
+                const displayTitle = resolveReviewDisplayTitle(rev, linkedNote);
                 const isOverdue = rev.dueDate < today;
                 return (
                   <li key={rev.id} className="flex items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0">
@@ -216,11 +222,12 @@ export function OverviewScreen() {
                           {isOverdue ? 'Vencida' : 'Para hoje'}
                         </Badge>
                       </div>
-                      <p className="mt-0.5 truncate text-sm font-medium text-fg">{rev.title}</p>
+                      <p className="mt-0.5 truncate text-sm font-medium text-fg">{displayTitle}</p>
                     </div>
                     <Button
                       variant="secondary"
                       size="sm"
+                      className="shrink-0"
                       icon={<Check className="size-3.5 text-success" aria-hidden="true" />}
                       onClick={() => void handleCompleteUrgentReview(rev.id)}
                     >

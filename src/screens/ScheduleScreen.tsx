@@ -930,7 +930,7 @@ export function ScheduleScreen() {
             description="Exibindo suas sessões de estudo planejadas para esta semana."
             actions={
               <Button
-                variant="primary"
+                variant="secondary"
                 size="sm"
                 icon={<Plus className="size-3.5" />}
                 onClick={() => openNewSession()}

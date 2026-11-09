@@ -459,7 +459,7 @@ export function QuestionsScreen() {
                         )}
                       </td>
                       <td className="py-2.5 px-3 text-right whitespace-nowrap">
-                        <div className="flex items-center justify-end gap-1">
+                        <div className="inline-flex shrink-0 items-center justify-end gap-1.5">
                           {log.incorrect > 0 && (
                             <IconButton
                               label={
@@ -486,7 +486,8 @@ export function QuestionsScreen() {
                           />
                           <IconButton
                             label="Excluir lançamento"
-                            icon={<Trash2 className="size-3.5 text-danger" />}
+                            icon={<Trash2 className="size-3.5" />}
+                            className="text-fg-muted hover:text-danger hover:bg-danger-soft/20"
                             size="sm"
                             onClick={() => {
                               setLogToDelete(log);

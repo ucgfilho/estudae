@@ -1,5 +1,5 @@
 import { db } from '../db/db';
-import type { ErrorNote, ErrorStatus, ErrorType, QuestionLog } from '../db/types';
+import type { ErrorNote, ErrorStatus, ErrorType, QuestionLog, ReviewTask } from '../db/types';
 import { findDuplicateLog, type NormalizedQuestionValues } from '../domain/questions';
 import { buildReviewTasks, nextPendingDate, postponedDueDate } from '../domain/reviews';
 import { isValidDateKey, todayKey, type DateKey } from '../lib/dates';
@@ -143,8 +143,44 @@ function validateErrorNote(input: ErrorNoteInput): void {
 }
 
 /**
+ * Constrói o título padronizado da revisão espaçada vinculada a um erro,
+ * garantindo que o número da questão apareça sempre que estiver na referência
+ * ou puder ser inferido do texto do diagnóstico/explicação.
+ */
+export function buildErrorNoteReviewTitle(
+  note: Pick<ErrorNote, 'sourceReference' | 'explanation' | 'mockExamTitle'>,
+): string {
+  let ref = note.sourceReference.trim();
+  const hasQuestionInRef = /quest[aã]o\s*#?\d+|\bq\.?\s*#?\d+/i.test(ref);
+
+  if (!hasQuestionInRef && note.explanation) {
+    const match = note.explanation.match(/(?:quest[aã]o|q\.?)\s*#?(\d+)/i);
+    if (match?.[1]) {
+      const qLabel = `questão ${match[1]}`;
+      ref = ref ? `${ref} · ${qLabel}` : qLabel;
+    }
+  }
+
+  const baseTitle = ref || note.explanation.replace(/\s+/g, ' ').trim().slice(0, 80);
+  return `Erro: ${baseTitle}`;
+}
+
+/**
+ * Resolve o título de exibição de uma revisão: caso esteja vinculada a um
+ * registro do Caderno de Erros com referência mais completa (ex: número da questão),
+ * prioriza o título sincronizado com a anotação de erro.
+ */
+export function resolveReviewDisplayTitle(review: ReviewTask, linkedNote?: ErrorNote | null): string {
+  if (!linkedNote) return review.title;
+  if (review.title.startsWith('Caderno de erros:')) return review.title;
+  return buildErrorNoteReviewTitle(linkedNote);
+}
+
+/**
  * Cria ou atualiza uma anotação de erro. Ao criar com `scheduleReviews`,
  * gera revisões espaçadas (intervalos das configurações) a partir da data do erro.
+ * Ao editar uma anotação existente, sincroniza automaticamente o título,
+ * a disciplina e o tópico nas revisões vinculadas.
  */
 export async function saveErrorNote(input: ErrorNoteInput, options: { id?: string; scheduleReviews?: boolean } = {}): Promise<ErrorNote> {
   validateErrorNote(input);
@@ -156,13 +192,24 @@ export async function saveErrorNote(input: ErrorNoteInput, options: { id?: strin
       const current = await db.errorNotes.get(options.id);
       if (!current) throw new ValidationError('Anotação não encontrada.');
       const updated: ErrorNote = { ...current, ...base, updatedAt: now };
+      const syncedTitle = buildErrorNoteReviewTitle(updated);
+      await db.reviews
+        .where('errorNoteId')
+        .equals(options.id)
+        .modify((rev) => {
+          rev.disciplineId = updated.disciplineId;
+          rev.topicId = updated.topicId;
+          if (!rev.title.startsWith('Caderno de erros:')) {
+            rev.title = syncedTitle;
+          }
+        });
       await db.errorNotes.put(updated);
       return updated;
     }
     const note: ErrorNote = { id: createId(), ...base, createdAt: now, updatedAt: now };
     if (options.scheduleReviews) {
-      const title = note.sourceReference || note.explanation.slice(0, 80);
-      const tasks = buildReviewTasks({ disciplineId: note.disciplineId, topicId: note.topicId, errorNoteId: note.id, title: `Erro: ${title}` }, note.errorDate, settings.reviewIntervals);
+      const reviewTitle = buildErrorNoteReviewTitle(note);
+      const tasks = buildReviewTasks({ disciplineId: note.disciplineId, topicId: note.topicId, errorNoteId: note.id, title: reviewTitle }, note.errorDate, settings.reviewIntervals);
       await db.reviews.bulkAdd(tasks);
       note.nextReviewDate = nextPendingDate(tasks);
     }

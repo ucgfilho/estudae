@@ -486,7 +486,8 @@ export function DisciplinesScreen() {
 
                         <IconButton
                           label="Excluir tópico"
-                          icon={<Trash2 className="size-3.5 text-danger" />}
+                          icon={<Trash2 className="size-3.5" />}
+                          className="text-fg-muted hover:text-danger hover:bg-danger-soft/20"
                           size="sm"
                           onClick={() => {
                             setTopicToDelete(topic);
@@ -563,7 +564,8 @@ export function DisciplinesScreen() {
                               />
                               <IconButton
                                 label="Excluir subtópico"
-                                icon={<Trash2 className="size-3 text-danger" />}
+                                icon={<Trash2 className="size-3" />}
+                                className="text-fg-muted hover:text-danger hover:bg-danger-soft/20"
                                 size="sm"
                                 onClick={() => {
                                   setTopicToDelete(sub);

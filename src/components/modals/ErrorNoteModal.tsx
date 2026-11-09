@@ -166,10 +166,29 @@ export function ErrorNoteModal({
       return;
     }
 
-    const trimmedRef = questionReference.trim();
+    const rawRef = questionReference.trim();
+    const normalizedRef = /^\d+$/.test(rawRef)
+      ? `questão ${rawRef}`
+      : /^q\.?\s*#?(\d+)$/i.test(rawRef)
+      ? `questão ${rawRef.replace(/^q\.?\s*#?/i, '')}`
+      : rawRef;
+
+    let effectiveQuestionRef = normalizedRef;
+    if (!effectiveQuestionRef && explanation.trim()) {
+      const match = explanation.match(/(?:quest[aã]o|q\.?)\s*#?(\d+)/i);
+      if (match?.[1]) {
+        effectiveQuestionRef = `questão ${match[1]}`;
+      }
+    }
+
+    if (selectedExam && !effectiveQuestionRef) {
+      setError('Informe o número da questão desta prova (ex: questão 54).');
+      return;
+    }
+
     const finalSourceRef = selectedExam
-      ? (trimmedRef ? `${selectedExam.title} · ${trimmedRef}` : selectedExam.title)
-      : trimmedRef;
+      ? `${selectedExam.title} · ${effectiveQuestionRef}`
+      : effectiveQuestionRef;
 
     if (!finalSourceRef && !explanation.trim()) {
       setError('Informe a referência da questão ou a explicação do aprendizado.');
@@ -311,13 +330,15 @@ export function ErrorNoteModal({
 
           <Field
             label="Identificação da questão"
-            hint={selectedExam ? 'Opcional (ex: Questão 45)' : 'Ex: Q12345 QConcursos, CESPE 2024'}
+            required={Boolean(selectedExam)}
+            hint={selectedExam ? 'Ex: questão 54 (ou apenas 54)' : 'Ex: Q12345 QConcursos, CESPE 2024'}
           >
             <Input
               type="text"
-              placeholder={selectedExam ? 'Ex: Questão 45' : 'Ex: CESPE 2024 BNB Q45'}
+              placeholder={selectedExam ? 'Ex: questão 54' : 'Ex: CESPE 2024 BNB Q45'}
               value={questionReference}
               onChange={(e) => setQuestionReference(e.target.value)}
+              required={Boolean(selectedExam)}
             />
           </Field>
         </div>

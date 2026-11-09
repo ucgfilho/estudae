@@ -81,7 +81,7 @@ export function MockExamsScreen() {
                 {[...exams]
                   .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
                   .map((e) => (
-                    <li key={e.id} className="flex items-center justify-between gap-3 py-2">
+                    <li key={e.id} className="flex items-center justify-between gap-3 py-2.5">
                       <button type="button" className="min-w-0 flex-1 text-left" onClick={() => setSelectedId(e.id)}>
                         <span className="block truncate text-sm font-medium text-fg">{e.title}</span>
                         <span className="text-xs text-fg-subtle">
@@ -89,8 +89,17 @@ export function MockExamsScreen() {
                           {e.date ? ` · ${formatDate(e.date)}` : ''}
                         </span>
                       </button>
-                      <Badge tone={e.submittedAt ? 'success' : 'warning'}>{e.submittedAt ? 'Enviado' : 'Em andamento'}</Badge>
-                      <IconButton label={`Excluir ${e.title}`} icon={<Trash2 className="size-4" />} onClick={() => setToDelete(e)} />
+                      <div className="flex shrink-0 items-center gap-2">
+                        <Badge tone={e.submittedAt ? 'success' : 'warning'}>{e.submittedAt ? 'Enviado' : 'Em andamento'}</Badge>
+                        <IconButton
+                          label={`Excluir ${e.title}`}
+                          variant="secondary"
+                          size="sm"
+                          icon={<Trash2 className="size-3.5" />}
+                          className="text-fg-muted hover:text-danger hover:border-danger/40 hover:bg-danger-soft/20"
+                          onClick={() => setToDelete(e)}
+                        />
+                      </div>
                     </li>
                   ))}
               </ul>

@@ -358,13 +358,19 @@ export async function createExamErrorNotebooks(examId: string, disciplineIds: st
       const items = wrong.get(disciplineId);
       if (!items?.length || done.has(disciplineId)) continue;
       const discipline = await db.disciplines.get(disciplineId);
+      const qNums = items.map((r) => r.number);
+      const qSummary =
+        qNums.length === 1
+          ? `questão ${qNums[0]}`
+          : `questões ${qNums.join(', ')}`;
       const lines = items.map((r) => `• Questão ${r.number}: você marcou ${r.marked ?? '—'}; gabarito ${r.correctAnswer}.`);
+      const sourceRef = `${exam.title}${discipline ? ` · ${discipline.name}` : ''} · ${qSummary}`;
       const note: ErrorNote = {
         id: createId(),
         questionLogId: null,
         disciplineId,
         topicId: null,
-        sourceReference: `${exam.title}${discipline ? ` · ${discipline.name}` : ''}`,
+        sourceReference: sourceRef,
         errorType: 'falta-conteudo',
         explanation: `Erros do simulado "${exam.title}" (${items.length}):\n${lines.join('\n')}`,
         errorDate: exam.date ?? baseDate,
@@ -376,7 +382,7 @@ export async function createExamErrorNotebooks(examId: string, disciplineIds: st
         updatedAt: now,
       };
       const tasks = buildReviewTasks(
-        { disciplineId, topicId: null, errorNoteId: note.id, title: `Caderno de erros: ${exam.title}${discipline ? ` · ${discipline.name}` : ''}` },
+        { disciplineId, topicId: null, errorNoteId: note.id, title: `Caderno de erros: ${sourceRef}` },
         baseDate,
         settings.reviewIntervals,
       );

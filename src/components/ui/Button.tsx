@@ -65,6 +65,12 @@ export interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement>
   size?: Size;
 }
 
+const iconSizes: Record<Size, string> = {
+  sm: 'size-8',
+  md: 'size-9',
+  lg: 'size-11',
+};
+
 /** Botão somente com ícone; `label` é obrigatório para leitores de tela. */
 export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(function IconButton(
   { label, icon, variant = 'ghost', size = 'md', className, type = 'button', ...rest },
@@ -79,7 +85,7 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(functio
       className={cn(
         'inline-flex shrink-0 items-center justify-center rounded-md transition-colors disabled:cursor-not-allowed disabled:opacity-45',
         variants[variant],
-        size === 'sm' ? 'size-7' : 'size-9',
+        iconSizes[size],
         className,
       )}
       {...rest}

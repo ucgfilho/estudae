@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Plus,
   CheckCircle,
@@ -23,7 +23,9 @@ import {
   completeReview,
   reopenReview,
   deleteReview,
+  resolveReviewDisplayTitle,
 } from '../services/performance';
+import { db } from '../db/db';
 import { reviewBuckets } from '../domain/metrics';
 import { formatDate } from '../lib/dates';
 import type { ReviewTask } from '../db/types';
@@ -58,6 +60,24 @@ export function ReviewsScreen() {
   const discMap = useMemo(() => new Map(disciplines.map((d) => [d.id, d])), [disciplines]);
   const topicMap = useMemo(() => new Map(topics.map((t) => [t.id, t])), [topics]);
   const errorNoteMap = useMemo(() => new Map(errorNotes.map((e) => [e.id, e])), [errorNotes]);
+
+  // Sincroniza automaticamente revisões antigas cujo caderno de erros foi atualizado com o número da questão
+  useEffect(() => {
+    if (reviews.length === 0 || errorNoteMap.size === 0) return;
+    const toHeal: ReviewTask[] = [];
+    for (const r of reviews) {
+      if (!r.errorNoteId) continue;
+      const linked = errorNoteMap.get(r.errorNoteId);
+      if (!linked) continue;
+      const expectedTitle = resolveReviewDisplayTitle(r, linked);
+      if (r.title !== expectedTitle) {
+        toHeal.push({ ...r, title: expectedTitle });
+      }
+    }
+    if (toHeal.length > 0) {
+      void db.reviews.bulkPut(toHeal);
+    }
+  }, [reviews, errorNoteMap]);
 
   const buckets = useMemo(() => reviewBuckets(reviews, today), [reviews, today]);
   const completedReviews = useMemo(() => {
@@ -153,9 +173,11 @@ export function ReviewsScreen() {
       {/* List Card */}
       <div className="space-y-3">
         {currentList.length > 0 ? (
-          currentList.map((review, idx) => {
+          currentList.map((review) => {
             const d = discMap.get(review.disciplineId);
             const t = review.topicId ? topicMap.get(review.topicId) : null;
+            const linkedErrorNote = review.errorNoteId ? errorNoteMap.get(review.errorNoteId) : undefined;
+            const displayTitle = resolveReviewDisplayTitle(review, linkedErrorNote);
             const isOverdue = review.status === 'pendente' && review.dueDate < today;
             const isToday = review.dueDate === today;
 
@@ -163,7 +185,7 @@ export function ReviewsScreen() {
               <div
                 key={review.id}
                 className={cn(
-                  'flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border p-4 bg-surface transition-all',
+                  'flex flex-col sm:flex-row sm:items-start justify-between gap-4 rounded-xl border p-4 bg-surface transition-all',
                   isOverdue
                     ? 'border-danger/30 bg-danger-soft/10'
                     : isToday
@@ -171,7 +193,7 @@ export function ReviewsScreen() {
                     : 'border-border'
                 )}
               >
-                <div className="space-y-1">
+                <div className="min-w-0 flex-1 space-y-1.5">
                   <div className="flex flex-wrap items-center gap-2">
                     {d && <DisciplineDot color={d.color} />}
                     <span className="font-semibold text-fg">{d?.name}</span>
@@ -186,7 +208,7 @@ export function ReviewsScreen() {
                     )}
                   </div>
 
-                  <p className="font-medium text-sm text-fg">{review.title}</p>
+                  <p className="font-medium text-sm text-fg">{displayTitle}</p>
 
                   <div className="text-xs text-fg-subtle flex items-center gap-3">
                     <span className="flex items-center gap-1">
@@ -200,30 +222,30 @@ export function ReviewsScreen() {
                     )}
                   </div>
 
-                  {review.errorNoteId && errorNoteMap.get(review.errorNoteId) && (
+                  {linkedErrorNote && (
                     <details className="mt-2 text-xs">
                       <summary className="cursor-pointer text-warning hover:underline font-medium select-none">
                         Ver diagnóstico do erro vinculado
                       </summary>
-                      <div className="mt-1.5 p-2.5 rounded-lg bg-surface-muted/60 border border-border text-xs text-fg space-y-1">
+                      <div className="mt-1.5 p-3 rounded-lg bg-surface-muted/60 border border-border text-xs text-fg space-y-1.5">
                         <div>
                           <span className="text-fg-subtle font-semibold">Fonte/Questão:</span>{' '}
-                          {errorNoteMap.get(review.errorNoteId)?.sourceReference || '—'}
+                          {linkedErrorNote.sourceReference || '—'}
                         </div>
                         <div>
                           <span className="text-fg-subtle font-semibold">Diagnóstico:</span>
-                          <FormattedText text={errorNoteMap.get(review.errorNoteId)?.explanation ?? ''} className="mt-1" />
+                          <FormattedText text={linkedErrorNote.explanation ?? ''} className="mt-1" />
                         </div>
                       </div>
                     </details>
                   )}
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex shrink-0 items-center gap-2 self-end sm:self-start">
                   {review.status === 'pendente' ? (
                     <>
                       <Button
-                        variant={idx === 0 ? 'primary' : 'secondary'}
+                        variant="primary"
                         size="sm"
                         icon={<Check className="size-4" />}
                         onClick={() => handleComplete(review)}
@@ -252,7 +274,10 @@ export function ReviewsScreen() {
 
                   <IconButton
                     label="Excluir revisão"
-                    icon={<Trash2 className="size-4 text-danger" />}
+                    variant="secondary"
+                    size="sm"
+                    icon={<Trash2 className="size-3.5" />}
+                    className="text-fg-muted hover:text-danger hover:border-danger/40 hover:bg-danger-soft/20"
                     onClick={() => {
                       setReviewToDelete(review);
                       setDeleteConfirmOpen(true);

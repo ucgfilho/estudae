@@ -449,10 +449,10 @@ export function CalendarScreen() {
                 return (
                   <div
                     key={s.id}
-                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-border p-4 bg-surface"
+                    className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 rounded-xl border border-border p-4 bg-surface"
                   >
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <div className="flex flex-wrap items-center gap-2">
                         {d ? (
                           <DisciplineDot color={d.color} />
                         ) : s.disciplineId === 'simulado' ? (
@@ -488,7 +488,7 @@ export function CalendarScreen() {
                       </div>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex shrink-0 items-center gap-2 self-end sm:self-start">
                       {s.status === 'planejada' && (
                         <Button
                           variant="primary"
@@ -670,10 +670,12 @@ export function CalendarScreen() {
                 </Button>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex shrink-0 items-center gap-2">
                 <IconButton
                   label="Editar detalhes"
-                  icon={<Edit2 className="size-4" />}
+                  variant="secondary"
+                  size="sm"
+                  icon={<Edit2 className="size-3.5" />}
                   onClick={() => {
                     setSessionToEdit(selectedSessionDetail);
                     setSessionModalOpen(true);
@@ -681,7 +683,10 @@ export function CalendarScreen() {
                 />
                 <IconButton
                   label="Excluir sessão"
-                  icon={<Trash2 className="size-4 text-danger" />}
+                  variant="secondary"
+                  size="sm"
+                  icon={<Trash2 className="size-3.5" />}
+                  className="text-fg-muted hover:text-danger hover:border-danger/40 hover:bg-danger-soft/20"
                   onClick={() => {
                     setSessionToDelete(selectedSessionDetail);
                     setDeleteConfirmOpen(true);

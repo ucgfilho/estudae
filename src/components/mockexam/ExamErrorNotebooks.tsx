@@ -197,10 +197,10 @@ export function ExamErrorNotebooks({ exam, disciplines }: { exam: MockExam; disc
                         </Badge>
                       </div>
 
-                      <div className="flex items-center gap-1">
+                      <div className="flex shrink-0 items-center gap-1.5">
                         {note.status !== 'dominado' && (
                           <Button
-                            variant="ghost"
+                            variant="secondary"
                             size="sm"
                             icon={<Check className="size-3.5 text-success" />}
                             onClick={() =>
@@ -215,7 +215,7 @@ export function ExamErrorNotebooks({ exam, disciplines }: { exam: MockExam; disc
                         )}
                         {note.status === 'dominado' && (
                           <Button
-                            variant="ghost"
+                            variant="secondary"
                             size="sm"
                             icon={<RotateCcw className="size-3.5" />}
                             onClick={() => handleStatusChange(note.id, 'revisar')}
@@ -225,12 +225,17 @@ export function ExamErrorNotebooks({ exam, disciplines }: { exam: MockExam; disc
                         )}
                         <IconButton
                           label="Editar anotação"
-                          icon={<Edit2 className="size-4" />}
+                          variant="secondary"
+                          size="sm"
+                          icon={<Edit2 className="size-3.5" />}
                           onClick={() => setNoteToEdit(note)}
                         />
                         <IconButton
                           label="Excluir anotação"
-                          icon={<Trash2 className="size-4 text-danger" />}
+                          variant="secondary"
+                          size="sm"
+                          icon={<Trash2 className="size-3.5" />}
+                          className="text-fg-muted hover:text-danger hover:border-danger/40 hover:bg-danger-soft/20"
                           onClick={() => setNoteToDelete(note)}
                         />
                       </div>
