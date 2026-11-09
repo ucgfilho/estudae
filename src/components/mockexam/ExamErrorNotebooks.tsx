@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { CheckCircle2, NotebookPen } from 'lucide-react';
+import { CheckCircle2, NotebookPen, Plus } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Alert, Badge, Card, DisciplineDot } from '../ui/Display';
 import { Checkbox } from '../ui/Form';
+import { ErrorNoteModal } from '../modals/ErrorNoteModal';
 import { useErrorNotes } from '../../hooks/useData';
 import { createExamErrorNotebooks, wrongQuestionsByDiscipline } from '../../services/mockExams';
 import { errorMessage } from '../../lib/utils';
@@ -15,6 +16,7 @@ export function ExamErrorNotebooks({ exam, disciplines }: { exam: MockExam; disc
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [created, setCreated] = useState(0);
+  const [manualOpen, setManualOpen] = useState(false);
 
   const wrong = useMemo(() => wrongQuestionsByDiscipline(exam), [exam]);
   const existing = useMemo(
@@ -48,6 +50,11 @@ export function ExamErrorNotebooks({ exam, disciplines }: { exam: MockExam; disc
 
   return (
     <Card
+      actions={
+        <Button size="sm" variant="primary" icon={<Plus className="size-4" />} onClick={() => setManualOpen(true)}>
+          Adicionar caderno de erros
+        </Button>
+      }
       title="Cadernos de erros desta prova"
       description="Crie um caderno por matéria com as questões que você errou. As revisões espaçadas são agendadas automaticamente e aparecem no cronograma."
     >
@@ -107,6 +114,13 @@ export function ExamErrorNotebooks({ exam, disciplines }: { exam: MockExam; disc
           </div>
         )}
       </div>
+      <ErrorNoteModal
+        open={manualOpen}
+        onClose={() => setManualOpen(false)}
+        mockExam={{ id: exam.id, title: exam.title }}
+        defaultDate={exam.date}
+        onSaved={() => setCreated((n) => n + 1)}
+      />
     </Card>
   );
 }

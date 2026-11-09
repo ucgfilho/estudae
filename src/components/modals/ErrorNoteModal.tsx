@@ -25,6 +25,8 @@ interface ErrorNoteModalProps {
   defaultDisciplineId?: string;
   defaultTopicId?: string | null;
   questionLogId?: string | null;
+  /** Simulado ao qual o novo caderno será vinculado automaticamente. */
+  mockExam?: { id: string; title: string } | null;
   onSaved?: (saved: ErrorNote) => void;
 }
 
@@ -36,6 +38,7 @@ export function ErrorNoteModal({
   defaultDisciplineId,
   defaultTopicId,
   questionLogId,
+  mockExam,
   onSaved,
 }: ErrorNoteModalProps) {
   const disciplines = useDisciplines();
@@ -78,7 +81,7 @@ export function ErrorNoteModal({
     } else {
       setDisciplineId(defaultDisciplineId || (disciplines[0]?.id ?? ''));
       setTopicId(defaultTopicId || '');
-      setSourceReference('');
+      setSourceReference(mockExam?.title ?? '');
       setErrorType('falta-conteudo');
       setExplanation('');
       setErrorDate(defaultDate || todayKey());
@@ -87,7 +90,7 @@ export function ErrorNoteModal({
       setScheduleReviews(true);
     }
     setError(null);
-  }, [open, effectiveNote, defaultDate, defaultDisciplineId, defaultTopicId, disciplines]);
+  }, [open, effectiveNote, defaultDate, defaultDisciplineId, defaultTopicId, disciplines, mockExam?.title]);
 
   const filteredTopics = topics.filter(
     (t) => t.disciplineId === disciplineId && t.active && !t.parentTopicId
@@ -116,6 +119,7 @@ export function ErrorNoteModal({
       errorDate,
       status,
       nextReviewDate: nextReviewDate.trim() || null,
+      ...(mockExam && !effectiveNote ? { mockExamId: mockExam.id, mockExamTitle: mockExam.title } : {}),
     };
 
     setLoading(true);
@@ -138,6 +142,7 @@ export function ErrorNoteModal({
       open={open}
       onClose={onClose}
       title={effectiveNote ? 'Editar Anotação de Erro' : 'Adicionar ao Caderno de Erros'}
+      description={mockExam && !effectiveNote ? `Será vinculado ao simulado "${mockExam.title}".` : undefined}
       size="md"
       footer={
         <>

@@ -129,6 +129,8 @@ export interface ErrorNoteInput {
   errorDate: DateKey;
   status: ErrorStatus;
   nextReviewDate: DateKey | null;
+  mockExamId?: string | null;
+  mockExamTitle?: string | null;
 }
 
 function validateErrorNote(input: ErrorNoteInput): void {
