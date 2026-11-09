@@ -17,6 +17,7 @@ data/
 server/database/seeds/
 *user-data*.json
 tasks/
+docs/
 
 # Test and coverage output
 coverage/
