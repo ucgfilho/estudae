@@ -86,7 +86,7 @@ export function AuthScreen({ onAuthenticated }: AuthScreenProps) {
   };
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row bg-bg text-fg">
+    <div className="min-h-screen flex flex-col lg:flex-row bg-canvas text-fg">
       {/* Coluna Institucional / Identidade Visual estudaê (mesma paleta e template) */}
       <div
         className="lg:w-5/12 xl:w-1/2 p-6 sm:p-10 lg:p-12 flex flex-col justify-between text-white relative overflow-hidden"

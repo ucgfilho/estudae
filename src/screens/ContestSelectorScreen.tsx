@@ -81,14 +81,14 @@ export function ContestSelectorScreen({ onSelectContest }: ContestSelectorScreen
   return (
     <div
       data-testid="contest-selector-screen"
-      className="min-h-screen flex flex-col justify-between bg-bg text-fg relative overflow-hidden"
+      className="min-h-screen flex flex-col justify-between bg-canvas text-fg relative overflow-hidden"
     >
       {/* Fundo decorativo com a paleta estudaê (#c20018 / #a6193c / #f68b1f) */}
       <div
-        className="pointer-events-none absolute inset-x-0 top-0 h-80 opacity-15 dark:opacity-25"
+        className="pointer-events-none absolute inset-x-0 top-0 h-96 sm:h-[450px] md:h-[520px] opacity-25 dark:opacity-40"
         style={{
           background:
-            'radial-gradient(circle at 50% 0%, #c20018 0%, #a6193c 45%, transparent 75%)',
+            'radial-gradient(ellipse 90% 80% at 50% 0%, #c20018 0%, #a6193c 40%, rgba(122, 16, 43, 0.4) 70%, transparent 100%)',
         }}
       />
 
