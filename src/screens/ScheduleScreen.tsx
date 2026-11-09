@@ -623,38 +623,58 @@ export function ScheduleScreen() {
       }
       const targetDayKey = found.dataset.dayColumn as string;
       const isSourceColumn = targetDayKey === session.date;
-      const step = d.height + 6;
+      const ghostCenterY = d.lastY - d.offsetY + d.height / 2;
       const cards = Array.from(
         found.querySelectorAll<HTMLElement>('[data-session-card-id]'),
       );
       if (isSourceColumn) {
         const sourceCardIndex = cards.findIndex((c) => c.dataset.sessionCardId === session.id);
-        let index = cards.length - 1;
+        const draggedCard = cards[sourceCardIndex];
+        const listBaseY = draggedCard
+          ? draggedCard.getBoundingClientRect().top - draggedCard.offsetTop
+          : 0;
+        const step = d.height + 6;
+        const prevIdx =
+          dropTargetRef.current?.dayKey === targetDayKey
+            ? dropTargetRef.current.index
+            : sourceCardIndex;
+        let index = 0;
         for (let i = 0; i < cards.length; i++) {
-          const r = cards[i].getBoundingClientRect();
-          const currentShift = Number(cards[i].dataset.shiftY || 0);
-          const unshiftedTop = r.top - currentShift;
-          const unshiftedMid = unshiftedTop + r.height / 2;
-          if (y < unshiftedMid) {
-            index = i;
-            break;
+          if (i === sourceCardIndex) continue;
+          let curShift = 0;
+          if (prevIdx > sourceCardIndex && i > sourceCardIndex && i <= prevIdx) {
+            curShift = -step;
+          } else if (prevIdx < sourceCardIndex && i >= prevIdx && i < sourceCardIndex) {
+            curShift = step;
           }
-        }
-        if (sourceCardIndex !== -1) {
-          index = Math.max(0, Math.min(index, cards.length - 1));
+          // Compara o centro do fantasma com o centro visual atual do card irmão
+          // usando metade do deslocamento como amortecedor para evitar oscilação
+          const threshold =
+            listBaseY + cards[i].offsetTop + cards[i].offsetHeight / 2 + curShift * 0.5;
+          if (ghostCenterY > threshold) {
+            index++;
+          }
         }
         setDropTarget({ dayKey: targetDayKey, index });
       } else {
         const otherCards = cards.filter((c) => c.dataset.sessionCardId !== session.id);
-        let index = otherCards.length;
+        const listEl = found.querySelector<HTMLElement>('[data-day-sessions-list]');
+        const listBaseY =
+          listEl && otherCards[0]
+            ? listEl.getBoundingClientRect().top - otherCards[0].offsetTop
+            : 0;
+        const step = d.height + 6;
+        const prevIdx =
+          dropTargetRef.current?.dayKey === targetDayKey
+            ? dropTargetRef.current.index
+            : otherCards.length;
+        let index = 0;
         for (let i = 0; i < otherCards.length; i++) {
-          const r = otherCards[i].getBoundingClientRect();
-          const currentShift = Number(otherCards[i].dataset.shiftY || 0);
-          const unshiftedTop = r.top - currentShift;
-          const unshiftedMid = unshiftedTop + r.height / 2;
-          if (y < unshiftedMid + (currentShift > 0 ? step * 0.25 : 0)) {
-            index = i;
-            break;
+          const curShift = i >= prevIdx ? step : 0;
+          const threshold =
+            listBaseY + otherCards[i].offsetTop + otherCards[i].offsetHeight / 2 + curShift * 0.5;
+          if (ghostCenterY > threshold) {
+            index++;
           }
         }
         setDropTarget({ dayKey: targetDayKey, index });
@@ -831,40 +851,39 @@ export function ScheduleScreen() {
           `[data-day-column="${CSS.escape(target.dayKey)}"]`,
         );
         if (targetCol) {
+          const listEl = targetCol.querySelector<HTMLElement>('[data-day-sessions-list]');
           const cardsInCol = Array.from(
             targetCol.querySelectorAll<HTMLElement>('[data-session-card-id]'),
           );
           if (target.dayKey === session.date) {
+            const draggedCard = cardsInCol.find((c) => c.dataset.sessionCardId === session.id);
+            const listBaseY = draggedCard
+              ? draggedCard.getBoundingClientRect().top - draggedCard.offsetTop
+              : 0;
             const slotCard = cardsInCol[target.index];
             if (slotCard) {
-              const r = slotCard.getBoundingClientRect();
-              const shift = Number(slotCard.dataset.shiftY || 0);
-              targetLeft = r.left;
-              targetTop = r.top - shift;
+              targetLeft = slotCard.getBoundingClientRect().left;
+              targetTop = listBaseY + slotCard.offsetTop;
             }
           } else {
             const otherCardsInCol = cardsInCol.filter(
               (c) => c.dataset.sessionCardId !== session.id,
             );
-            if (target.index < otherCardsInCol.length) {
-              const refCard = otherCardsInCol[target.index];
-              const r = refCard.getBoundingClientRect();
-              const shift = Number(refCard.dataset.shiftY || 0);
-              targetLeft = r.left;
-              targetTop = r.top - shift;
-            } else if (otherCardsInCol.length > 0) {
-              const lastCard = otherCardsInCol[otherCardsInCol.length - 1];
-              const r = lastCard.getBoundingClientRect();
-              const shift = Number(lastCard.dataset.shiftY || 0);
-              targetLeft = r.left;
-              targetTop = r.top - shift + r.height + 6;
-            } else {
-              const listEl = targetCol.querySelector<HTMLElement>('[data-day-sessions-list]');
-              if (listEl) {
-                const r = listEl.getBoundingClientRect();
-                targetLeft = r.left;
-                targetTop = r.top;
+            if (listEl && otherCardsInCol.length > 0) {
+              const listBaseY = listEl.getBoundingClientRect().top - otherCardsInCol[0].offsetTop;
+              if (target.index < otherCardsInCol.length) {
+                const refCard = otherCardsInCol[target.index];
+                targetLeft = refCard.getBoundingClientRect().left;
+                targetTop = listBaseY + refCard.offsetTop;
+              } else {
+                const lastCard = otherCardsInCol[otherCardsInCol.length - 1];
+                targetLeft = lastCard.getBoundingClientRect().left;
+                targetTop = listBaseY + lastCard.offsetTop + lastCard.offsetHeight + 6;
               }
+            } else if (listEl) {
+              const r = listEl.getBoundingClientRect();
+              targetLeft = r.left;
+              targetTop = r.top;
             }
           }
         }
