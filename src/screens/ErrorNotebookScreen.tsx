@@ -22,6 +22,7 @@ import {
   useTopics,
   useErrorNotes,
   useReviews,
+  useMockExams,
 } from '../hooks/useData';
 import {
   setErrorStatus,
@@ -44,9 +45,11 @@ export function ErrorNotebookScreen() {
   const topics = useTopics();
   const errorNotes = useErrorNotes();
   const reviews = useReviews();
+  const mockExams = useMockExams();
 
   // Filters
   const [filterDisciplineId, setFilterDisciplineId] = useState('');
+  const [filterMockExamId, setFilterMockExamId] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('');
   const [filterType, setFilterType] = useState<string>('');
   const [filterSearch, setFilterSearch] = useState('');
@@ -72,6 +75,13 @@ export function ErrorNotebookScreen() {
         if (filterDisciplineId && n.disciplineId !== filterDisciplineId) return false;
         if (filterStatus && n.status !== filterStatus) return false;
         if (filterType && n.errorType !== filterType) return false;
+        if (filterMockExamId) {
+          if (filterMockExamId === '__none__') {
+            if (n.mockExamId) return false;
+          } else {
+            if (n.mockExamId !== filterMockExamId) return false;
+          }
+        }
         if (filterSearch) {
           const q = filterSearch.toLowerCase();
           const matchExpl = n.explanation.toLowerCase().includes(q);
@@ -82,7 +92,7 @@ export function ErrorNotebookScreen() {
         return true;
       })
       .sort((a, b) => b.errorDate.localeCompare(a.errorDate) || b.createdAt.localeCompare(a.createdAt));
-  }, [errorNotes, filterDisciplineId, filterStatus, filterType, filterSearch, topicMap]);
+  }, [errorNotes, filterDisciplineId, filterStatus, filterType, filterMockExamId, filterSearch, topicMap]);
 
   const counts = useMemo(() => {
     return {
@@ -218,7 +228,7 @@ export function ErrorNotebookScreen() {
           </div>
         }
         actions={
-          (filterDisciplineId || filterStatus || filterType || filterSearch) && (
+          (filterDisciplineId || filterStatus || filterType || filterMockExamId || filterSearch) && (
             <Button
               variant="ghost"
               size="sm"
@@ -227,6 +237,7 @@ export function ErrorNotebookScreen() {
                 setFilterDisciplineId('');
                 setFilterStatus('');
                 setFilterType('');
+                setFilterMockExamId('');
                 setFilterSearch('');
               }}
             >
@@ -235,7 +246,7 @@ export function ErrorNotebookScreen() {
           )
         }
       >
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           <div>
             <label className="text-xs font-medium text-fg-subtle block mb-1">Buscar por palavra</label>
             <div className="relative">
@@ -250,6 +261,22 @@ export function ErrorNotebookScreen() {
                 <Search className="size-3.5" />
               </span>
             </div>
+          </div>
+
+          <div>
+            <label className="text-xs font-medium text-fg-subtle block mb-1">Simulado / Prova</label>
+            <Select
+              value={filterMockExamId}
+              onChange={(e) => setFilterMockExamId(e.target.value)}
+            >
+              <option value="">Todas as origens</option>
+              <option value="__none__">Apenas avulsas (sem prova)</option>
+              {mockExams.map((m) => (
+                <option key={m.id} value={m.id}>
+                  Prova: {m.title}
+                </option>
+              ))}
+            </Select>
           </div>
 
           <div>
