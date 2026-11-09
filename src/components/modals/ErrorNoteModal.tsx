@@ -4,7 +4,7 @@ import { Button } from '../ui/Button';
 import { Alert } from '../ui/Display';
 import { Field, Input, Select, Checkbox } from '../ui/Form';
 import { RichTextEditor } from '../ui/RichText';
-import { useDisciplines, useTopics, useErrorNotes } from '../../hooks/useData';
+import { useDisciplines, useTopics, useErrorNotes, useMockExams } from '../../hooks/useData';
 import { saveErrorNote, type ErrorNoteInput } from '../../services/performance';
 import {
   ERROR_TYPE_LABELS,
@@ -13,7 +13,7 @@ import {
   type ErrorType,
   type ErrorStatus,
 } from '../../db/types';
-import { todayKey } from '../../lib/dates';
+import { formatDate, todayKey } from '../../lib/dates';
 import { errorMessage } from '../../lib/utils';
 import { DateInput } from '../ui/DateInput';
 
@@ -44,6 +44,7 @@ export function ErrorNoteModal({
   const disciplines = useDisciplines();
   const topics = useTopics();
   const errorNotes = useErrorNotes();
+  const mockExams = useMockExams();
 
   const effectiveNote = useMemo(() => {
     if (noteToEdit) return noteToEdit;
@@ -53,9 +54,40 @@ export function ErrorNoteModal({
     return null;
   }, [noteToEdit, questionLogId, errorNotes]);
 
+  // Simulados disponíveis para vinculação (prioriza finalizados/submetidos)
+  const availableExams = useMemo(() => {
+    const list = [...mockExams];
+    if (mockExam && !list.some((e) => e.id === mockExam.id)) {
+      list.push({
+        id: mockExam.id,
+        title: mockExam.title,
+        questionCount: 0,
+        optionCount: 4,
+        answerKey: {},
+        ranges: [],
+        responses: {},
+        examFileName: null,
+        keyFileName: null,
+        submittedAt: null,
+        createdAt: '',
+        updatedAt: '',
+      });
+    }
+    return list.sort((a, b) => {
+      // Submetidos primeiro, depois por data mais recente
+      if (Boolean(a.submittedAt) !== Boolean(b.submittedAt)) {
+        return a.submittedAt ? -1 : 1;
+      }
+      const dateA = a.date ?? a.createdAt;
+      const dateB = b.date ?? b.createdAt;
+      return dateB.localeCompare(dateA);
+    });
+  }, [mockExams, mockExam]);
+
   const [disciplineId, setDisciplineId] = useState(defaultDisciplineId || '');
   const [topicId, setTopicId] = useState(defaultTopicId || '');
-  const [sourceReference, setSourceReference] = useState('');
+  const [selectedMockExamId, setSelectedMockExamId] = useState('');
+  const [questionReference, setQuestionReference] = useState('');
   const [errorType, setErrorType] = useState<ErrorType>('falta-conteudo');
   const [explanation, setExplanation] = useState('');
   const [errorDate, setErrorDate] = useState(defaultDate || todayKey());
@@ -71,7 +103,22 @@ export function ErrorNoteModal({
     if (effectiveNote) {
       setDisciplineId(effectiveNote.disciplineId);
       setTopicId(effectiveNote.topicId || '');
-      setSourceReference(effectiveNote.sourceReference);
+      setSelectedMockExamId(effectiveNote.mockExamId || '');
+
+      // Extrai detalhe da questão se a referência começar com o título do simulado
+      if (effectiveNote.mockExamTitle) {
+        const prefix = `${effectiveNote.mockExamTitle} · `;
+        if (effectiveNote.sourceReference.startsWith(prefix)) {
+          setQuestionReference(effectiveNote.sourceReference.slice(prefix.length));
+        } else if (effectiveNote.sourceReference === effectiveNote.mockExamTitle) {
+          setQuestionReference('');
+        } else {
+          setQuestionReference(effectiveNote.sourceReference);
+        }
+      } else {
+        setQuestionReference(effectiveNote.sourceReference);
+      }
+
       setErrorType(effectiveNote.errorType);
       setExplanation(effectiveNote.explanation);
       setErrorDate(effectiveNote.errorDate);
@@ -81,7 +128,8 @@ export function ErrorNoteModal({
     } else {
       setDisciplineId(defaultDisciplineId || (disciplines[0]?.id ?? ''));
       setTopicId(defaultTopicId || '');
-      setSourceReference(mockExam?.title ?? '');
+      setSelectedMockExamId(mockExam?.id || '');
+      setQuestionReference('');
       setErrorType('falta-conteudo');
       setExplanation('');
       setErrorDate(defaultDate || todayKey());
@@ -90,11 +138,24 @@ export function ErrorNoteModal({
       setScheduleReviews(true);
     }
     setError(null);
-  }, [open, effectiveNote, defaultDate, defaultDisciplineId, defaultTopicId, disciplines, mockExam?.title]);
+  }, [open, effectiveNote, defaultDate, defaultDisciplineId, defaultTopicId, disciplines, mockExam?.id]);
 
   const filteredTopics = topics.filter(
     (t) => t.disciplineId === disciplineId && t.active && !t.parentTopicId
   );
+
+  const selectedExam = useMemo(
+    () => availableExams.find((e) => e.id === selectedMockExamId) ?? null,
+    [availableExams, selectedMockExamId]
+  );
+
+  const handleExamChange = (newExamId: string) => {
+    setSelectedMockExamId(newExamId);
+    const chosen = availableExams.find((e) => e.id === newExamId);
+    if (chosen?.date && !effectiveNote) {
+      setErrorDate(chosen.date);
+    }
+  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -104,7 +165,13 @@ export function ErrorNoteModal({
       setError('Selecione uma disciplina.');
       return;
     }
-    if (!sourceReference.trim() && !explanation.trim()) {
+
+    const trimmedRef = questionReference.trim();
+    const finalSourceRef = selectedExam
+      ? (trimmedRef ? `${selectedExam.title} · ${trimmedRef}` : selectedExam.title)
+      : trimmedRef;
+
+    if (!finalSourceRef && !explanation.trim()) {
       setError('Informe a referência da questão ou a explicação do aprendizado.');
       return;
     }
@@ -113,13 +180,14 @@ export function ErrorNoteModal({
       disciplineId,
       topicId: topicId || null,
       questionLogId: effectiveNote?.questionLogId || questionLogId || null,
-      sourceReference: sourceReference.trim(),
+      sourceReference: finalSourceRef,
       errorType,
       explanation: explanation.trim(),
       errorDate,
       status,
       nextReviewDate: nextReviewDate.trim() || null,
-      ...(mockExam && !effectiveNote ? { mockExamId: mockExam.id, mockExamTitle: mockExam.title } : {}),
+      mockExamId: selectedExam ? selectedExam.id : null,
+      mockExamTitle: selectedExam ? selectedExam.title : null,
     };
 
     setLoading(true);
@@ -142,7 +210,11 @@ export function ErrorNoteModal({
       open={open}
       onClose={onClose}
       title={effectiveNote ? 'Editar Anotação de Erro' : 'Adicionar ao Caderno de Erros'}
-      description={mockExam && !effectiveNote ? `Será vinculado ao simulado "${mockExam.title}".` : undefined}
+      description={
+        selectedExam
+          ? `Vinculado à prova "${selectedExam.title}".`
+          : 'Cadastre o erro para gerar revisões espaçadas no cronograma.'
+      }
       size="md"
       footer={
         <>
@@ -219,14 +291,36 @@ export function ErrorNoteModal({
           </Field>
         </div>
 
-        <Field label="Referência ou identificação da questão" hint="Ex: Q12345 QConcursos, CESPE 2024 BNB Q45">
-          <Input
-            type="text"
-            placeholder="Ex: CESPE 2024 BNB - Questão sobre Clean Architecture"
-            value={sourceReference}
-            onChange={(e) => setSourceReference(e.target.value)}
-          />
-        </Field>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Field
+            label="Simulado de referência (Prova)"
+            hint={availableExams.length > 0 ? 'Escolha de qual prova é esta questão' : 'Nenhum simulado cadastrado'}
+          >
+            <Select
+              value={selectedMockExamId}
+              onChange={(e) => handleExamChange(e.target.value)}
+            >
+              <option value="">Nenhum (questão avulsa / outro concurso)</option>
+              {availableExams.map((exam) => (
+                <option key={exam.id} value={exam.id}>
+                  {exam.title}{exam.date ? ` · ${formatDate(exam.date)}` : ''}{!exam.submittedAt ? ' (em andamento)' : ''}
+                </option>
+              ))}
+            </Select>
+          </Field>
+
+          <Field
+            label="Identificação da questão"
+            hint={selectedExam ? 'Opcional (ex: Questão 45)' : 'Ex: Q12345 QConcursos, CESPE 2024'}
+          >
+            <Input
+              type="text"
+              placeholder={selectedExam ? 'Ex: Questão 45' : 'Ex: CESPE 2024 BNB Q45'}
+              value={questionReference}
+              onChange={(e) => setQuestionReference(e.target.value)}
+            />
+          </Field>
+        </div>
 
         <Field label="Explicação correta / Resumo do aprendizado" required hint="Qual era a pegadinha ou conceito fundamental que causou o erro?">
           <RichTextEditor
