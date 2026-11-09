@@ -148,14 +148,16 @@ export function ScheduleScreen() {
   const [loading, setLoading] = useState(false);
 
 
-  // Drag and drop (pointer events + FLIP): arrasto fluido com fantasma, espaço de destino e animações
+  // Drag and drop (pointer events + CSS translate3d): arrasto fluido onde os cards irmãos deslizam suavemente
   const boardRef = useRef<HTMLDivElement>(null);
   const flipRectsRef = useRef<Map<string, { left: number; top: number }>>(new Map());
+  const skipNextFlipRef = useRef(false);
   const dropTargetRef = useRef<{ dayKey: string; index: number } | null>(null);
   const dragWeekRef = useRef<number | null>(null);
   const cancelDragRef = useRef<(() => void) | null>(null);
   const [draggedSessionId, setDraggedSessionId] = useState<string | null>(null);
   const [dragHeight, setDragHeight] = useState(0);
+  const [suppressShiftTransition, setSuppressShiftTransition] = useState(false);
   const [dropTarget, setDropTargetState] = useState<{ dayKey: string; index: number } | null>(null);
   const [dragOverWeekIndex, setDragOverWeekIndexState] = useState<number | null>(null);
   const [optimisticSessions, setOptimisticSessions] = useState<StudySession[] | null>(null);
@@ -198,28 +200,29 @@ export function ScheduleScreen() {
 
   useEffect(() => () => cancelDragRef.current?.(), []);
 
-  // FLIP: anima os cards de sessão até a nova posição sempre que o layout muda
+  // FLIP: anima os cards quando movidos por teclado (Alt + setas)
   useLayoutEffect(() => {
     const board = boardRef.current;
-    if (!board) return;
+    if (!board || draggedSessionId) return;
+    const skip = skipNextFlipRef.current;
+    skipNextFlipRef.current = false;
     const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
     const origin = board.getBoundingClientRect();
     const next = new Map<string, { left: number; top: number }>();
     board.querySelectorAll<HTMLElement>('[data-session-card-id]').forEach((el) => {
       const r = el.getBoundingClientRect();
       if (r.width === 0 && r.height === 0) return;
-      if (el.dataset.dragging !== undefined) return;
       const id = el.dataset.sessionCardId as string;
       const pos = { left: r.left - origin.left, top: r.top - origin.top };
       next.set(id, pos);
       const prev = flipRectsRef.current.get(id);
-      if (reduce || !prev || typeof el.animate !== 'function') return;
+      if (skip || reduce || !prev || typeof el.animate !== 'function') return;
       const dx = prev.left - pos.left;
       const dy = prev.top - pos.top;
       if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return;
       el.animate(
         [{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'translate(0, 0)' }],
-        { duration: 240, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' },
+        { duration: 240, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' },
       );
     });
     flipRectsRef.current = next;
@@ -618,18 +621,44 @@ export function ScheduleScreen() {
         setDropTarget(null);
         return;
       }
+      const targetDayKey = found.dataset.dayColumn as string;
+      const isSourceColumn = targetDayKey === session.date;
+      const step = d.height + 6;
       const cards = Array.from(
-        found.querySelectorAll<HTMLElement>('[data-session-card-id]:not([data-dragging])'),
+        found.querySelectorAll<HTMLElement>('[data-session-card-id]'),
       );
-      let index = cards.length;
-      for (let i = 0; i < cards.length; i++) {
-        const r = cards[i].getBoundingClientRect();
-        if (y < r.top + r.height / 2) {
-          index = i;
-          break;
+      if (isSourceColumn) {
+        const sourceCardIndex = cards.findIndex((c) => c.dataset.sessionCardId === session.id);
+        let index = cards.length - 1;
+        for (let i = 0; i < cards.length; i++) {
+          const r = cards[i].getBoundingClientRect();
+          const currentShift = Number(cards[i].dataset.shiftY || 0);
+          const unshiftedTop = r.top - currentShift;
+          const unshiftedMid = unshiftedTop + r.height / 2;
+          if (y < unshiftedMid) {
+            index = i;
+            break;
+          }
         }
+        if (sourceCardIndex !== -1) {
+          index = Math.max(0, Math.min(index, cards.length - 1));
+        }
+        setDropTarget({ dayKey: targetDayKey, index });
+      } else {
+        const otherCards = cards.filter((c) => c.dataset.sessionCardId !== session.id);
+        let index = otherCards.length;
+        for (let i = 0; i < otherCards.length; i++) {
+          const r = otherCards[i].getBoundingClientRect();
+          const currentShift = Number(otherCards[i].dataset.shiftY || 0);
+          const unshiftedTop = r.top - currentShift;
+          const unshiftedMid = unshiftedTop + r.height / 2;
+          if (y < unshiftedMid + (currentShift > 0 ? step * 0.25 : 0)) {
+            index = i;
+            break;
+          }
+        }
+        setDropTarget({ dayKey: targetDayKey, index });
       }
-      setDropTarget({ dayKey: found.dataset.dayColumn as string, index });
     };
 
     const moveGhost = () => {
@@ -784,9 +813,8 @@ export function ScheduleScreen() {
         return;
       }
 
-      // Soltou numa coluna de dia: o fantasma "encaixa" no espaço reservado
+      // Soltou numa coluna de dia: o fantasma "encaixa" suavemente no espaço aberto pelos cards irmãos
       if (!cancelled && target) {
-        const slot = board()?.querySelector<HTMLElement>('[data-drop-slot]');
         const sameDayOthers = all
           .filter((s) => s.date === target.dayKey && s.id !== session.id)
           .sort(compareSessionsInDay);
@@ -796,17 +824,63 @@ export function ScheduleScreen() {
             ? sameDayOthers.filter((s) => compareSessionsInDay(s, original) < 0).length
             : -1;
         const noop = sourceIdx === target.index;
-        const apply = () => {
-          flushSync(() => clearDragState());
-          if (!noop) void move(session.id, target.dayKey, target.index);
-        };
-        if (slot) {
-          const r = slot.getBoundingClientRect();
-          animateGhostTo(r.left - d.left, r.top - d.top, true, apply);
-        } else {
-          d.ghost?.remove();
-          apply();
+
+        let targetLeft = d.left;
+        let targetTop = d.top;
+        const targetCol = board()?.querySelector<HTMLElement>(
+          `[data-day-column="${CSS.escape(target.dayKey)}"]`,
+        );
+        if (targetCol) {
+          const cardsInCol = Array.from(
+            targetCol.querySelectorAll<HTMLElement>('[data-session-card-id]'),
+          );
+          if (target.dayKey === session.date) {
+            const slotCard = cardsInCol[target.index];
+            if (slotCard) {
+              const r = slotCard.getBoundingClientRect();
+              const shift = Number(slotCard.dataset.shiftY || 0);
+              targetLeft = r.left;
+              targetTop = r.top - shift;
+            }
+          } else {
+            const otherCardsInCol = cardsInCol.filter(
+              (c) => c.dataset.sessionCardId !== session.id,
+            );
+            if (target.index < otherCardsInCol.length) {
+              const refCard = otherCardsInCol[target.index];
+              const r = refCard.getBoundingClientRect();
+              const shift = Number(refCard.dataset.shiftY || 0);
+              targetLeft = r.left;
+              targetTop = r.top - shift;
+            } else if (otherCardsInCol.length > 0) {
+              const lastCard = otherCardsInCol[otherCardsInCol.length - 1];
+              const r = lastCard.getBoundingClientRect();
+              const shift = Number(lastCard.dataset.shiftY || 0);
+              targetLeft = r.left;
+              targetTop = r.top - shift + r.height + 6;
+            } else {
+              const listEl = targetCol.querySelector<HTMLElement>('[data-day-sessions-list]');
+              if (listEl) {
+                const r = listEl.getBoundingClientRect();
+                targetLeft = r.left;
+                targetTop = r.top;
+              }
+            }
+          }
         }
+
+        const apply = () => {
+          skipNextFlipRef.current = true;
+          flushSync(() => {
+            setSuppressShiftTransition(true);
+            clearDragState();
+            if (!noop) void move(session.id, target.dayKey, target.index);
+          });
+          requestAnimationFrame(() => {
+            setSuppressShiftTransition(false);
+          });
+        };
+        animateGhostTo(targetLeft - d.left, targetTop - d.top, true, apply);
         return;
       }
 
@@ -1256,41 +1330,11 @@ export function ScheduleScreen() {
                 ? totalDayPlanned + (draggedSession?.plannedMinutes ?? 0)
                 : totalDayPlanned;
 
-              const draggedDisc = draggedSession
-                ? discMap.get(draggedSession.disciplineId)
-                : undefined;
-              const draggedLabel = draggedSession
-                ? draggedDisc?.name ??
-                  (draggedSession.disciplineId === 'simulado'
-                    ? 'Simulado Geral BNB'
-                    : draggedSession.disciplineId)
-                : '';
-
-              // `slotIdx` conta apenas as demais sessões do dia (a arrastada fica oculta)
-              const renderDropPreviewSlot = (slotIdx: number) => {
-                if (!isHoveredDay || dropTarget?.index !== slotIdx || !draggedSession) {
-                  return null;
-                }
-                return (
-                  <div
-                    key={`drop-slot-${dayKey}`}
-                    data-drop-slot
-                    data-testid={`drop-preview-${dayKey}`}
-                    style={{ height: dragHeight || undefined, ['--slot-h' as string]: `${dragHeight}px` }}
-                    className="pointer-events-none animate-slot-in overflow-hidden rounded-lg border-2 border-dashed border-primary bg-primary-soft/30 px-2.5 py-2 text-xs font-medium text-primary flex items-start justify-between gap-1.5"
-                  >
-                    <span className="flex items-center gap-1.5 truncate">
-                      <DisciplineDot color={draggedDisc?.color ?? '#A6193C'} />
-                      <span className="truncate">{draggedLabel}</span>
-                    </span>
-                    <span className="text-[10px] font-bold shrink-0">
-                      {draggedSession.plannedMinutes}m
-                    </span>
-                  </div>
-                );
-              };
-
-              let othersCount = 0;
+              const step = (dragHeight || 76) + 6;
+              const isSourceDay = draggedSession?.date === dayKey;
+              const sourceIdxInDay = isSourceDay
+                ? daySessions.findIndex((s) => s.id === draggedSessionId)
+                : -1;
 
               return (
                 <div
@@ -1344,50 +1388,77 @@ export function ScheduleScreen() {
                     </div>
 
                     {/* Sessions in day */}
-                    <div className="mt-2 flex flex-col gap-1.5">
-                      {daySessions.map((s) => {
+                    <div
+                      data-day-sessions-list
+                      style={{
+                        paddingBottom: isCrossDayHover ? `${step}px` : '0px',
+                        transition: suppressShiftTransition
+                          ? 'none'
+                          : 'padding-bottom 220ms cubic-bezier(0.22, 1, 0.36, 1)',
+                      }}
+                      className="mt-2 flex flex-col gap-1.5"
+                    >
+                      {daySessions.map((s, idx) => {
                         const d = discMap.get(s.disciplineId);
                         const isSimulado = s.disciplineId === 'simulado';
                         const isOverdue = s.status === 'planejada' && s.date < today;
                         const isLost = s.status === 'perdida';
                         const canRecover = isOverdue || isLost;
                         const isDragging = draggedSessionId === s.id;
-                        const slotIdx = isDragging ? -1 : othersCount++;
+
+                        let shiftY = 0;
+                        if (draggedSession && !isDragging) {
+                          if (isSourceDay && sourceIdxInDay !== -1) {
+                            if (isHoveredDay && dropTarget) {
+                              const targetIdx = dropTarget.index;
+                              if (targetIdx > sourceIdxInDay && idx > sourceIdxInDay && idx <= targetIdx) {
+                                shiftY = -step;
+                              } else if (targetIdx < sourceIdxInDay && idx >= targetIdx && idx < sourceIdxInDay) {
+                                shiftY = step;
+                              }
+                            } else if (dropTarget && dropTarget.dayKey !== dayKey) {
+                              if (idx > sourceIdxInDay) {
+                                shiftY = -step;
+                              }
+                            }
+                          } else if (isHoveredDay && dropTarget) {
+                            if (idx >= dropTarget.index) {
+                              shiftY = step;
+                            }
+                          }
+                        }
 
                         return (
                           <div
                             key={s.id}
+                            data-session-card-id={s.id}
+                            data-dragging={isDragging ? '' : undefined}
+                            data-shift-y={shiftY}
+                            tabIndex={0}
+                            onDragStart={(e) => e.preventDefault()}
+                            onPointerDown={(e) => handleCardPointerDown(e, s)}
+                            onKeyDown={(e) => handleCardKeyDown(e, s)}
+                            title="Arraste para mover (dia, posição ou aba de semana) — ou use Alt + setas"
+                            style={{
+                              touchAction: 'pan-y',
+                              transform: shiftY ? `translate3d(0, ${shiftY}px, 0)` : 'translate3d(0, 0, 0)',
+                              transition: suppressShiftTransition
+                                ? 'none'
+                                : 'transform 220ms cubic-bezier(0.22, 1, 0.36, 1), opacity 150ms ease, border-color 150ms ease, box-shadow 150ms ease, background-color 150ms ease',
+                            }}
                             className={cn(
-                              'flex flex-col gap-1.5 transition-[margin] duration-200 ease-out',
-                              isDragging && '-mb-1.5 pointer-events-none',
+                              'group rounded-lg border p-2 text-xs space-y-1 cursor-grab select-none will-change-transform focus-visible:outline-2 focus-visible:outline-primary',
+                              isDragging && 'opacity-0 pointer-events-none',
+                              isSimulado &&
+                                'border-primary/40 bg-primary-soft/15 ring-1 ring-primary/30',
+                              s.status === 'concluida'
+                                ? 'border-success/30 bg-success-soft/30'
+                                : isOverdue
+                                ? 'border-warning/40 bg-warning-soft/40'
+                                : !isSimulado &&
+                                  'border-border bg-surface hover:border-primary/50 hover:shadow-xs'
                             )}
                           >
-                            {renderDropPreviewSlot(slotIdx)}
-                            <div
-                              className="grid transition-[grid-template-rows,opacity] duration-200 ease-out"
-                              style={{ gridTemplateRows: isDragging ? '0fr' : '1fr', opacity: isDragging ? 0 : 1 }}
-                            >
-                            <div className="-m-0.5 min-h-0 overflow-hidden p-0.5">
-                            <div
-                              data-session-card-id={s.id}
-                              data-dragging={isDragging ? '' : undefined}
-                              tabIndex={0}
-                              onPointerDown={(e) => handleCardPointerDown(e, s)}
-                              onKeyDown={(e) => handleCardKeyDown(e, s)}
-                              title="Arraste para mover (dia, posição ou aba de semana) — ou use Alt + setas"
-                              style={{ touchAction: 'pan-y' }}
-                              className={cn(
-                                'group rounded-lg border p-2 text-xs space-y-1 cursor-grab select-none transition-[border-color,box-shadow,background-color] duration-150 focus-visible:outline-2 focus-visible:outline-primary',
-                                isSimulado &&
-                                  'border-primary/40 bg-primary-soft/15 ring-1 ring-primary/30',
-                                s.status === 'concluida'
-                                  ? 'border-success/30 bg-success-soft/30'
-                                  : isOverdue
-                                  ? 'border-warning/40 bg-warning-soft/40'
-                                  : !isSimulado &&
-                                    'border-border bg-surface hover:border-primary/50 hover:shadow-xs'
-                              )}
-                            >
                               <div
                                 className="flex items-center justify-between gap-1"
                               >
@@ -1524,12 +1595,8 @@ export function ScheduleScreen() {
                                 </div>
                               </div>
                             </div>
-                            </div>
-                            </div>
-                          </div>
                         );
                       })}
-                      {renderDropPreviewSlot(othersCount)}
                     </div>
                   </div>
 
