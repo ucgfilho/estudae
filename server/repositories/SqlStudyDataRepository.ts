@@ -437,9 +437,11 @@ export class SqlStudyDataRepository implements IStudyDataRepository {
         `INSERT INTO error_notes (
            user_id, id, question_log_id, discipline_id, topic_id,
            source_reference, error_type, explanation, error_date,
-           status, next_review_date, created_at, updated_at
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           status, next_review_date, mock_exam_id, mock_exam_title, created_at, updated_at
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(user_id, id) DO UPDATE SET
+           mock_exam_id = excluded.mock_exam_id,
+           mock_exam_title = excluded.mock_exam_title,
            question_log_id = excluded.question_log_id,
            discipline_id = excluded.discipline_id,
            topic_id = excluded.topic_id,
@@ -463,6 +465,8 @@ export class SqlStudyDataRepository implements IStudyDataRepository {
           e.errorDate,
           e.status,
           e.nextReviewDate,
+          e.mockExamId ?? null,
+          e.mockExamTitle ?? null,
           e.createdAt,
           e.updatedAt,
         ],
@@ -873,12 +877,14 @@ export class SqlStudyDataRepository implements IStudyDataRepository {
       error_date: string;
       status: ErrorNote['status'];
       next_review_date: string | null;
+      mock_exam_id: string | null;
+      mock_exam_title: string | null;
       created_at: string;
       updated_at: string;
     }>(
       `SELECT id, question_log_id, discipline_id, topic_id, source_reference,
               error_type, explanation, error_date, status, next_review_date,
-              created_at, updated_at
+              mock_exam_id, mock_exam_title, created_at, updated_at
        FROM error_notes
        WHERE user_id = ?
        ORDER BY error_date DESC, created_at DESC`,
@@ -895,6 +901,7 @@ export class SqlStudyDataRepository implements IStudyDataRepository {
       errorDate: r.error_date,
       status: r.status,
       nextReviewDate: r.next_review_date,
+      ...(r.mock_exam_id ? { mockExamId: r.mock_exam_id, mockExamTitle: r.mock_exam_title } : {}),
       createdAt: r.created_at,
       updatedAt: r.updated_at,
     }));

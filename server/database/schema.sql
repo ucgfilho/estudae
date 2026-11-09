@@ -141,6 +141,8 @@ CREATE TABLE IF NOT EXISTS error_notes (
   error_date TEXT NOT NULL,
   status TEXT NOT NULL CHECK (status IN ('revisar', 'revisado', 'dominado')),
   next_review_date TEXT NULL,
+  mock_exam_id TEXT NULL,
+  mock_exam_title TEXT NULL,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
   PRIMARY KEY (user_id, id),

@@ -9,6 +9,7 @@ import {
   Check,
   RotateCcw,
   BookOpen,
+  FileText,
 } from 'lucide-react';
 import { Button, IconButton } from '../components/ui/Button';
 import { Card, PageHeader, Badge, EmptyState, DisciplineDot, Alert } from '../components/ui/Display';
@@ -74,7 +75,7 @@ export function ErrorNotebookScreen() {
         if (filterSearch) {
           const q = filterSearch.toLowerCase();
           const matchExpl = n.explanation.toLowerCase().includes(q);
-          const matchSource = n.sourceReference.toLowerCase().includes(q);
+          const matchSource = n.sourceReference.toLowerCase().includes(q) || (n.mockExamTitle ?? '').toLowerCase().includes(q);
           const matchTopic = n.topicId ? (topicMap.get(n.topicId)?.title ?? '').toLowerCase().includes(q) : false;
           if (!matchExpl && !matchSource && !matchTopic) return false;
         }
@@ -323,6 +324,11 @@ export function ErrorNotebookScreen() {
                     {d && <DisciplineDot color={d.color} />}
                     <span className="font-semibold text-fg">{d?.name}</span>
                     {t && <Badge tone="neutral">{t.title}</Badge>}
+                    {note.mockExamTitle && (
+                      <Badge tone="primary" icon={<FileText className="size-3" aria-hidden />} className="max-w-64">
+                        <span className="truncate">Prova: {note.mockExamTitle}</span>
+                      </Badge>
+                    )}
                     <Badge tone="neutral" className="text-xs">
                       {ERROR_TYPE_LABELS[note.errorType]}
                     </Badge>

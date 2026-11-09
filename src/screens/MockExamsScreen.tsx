@@ -8,6 +8,7 @@ import { DateInput } from '../components/ui/DateInput';
 import { ExamSetup } from '../components/mockexam/ExamSetup';
 import { AnswerSheet } from '../components/mockexam/AnswerSheet';
 import { ExamResult } from '../components/mockexam/ExamResult';
+import { ExamErrorNotebooks } from '../components/mockexam/ExamErrorNotebooks';
 import { Stepper } from '../components/mockexam/Stepper';
 import { useDisciplines, useMockExams, useSettings } from '../hooks/useData';
 import { deleteMockExam, updateMockExamDate } from '../services/mockExams';
@@ -61,7 +62,10 @@ export function MockExamsScreen() {
             </div>
           </Card>
           {selected.submittedAt ? (
-            <ExamResult exam={selected} disciplines={disciplines} accuracyGoal={settings?.accuracyGoal ?? 70} />
+            <>
+              <ExamResult exam={selected} disciplines={disciplines} accuracyGoal={settings?.accuracyGoal ?? 70} />
+              <ExamErrorNotebooks exam={selected} disciplines={disciplines} />
+            </>
           ) : (
             <AnswerSheet exam={selected} disciplines={disciplines} />
           )}

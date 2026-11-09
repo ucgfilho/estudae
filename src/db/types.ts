@@ -157,6 +157,9 @@ export interface ErrorNote {
   errorDate: DateKey;
   status: ErrorStatus;
   nextReviewDate: DateKey | null;
+  /** Simulado de origem (cadernos criados a partir de uma prova). */
+  mockExamId?: string | null;
+  mockExamTitle?: string | null;
   createdAt: string;
   updatedAt: string;
 }

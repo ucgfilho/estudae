@@ -1,5 +1,5 @@
 import { db } from '../db/db';
-import type { MockExam, MockExamRange, StudySession } from '../db/types';
+import type { ErrorNote, MockExam, MockExamRange, StudySession } from '../db/types';
 import {
   keyedQuestions,
   normalizeMarked,
@@ -7,12 +7,15 @@ import {
   gradeExam,
   type AnswerKey,
   type GradedExam,
+  type QuestionResult,
   type Responses,
 } from '../domain/mockExam';
+import { buildReviewTasks, nextPendingDate } from '../domain/reviews';
 import { SIMULADO_DISCIPLINE_ID } from '../domain/schedule';
 import { formatDate, isValidDateKey, todayKey, type DateKey } from '../lib/dates';
 import { createId, nowIso } from '../lib/utils';
 import { ValidationError, syncWeeklyPlansWithSessions } from './sessions';
+import { getSettings } from './settings';
 
 export const MOCK_EXAM_SESSION_MINUTES = 180; // 3 horas
 
@@ -322,5 +325,67 @@ export async function deleteMockExam(id: string): Promise<void> {
     }
     await db.mockExams.delete(id);
     await syncWeeklyPlansWithSessions();
+  });
+}
+
+/** Questões erradas do simulado agrupadas por disciplina (anuladas e em branco ficam de fora). */
+export function wrongQuestionsByDiscipline(exam: MockExam): Map<string, QuestionResult[]> {
+  const map = new Map<string, QuestionResult[]>();
+  for (const r of gradeStoredExam(exam).results) {
+    if (r.outcome !== 'wrong' || !r.disciplineId) continue;
+    map.set(r.disciplineId, [...(map.get(r.disciplineId) ?? []), r]);
+  }
+  return map;
+}
+
+/**
+ * Cria um caderno de erros por disciplina escolhida a partir de um simulado corrigido.
+ * Cada caderno entra no Caderno de Erros e já recebe as revisões espaçadas padrão
+ * (que aparecem em Revisões e no cronograma). Disciplinas que já têm caderno desta prova são ignoradas.
+ */
+export async function createExamErrorNotebooks(examId: string, disciplineIds: string[]): Promise<ErrorNote[]> {
+  const settings = await getSettings();
+  return db.transaction('rw', db.mockExams, db.errorNotes, db.reviews, db.disciplines, async () => {
+    const exam = await db.mockExams.get(examId);
+    if (!exam?.submittedAt) throw new ValidationError('Envie o simulado para correção antes de criar cadernos de erros.');
+    const wrong = wrongQuestionsByDiscipline(exam);
+    const existing = await db.errorNotes.filter((n) => n.mockExamId === examId).toArray();
+    const done = new Set(existing.map((n) => n.disciplineId));
+    const baseDate = todayKey();
+    const now = nowIso();
+    const created: ErrorNote[] = [];
+    for (const disciplineId of new Set(disciplineIds)) {
+      const items = wrong.get(disciplineId);
+      if (!items?.length || done.has(disciplineId)) continue;
+      const discipline = await db.disciplines.get(disciplineId);
+      const lines = items.map((r) => `• Questão ${r.number}: você marcou ${r.marked ?? '—'}; gabarito ${r.correctAnswer}.`);
+      const note: ErrorNote = {
+        id: createId(),
+        questionLogId: null,
+        disciplineId,
+        topicId: null,
+        sourceReference: `${exam.title}${discipline ? ` · ${discipline.name}` : ''}`,
+        errorType: 'falta-conteudo',
+        explanation: `Erros do simulado "${exam.title}" (${items.length}):\n${lines.join('\n')}`,
+        errorDate: exam.date ?? baseDate,
+        status: 'revisar',
+        nextReviewDate: null,
+        mockExamId: exam.id,
+        mockExamTitle: exam.title,
+        createdAt: now,
+        updatedAt: now,
+      };
+      const tasks = buildReviewTasks(
+        { disciplineId, topicId: null, errorNoteId: note.id, title: `Caderno de erros: ${exam.title}${discipline ? ` · ${discipline.name}` : ''}` },
+        baseDate,
+        settings.reviewIntervals,
+      );
+      await db.reviews.bulkAdd(tasks);
+      note.nextReviewDate = nextPendingDate(tasks);
+      await db.errorNotes.add(note);
+      created.push(note);
+    }
+    if (created.length === 0) throw new ValidationError('Nenhum caderno novo foi criado: as disciplinas escolhidas não têm erros ou já possuem caderno.');
+    return created;
   });
 }

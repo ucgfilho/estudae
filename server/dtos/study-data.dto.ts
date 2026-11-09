@@ -114,6 +114,8 @@ export const errorNoteDtoSchema = z.object({
   errorDate: dateKey,
   status: z.enum(['revisar', 'revisado', 'dominado']),
   nextReviewDate: nullableDateKey,
+  mockExamId: z.string().max(128).nullable().optional(),
+  mockExamTitle: z.string().max(500).nullable().optional(),
   createdAt: iso,
   updatedAt: iso,
 });
