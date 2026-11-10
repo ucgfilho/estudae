@@ -84,9 +84,16 @@ export function ReportsScreen() {
     );
   }, [questionLogs, startDate, today, timeGranularity]);
 
-  // Accuracy by discipline
+  // Accuracy by discipline (ordenado em formato de ranking decrescente por taxa de acerto)
   const discAccuracy = useMemo(() => {
-    return accuracyByDiscipline(questionLogs, disciplines);
+    const list = accuracyByDiscipline(questionLogs, disciplines);
+    return [...list].sort((a, b) => {
+      const accA = a.accuracy ?? -1;
+      const accB = b.accuracy ?? -1;
+      if (accB !== accA) return accB - accA;
+      if (b.total !== a.total) return b.total - a.total;
+      return a.name.localeCompare(b.name, 'pt-BR');
+    });
   }, [questionLogs, disciplines]);
 
   // Worst performing topics
@@ -279,27 +286,57 @@ export function ReportsScreen() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Disciplines Accuracy */}
         <Card
-          title="Desempenho Geral por Disciplina"
-          description="Total de questões, acertos e taxa apurada"
+          title="Ranking de Desempenho por Disciplina"
+          description="Classificação decrescente por taxa de acerto apurada"
         >
-          <div className="space-y-3">
-            {discAccuracy.map((d) => (
-              <div
-                key={d.disciplineId}
-                className="flex items-center justify-between p-2.5 rounded-lg border border-border bg-surface"
-              >
-                <div className="flex items-center gap-2 min-w-0">
-                  <DisciplineDot color={d.color} />
-                  <span className="font-medium text-sm text-fg truncate">{d.name}</span>
+          <div className="space-y-2.5">
+            {discAccuracy.map((d, index) => {
+              const position = index + 1;
+              const isTop1 = position === 1 && (d.accuracy ?? 0) > 0;
+              const isTop2 = position === 2 && (d.accuracy ?? 0) > 0;
+              const isTop3 = position === 3 && (d.accuracy ?? 0) > 0;
+
+              return (
+                <div
+                  key={d.disciplineId}
+                  className="flex items-center justify-between p-2.5 rounded-lg border border-border bg-surface transition-colors hover:border-border-strong hover:bg-surface-elevated/40"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span
+                      className={`flex size-6 shrink-0 items-center justify-center rounded-md font-mono text-xs font-bold ${
+                        isTop1
+                          ? 'bg-amber-500/15 text-amber-500 ring-1 ring-amber-500/40'
+                          : isTop2
+                          ? 'bg-slate-400/15 text-slate-300 ring-1 ring-slate-400/40'
+                          : isTop3
+                          ? 'bg-amber-700/15 text-amber-600 ring-1 ring-amber-700/40'
+                          : 'bg-surface-muted text-fg-subtle'
+                      }`}
+                    >
+                      {position}º
+                    </span>
+                    <DisciplineDot color={d.color} />
+                    <span className="font-medium text-sm text-fg truncate">{d.name}</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-xs shrink-0">
+                    <span className="text-fg-subtle">{d.total} resolvidas</span>
+                    <span
+                      className={`font-mono font-bold tabular-nums text-sm ${
+                        d.accuracy !== null
+                          ? d.accuracy >= 80
+                            ? 'text-success'
+                            : d.accuracy >= 65
+                            ? 'text-fg'
+                            : 'text-warning'
+                          : 'text-fg-subtle'
+                      }`}
+                    >
+                      {d.accuracy !== null ? formatPercent(d.accuracy) : EMPTY_VALUE}
+                    </span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-4 text-xs shrink-0">
-                  <span className="text-fg-subtle">{d.total} resolvidas</span>
-                  <span className="font-bold tabular-nums">
-                    {d.accuracy !== null ? formatPercent(d.accuracy) : EMPTY_VALUE}
-                  </span>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </Card>
 
