@@ -9,7 +9,6 @@ import {
 } from '../domain/schedule';
 import { addDays, isValidDateKey, todayKey, type DateKey } from '../lib/dates';
 import { replaceUserWorkspaceInApi, waitForPendingSync } from './auth';
-import { createId, nowIso } from '../lib/utils';
 import { getSettings, updateSettings } from './settings';
 import { ValidationError, syncWeeklyPlansWithSessions } from './sessions';
 import {
@@ -71,35 +70,30 @@ export async function generateSchedule(
     const preservedSessions = await db.sessions.toArray();
     const finalSessions = filterAndAdjustAiSessions(aiResult.sessions, preservedSessions);
 
-    // Garante que toda sessão de estudo gerada tenha tópico vinculado (cria o tópico se faltar).
-    const allTopics = await db.topics.toArray();
-    const norm = (t: string) => t.trim().toLowerCase();
+    // Toda sessão de estudo usa exclusivamente tópicos já cadastrados (edital): o objetivo é o título do tópico.
+    const allTopics = (await db.topics.toArray()).filter((t) => t.active);
+    const cursor = new Map<string, number>();
+    const orphans = new Set<StudySession>();
     for (const session of finalSessions) {
-      if (session.topicId || session.disciplineId === SIMULADO_DISCIPLINE_ID || !session.objective.trim()) continue;
-      const title = session.objective.trim();
-      let topic = allTopics.find((t) => t.disciplineId === session.disciplineId && norm(t.title) === norm(title));
+      if (session.disciplineId === SIMULADO_DISCIPLINE_ID) continue;
+      let topic = session.topicId ? allTopics.find((t) => t.id === session.topicId) : undefined;
       if (!topic) {
-        const siblings = allTopics.filter((t) => t.disciplineId === session.disciplineId && !t.parentTopicId);
-        const now = nowIso();
-        topic = {
-          id: createId(),
-          disciplineId: session.disciplineId,
-          title,
-          parentTopicId: null,
-          status: 'nao-iniciado',
-          notes: '',
-          order: siblings.reduce((m, t) => Math.max(m, t.order + 1), 0),
-          active: true,
-          createdAt: now,
-          updatedAt: now,
-        };
-        await db.topics.add(topic);
-        allTopics.push(topic);
+        const pool = allTopics
+          .filter((t) => t.disciplineId === session.disciplineId)
+          .sort((x, y) => Number(!!x.parentTopicId) - Number(!!y.parentTopicId) || x.order - y.order);
+        if (pool.length === 0) {
+          orphans.add(session);
+          continue;
+        }
+        const n = cursor.get(session.disciplineId) ?? 0;
+        cursor.set(session.disciplineId, n + 1);
+        topic = pool[n % pool.length];
       }
       session.topicId = topic.id;
+      session.objective = topic.title;
     }
 
-    await db.sessions.bulkAdd(finalSessions);
+    await db.sessions.bulkAdd(finalSessions.filter((x) => !orphans.has(x)));
     await syncWeeklyPlansWithSessions();
     await db.settings.update('settings', { scheduleStartDate: startDate });
   });
