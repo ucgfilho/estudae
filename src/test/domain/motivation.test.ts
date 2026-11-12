@@ -3,7 +3,7 @@ import {
   dailyProgress,
   detectAchievements,
   evaluateQuestionLog,
-  pickMessage,
+  formatAchievementMessage,
   primaryAchievement,
   progressFraming,
   snapshot,
@@ -73,9 +73,9 @@ describe('domain/motivation - daily progress', () => {
 
   it('frames progress by accumulated work early and by remaining work late (Koo & Fishbach)', () => {
     expect(progressFraming(0, 120)).toMatch(/primeiro bloco/i);
-    expect(progressFraming(30, 120)).toMatch(/já acumulou 30 min/);
+    expect(progressFraming(30, 120)).toMatch(/já estudou 30 min/);
     expect(progressFraming(80, 120)).toMatch(/Faltam 40 min/);
-    expect(progressFraming(110, 120)).toMatch(/Faltam só 10 min/);
+    expect(progressFraming(110, 120)).toMatch(/Faltam 10 min/);
     expect(progressFraming(130, 120)).toMatch(/cumprida/);
   });
 });
@@ -136,10 +136,58 @@ describe('domain/motivation - question evaluation', () => {
   });
 });
 
-describe('domain/motivation - variable messages', () => {
-  it('returns different messages depending on randomness', () => {
-    const first = pickMessage('session-complete', () => 0);
-    const last = pickMessage('session-complete', () => 0.99);
-    expect(first.title).not.toBe(last.title);
+describe('domain/motivation - deterministic messages', () => {
+  it('generates consistent messages for session-complete', () => {
+    const msg = formatAchievementMessage('session-complete', '+30 min', 'Banco de Dados');
+    expect(msg.title).toBe('Sessão concluída em Banco de Dados');
+    expect(msg.body).toBe('+30 min registrados no seu histórico.');
+  });
+
+  it('generates consistent messages for daily-goal', () => {
+    const msg = formatAchievementMessage('daily-goal');
+    expect(msg.title).toBe('Meta diária cumprida');
+    expect(msg.body).toBe('Você atingiu o tempo de estudo planejado para hoje.');
+  });
+
+  it('generates consistent messages for schedule-complete', () => {
+    const msg = formatAchievementMessage('schedule-complete');
+    expect(msg.title).toBe('Cronograma do dia completo');
+    expect(msg.body).toBe('Todos os blocos planejados para hoje foram executados.');
+  });
+
+  it('generates consistent messages for question-goal', () => {
+    const msg = formatAchievementMessage('question-goal');
+    expect(msg.title).toBe('Meta de questões atingida');
+    expect(msg.body).toBe('Volume diário de questões cumprido. É assim que se fixa o conteúdo.');
+  });
+
+  it('generates consistent messages for questions-great', () => {
+    const msg = formatAchievementMessage('questions-great', '8/10 acertos (80%)', 'Direito Administrativo');
+    expect(msg.title).toBe('Ótimo desempenho em Direito Administrativo');
+    expect(msg.body).toBe('Acertou 8/10 acertos (80%). Acima da sua meta de acerto.');
+  });
+
+  it('generates consistent messages for questions-perfect', () => {
+    const msg = formatAchievementMessage('questions-perfect', '10/10 acertos (100%)', 'Português');
+    expect(msg.title).toBe('Gabaritou em Português');
+    expect(msg.body).toBe('Acertou 10/10 acertos (100%). Domínio demonstrado.');
+  });
+
+  it('generates consistent messages for personal-best', () => {
+    const msg = formatAchievementMessage('personal-best', 'Recorde na disciplina: 85% (antes 75%)', 'Informática');
+    expect(msg.title).toBe('Novo recorde pessoal em Informática');
+    expect(msg.body).toBe('Recorde na disciplina: 85% (antes 75%)');
+  });
+
+  it('generates consistent messages for streak-milestone', () => {
+    const msg = formatAchievementMessage('streak-milestone', '7 dias seguidos');
+    expect(msg.title).toBe('7 dias seguidos de estudo');
+    expect(msg.body).toBe('Constância é o diferencial que aprova. Mantenha a sequência.');
+  });
+
+  it('generates consistent messages for questions-logged', () => {
+    const msg = formatAchievementMessage('questions-logged', '6/10 acertos (60%)', 'Matemática');
+    expect(msg.title).toBe('Questões registradas em Matemática');
+    expect(msg.body).toBe('Acertou 6/10 acertos (60%). Cada erro mapeado vira revisão no Caderno de Erros.');
   });
 });

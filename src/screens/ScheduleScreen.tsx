@@ -305,7 +305,7 @@ export function ScheduleScreen() {
     setLoading(true);
     try {
       const count = await applyDistributionToWeek(weekStart, today);
-      setActionSuccess(`Distribuição reaplicada! ${count} sessão(ões) atualizadas para a semana.`);
+      setActionSuccess(`Distribuição reaplicada. ${count} sessão(ões) atualizadas para a semana.`);
     } catch (err) {
       setActionError(errorMessage(err));
     } finally {
@@ -324,7 +324,7 @@ export function ScheduleScreen() {
     try {
       await saveDistribution(tempDistribution);
       setDistributionModalOpen(false);
-      setActionSuccess('Distribuição padrão salva com sucesso!');
+      setActionSuccess('Distribuição padrão salva .');
     } catch (err) {
       setActionError(errorMessage(err));
     }
@@ -351,7 +351,7 @@ export function ScheduleScreen() {
       await updateWeeklyPlan(editingPlan.id, planForm);
       setPlanEditModalOpen(false);
       setEditingPlan(null);
-      setActionSuccess('Metas e anotações da semana atualizadas!');
+      setActionSuccess('Metas e anotações da semana atualizadas.');
     } catch (err) {
       setActionError(errorMessage(err));
     } finally {
@@ -374,7 +374,7 @@ export function ScheduleScreen() {
       await recoverSession(sessionToRecover.id, recoverDate);
       setRecoverModalOpen(false);
       setSessionToRecover(null);
-      setActionSuccess('Sessão recuperada com sucesso para a nova data!');
+      setActionSuccess('Sessão recuperada para a nova data.');
     } catch (err) {
       setActionError(errorMessage(err));
     } finally {
@@ -399,7 +399,7 @@ export function ScheduleScreen() {
     try {
       await clearSchedule();
       setClearConfirmOpen(false);
-      setActionSuccess('Cronograma limpo com sucesso! Planos semanais e sessões planejadas foram removidos.');
+      setActionSuccess('Cronograma limpo . Planos semanais e sessões planejadas foram removidos.');
     } catch (err) {
       setActionError(errorMessage(err));
     } finally {
@@ -434,7 +434,7 @@ export function ScheduleScreen() {
       await deleteSession(sessionToDelete.id);
       setDeleteConfirmOpen(false);
       setSessionToDelete(null);
-      setActionSuccess('Sessão excluída com sucesso!');
+      setActionSuccess('Sessão excluída .');
     } catch (err) {
       setActionError(errorMessage(err));
     } finally {
@@ -494,8 +494,8 @@ export function ScheduleScreen() {
         disc?.name ?? (s.disciplineId === 'simulado' ? 'Simulado Geral BNB' : s.disciplineId);
       setActionSuccess(
         isSameDay
-          ? `Ordem de "${discName}" atualizada em ${formatWeekdayShort(targetDate)} (${formatDate(targetDate)})!`
-          : `Sessão de "${discName}" movida para ${formatWeekdayShort(targetDate)} (${formatDate(targetDate)}) com sucesso!`
+          ? `Ordem de "${discName}" atualizada em ${formatWeekdayShort(targetDate)} (${formatDate(targetDate)})`
+          : `Sessão de "${discName}" movida para ${formatWeekdayShort(targetDate)} (${formatDate(targetDate)})`
       );
     } catch (err) {
       setOptimisticSessions(null);
@@ -536,7 +536,7 @@ export function ScheduleScreen() {
       const discName =
         disc?.name ?? (s.disciplineId === 'simulado' ? 'Simulado Geral BNB' : s.disciplineId);
       setActionSuccess(
-        `Sessão de "${discName}" movida para Semana ${targetPlan.weekIndex} (${formatWeekdayShort(targetDate)}, ${formatDate(targetDate)}) com sucesso!`
+        `Sessão de "${discName}" movida para Semana ${targetPlan.weekIndex} (${formatWeekdayShort(targetDate)}, ${formatDate(targetDate)})`
       );
     } catch (err) {
       setOptimisticSessions(null);
@@ -1031,7 +1031,7 @@ export function ScheduleScreen() {
       {/* Post-Session Congratulations & Actions (Print 2) */}
       {justFinishedSession && (
         <Card
-          title="Sessão Finalizada e Salva com Sucesso!"
+          title="Sessão finalizada e salva"
           description={`Você estudou ${formatMinutes(Math.round(justFinishedSession.actualSeconds / 60))}.`}
           className="border-success/40 bg-success-soft/20 animate-fade-in"
           onClose={() => setJustFinishedSession(null)}
@@ -1247,7 +1247,7 @@ export function ScheduleScreen() {
             {overloadInfo.weekOverloaded && (
               <Alert
                 tone="danger"
-                title="Atenção: Sobrecarga na semana!"
+                title="Atenção: Sobrecarga na semana"
                 className="mt-2"
                 dismissKey={`schedule-week-overload-${selectedWeekIndex}`}
                 once
@@ -1852,7 +1852,7 @@ export function ScheduleScreen() {
         defaultDate={justFinishedSession?.date}
         defaultDisciplineId={justFinishedSession?.disciplineId}
         defaultTopicId={justFinishedSession?.topicId}
-        onSaved={() => setActionSuccess('Anotação salva no Caderno de Erros com sucesso!')}
+        onSaved={() => setActionSuccess('Anotação salva no Caderno de Erros .')}
       />
 
       {/* Manual / Planned Session Modal */}
@@ -1867,7 +1867,7 @@ export function ScheduleScreen() {
         onSaved={(saved) => {
           setSessionModalOpen(false);
           setSessionToEdit(null);
-          setActionSuccess('Sessão planejada com sucesso!');
+          setActionSuccess('Sessão planejada .');
           if (weeklyPlans.length > 0) {
             const targetPlan = weeklyPlans.find(
               (wp) => saved.date >= wp.weekStart && saved.date <= addDays(wp.weekStart, 6),

@@ -164,7 +164,7 @@ export function CalendarScreen() {
       }
       setDeleteConfirmOpen(false);
       setSessionToDelete(null);
-      setActionSuccess('Sessão excluída com sucesso!');
+      setActionSuccess('Sessão excluída .');
     } catch (err) {
       setActionError(errorMessage(err));
     }
@@ -279,7 +279,7 @@ export function CalendarScreen() {
                         isToday && 'bg-primary text-primary-fg font-bold',
                         isExamDay && !isToday && 'bg-danger text-white'
                       )}
-                      title={isExamDay ? 'Dia da Prova!' : undefined}
+                      title={isExamDay ? 'Dia da prova' : undefined}
                     >
                       {dayKey.slice(8)}
                     </span>
@@ -706,7 +706,7 @@ export function CalendarScreen() {
         defaultDate={modalDefaultDate}
         onSaved={(s) => {
           if (selectedSessionDetail?.id === s.id) setSelectedSessionDetail(s);
-          setActionSuccess(sessionToEdit ? 'Sessão atualizada com sucesso!' : 'Sessão planejada com sucesso!');
+          setActionSuccess(sessionToEdit ? 'Sessão atualizada .' : 'Sessão planejada .');
         }}
       />
 
@@ -716,7 +716,7 @@ export function CalendarScreen() {
         session={sessionToReschedule}
         onRescheduled={(s) => {
           setSelectedSessionDetail(s);
-          setActionSuccess('Sessão reagendada com sucesso!');
+          setActionSuccess('Sessão reagendada .');
         }}
       />
 

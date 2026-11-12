@@ -541,7 +541,7 @@ export function QuestionsScreen() {
         defaultDisciplineId={selectedLogForError?.disciplineId}
         defaultTopicId={selectedLogForError?.topicId}
         questionLogId={selectedLogForError?.id}
-        onSaved={() => setActionSuccess('Anotação salva no Caderno de Erros com sucesso!')}
+        onSaved={() => setActionSuccess('Anotação salva no Caderno de Erros .')}
       />
 
       <ConfirmModal

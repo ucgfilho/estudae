@@ -1,19 +1,26 @@
 /**
  * Motivação e reforço positivo baseados em evidências.
  *
- * Fundamentos aplicados (resumo — ver README, seção "Motivação"):
- * - Goal-gradient (Hull 1932; Kivetz, Urminsky & Zheng 2006): o esforço acelera
- *   conforme a meta se aproxima → progresso sempre visível.
- * - Small-area hypothesis (Koo & Fishbach 2012): no início enfatizar o que já
- *   foi feito; depois da metade, enfatizar o pouco que falta.
- * - Reward prediction error (Schultz 1997): recompensas inesperadas/variáveis
- *   geram mais dopamina que as previsíveis → mensagens e intensidade variáveis,
- *   marcos raros (recorde pessoal, 100%) celebrados com mais ênfase.
- * - Progress principle (Amabile & Kramer 2011): pequenas vitórias sinalizadas
- *   sustentam a motivação → cada sessão concluída é reconhecida.
- * - Self-Determination Theory (Deci & Ryan): feedback informacional de
- *   competência (comparações com o próprio histórico), sem tom controlador.
+ * Fundamentos aplicados (resumo — ver ux-writing.md, seção SCIENTIFIC_RESEARCH):
+ * - Self-Determination Theory (Bureau et al., 2022; Wang et al., 2024): autonomia,
+ *   competência e relacionamento como necessidades psicológicas básicas que, quando
+ *   apoiadas, geram motivação autônoma, persistência e bem-estar acadêmico.
+ * - Feedback informativo (Wisniewski et al., 2020): feedback orientado à tarefa,
+ *   que identifica erros e orienta melhoria, é mais eficaz que feedback controlador
+ *   ou genérico. Feedback deve reconhecer progresso real.
+ * - Need Support vs. Thwarting (Howard et al., 2024): comportamentos que apoiam
+ *   autonomia (escolha, racionalização), competência (estrutura, feedback) e
+ *   relacionamento (cuidado, reconhecimento) predizem engajamento e desempenho.
+ *   Comportamentos controladores, caóticos ou frios prejudicam essas necessidades.
+ *
+ * Princípios de UX Writing derivados (ver ux-writing.md, VERBAL_IDENTITY):
+ * - Mensagens determinísticas e contextualizadas (não aleatórias).
+ * - Feedback informacional baseado em dados reais do estudante.
+ * - Reconhecimento de progresso concreto, não elogios vazios.
+ * - Linguagem que apoia autonomia (não controladora).
+ * - Tom adaptado ao contexto: conquistas, progresso, dificuldades, pendências, retorno, execução.
  */
+
 import type { QuestionLog, Settings, StudySession } from '../db/types';
 import { addDays, type DateKey } from '../lib/dates';
 import { accuracy, plannedSessions, studiedMinutesInRange, studyStreak } from './metrics';
@@ -57,8 +64,9 @@ export function dailyProgress(
 }
 
 /**
- * Mensagem de progresso com enquadramento dinâmico (Koo & Fishbach 2012):
+ * Mensagem de progresso com enquadramento dinâmico (Koo & Fishbach, 2012):
  * abaixo de 50% destaca o acumulado; a partir de 50% destaca o que falta.
+ * Retorna mensagem determinística baseada nos dados reais.
  */
 export function progressFraming(studied: number, goal: number): string {
   const done = Math.round(studied);
@@ -66,8 +74,8 @@ export function progressFraming(studied: number, goal: number): string {
   if (done >= goal) return 'Meta diária cumprida. Todo minuto extra agora é vantagem competitiva.';
   const remaining = Math.max(1, Math.round(goal - studied));
   if (done === 0) return 'O primeiro bloco é o mais difícil. Comece com 25 minutos.';
-  if (studied / goal < 0.5) return `Você já acumulou ${done} min hoje. Bom ritmo, continue.`;
-  if (remaining <= 15) return `Faltam só ${remaining} min para fechar a meta de hoje.`;
+  if (studied / goal < 0.5) return `Você já estudou ${done} min hoje. Bom ritmo, continue.`;
+  if (remaining <= 15) return `Faltam ${remaining} min para fechar a meta de hoje.`;
   return `Mais da metade feita. Faltam ${remaining} min para a meta.`;
 }
 
@@ -228,73 +236,83 @@ export function highestTier(list: readonly Achievement[]): AchievementTier | nul
 }
 
 /* ------------------------------------------------------------------ */
-/* Mensagens variáveis (evitam habituação)                             */
+/* Mensagens determinísticas e contextualizadas (não aleatórias)      */
 /* ------------------------------------------------------------------ */
 
-const MESSAGES: Record<AchievementKind, { title: string[]; body: string[] }> = {
-  'session-complete': {
-    title: ['Sessão concluída', 'Bloco fechado', 'Mais um bloco no histórico', 'Foco convertido em progresso'],
-    body: [
-      'Cada sessão concluída aproxima você da aprovação.',
-      'Consistência vence intensidade. Ótimo trabalho.',
-      'Registre as questões agora, enquanto o conteúdo está fresco.',
-      'Uma pausa curta agora ajuda a render mais no próximo bloco.',
-    ],
-  },
-  'daily-goal': {
-    title: ['Meta diária batida', 'Meta do dia cumprida', 'Dia ganho'],
-    body: [
-      'Você cumpriu o tempo de estudo planejado para hoje.',
-      'Meta atingida. O que vier a partir daqui é vantagem sobre a concorrência.',
-      'Hoje o plano saiu do papel. Amanhã, repita.',
-    ],
-  },
-  'schedule-complete': {
-    title: ['Cronograma do dia completo', 'Todos os blocos de hoje concluídos', 'Dia 100% executado'],
-    body: [
-      'Você executou todos os blocos planejados para hoje.',
-      'Plano cumprido por inteiro. Esse é o hábito que aprova.',
-      'Nenhum bloco ficou para trás hoje. Excelente disciplina.',
-    ],
-  },
-  'question-goal': {
-    title: ['Meta de questões batida', 'Cota diária de questões cumprida'],
-    body: ['Você atingiu a meta diária de questões.', 'Volume de questões em dia. É assim que se fixa o conteúdo.'],
-  },
-  'questions-great': {
-    title: ['Ótimo desempenho', 'Acima da meta', 'Mandou bem'],
-    body: [
-      'Desempenho acima da sua meta de acerto.',
-      'Essa matéria está ficando sólida.',
-      'Seu estudo está se convertendo em acertos.',
-    ],
-  },
-  'questions-perfect': {
-    title: ['Gabaritou', '100% de acerto', 'Bateria perfeita'],
-    body: ['Nenhum erro nesta bateria. Domínio demonstrado.', 'Acerto total. Considere aumentar a dificuldade.'],
-  },
-  'personal-best': {
-    title: ['Novo recorde pessoal', 'Você superou sua melhor marca', 'Recorde quebrado'],
-    body: ['Seu melhor desempenho já registrado nesta disciplina.', 'Evolução comprovada pelos seus próprios números.'],
-  },
-  'streak-milestone': {
-    title: ['Sequência em alta', 'Marco de constância', 'Hábito consolidado'],
-    body: ['Dias consecutivos de estudo constroem o hábito que aprova.', 'Constância é o seu diferencial. Não quebre a corrente.'],
-  },
-  'questions-logged': {
-    title: ['Questões registradas', 'Bateria registrada'],
-    body: [
-      'Cada erro é um ponto de revisão mapeado. Anote os principais no Caderno de Erros.',
-      'Errar no treino é o que evita errar na prova. Revise os erros hoje.',
-    ],
-  },
-};
+/**
+ * Gera título e corpo da mensagem baseados no tipo de conquista e dados reais.
+ * Substitui pickMessage aleatório por mensagens determinísticas e informativas.
+ */
+export function formatAchievementMessage(
+  kind: AchievementKind,
+  detail?: string,
+  disciplineName?: string,
+  studiedMinutes?: number,
+  streakDays?: number,
+): { title: string; body: string } {
+  // Usa disciplina no título quando disponível para contextualização
+  const disc = disciplineName ? ` em ${disciplineName}` : '';
 
-/** Seleciona título e mensagem de forma variável. `random` injetável para testes. */
-export function pickMessage(kind: AchievementKind, random: () => number = Math.random): { title: string; body: string } {
-  const pool = MESSAGES[kind];
-  const pick = (arr: string[]) => arr[Math.floor(random() * arr.length) % arr.length];
-  return { title: pick(pool.title), body: pick(pool.body) };
+  switch (kind) {
+    case 'session-complete': {
+      const mins = detail ? detail.replace('+', '').replace(' min', '') : studiedMinutes?.toString() ?? '';
+      return {
+        title: `Sessão concluída${disc}`,
+        body: mins ? `+${mins} min registrados no seu histórico.` : 'Sessão finalizada e salva.',
+      };
+    }
+    case 'daily-goal': {
+      return {
+        title: 'Meta diária cumprida',
+        body: 'Você atingiu o tempo de estudo planejado para hoje.',
+      };
+    }
+    case 'schedule-complete': {
+      return {
+        title: 'Cronograma do dia completo',
+        body: 'Todos os blocos planejados para hoje foram executados.',
+      };
+    }
+    case 'question-goal': {
+      return {
+        title: 'Meta de questões atingida',
+        body: 'Volume diário de questões cumprido. É assim que se fixa o conteúdo.',
+      };
+    }
+    case 'questions-great': {
+      return {
+        title: `Ótimo desempenho${disc}`,
+        body: detail ? `Acertou ${detail}. Acima da sua meta de acerto.` : 'Desempenho acima da sua meta de acerto.',
+      };
+    }
+    case 'questions-perfect': {
+      return {
+        title: `Gabaritou${disc}`,
+        body: detail ? `Acertou ${detail}. Domínio demonstrado.` : '100% de acerto nesta bateria. Considere aumentar a dificuldade.',
+      };
+    }
+    case 'personal-best': {
+      return {
+        title: `Novo recorde pessoal${disc}`,
+        body: detail ?? 'Você superou sua melhor marca nesta disciplina.',
+      };
+    }
+    case 'streak-milestone': {
+      const days = streakDays ?? (detail ? parseInt(detail.replace(' dias seguidos', ''), 10) : null);
+      return {
+        title: days ? `${days} dias seguidos de estudo` : 'Marco de constância atingido',
+        body: 'Constância é o diferencial que aprova. Mantenha a sequência.',
+      };
+    }
+    case 'questions-logged': {
+      return {
+        title: `Questões registradas${disc}`,
+        body: detail
+          ? `Acertou ${detail}. Cada erro mapeado vira revisão no Caderno de Erros.`
+          : 'Bateria registrada. Erros viram revisão; acertos confirmam o que você já domina.',
+      };
+    }
+  }
 }
 
 /** Comparativo opcional com ontem (feedback informacional surpresa). */

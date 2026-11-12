@@ -6,8 +6,8 @@ import { useCelebrationsEnabled } from '../../hooks/useCelebrationPrefs';
 import {
   comparedToYesterday,
   detectAchievements,
+  formatAchievementMessage,
   nextPendingToday,
-  pickMessage,
   primaryAchievement,
   snapshot,
   type Achievement,
@@ -97,11 +97,17 @@ export function CelebrationLayer() {
     const primary = primaryAchievement(list);
     if (!primary) return;
 
-    const { title, body } = pickMessage(primary.kind);
+    const discName = primary.disciplineId ? disciplines.find((d) => d.id === primary.disciplineId)?.name : undefined;
+    const studiedMinutes = primary.kind === 'session-complete' || primary.kind === 'daily-goal'
+      ? sessions.find((s) => s.id === primary.detail?.replace('+', '').replace(' min', ''))?.actualSeconds
+      : undefined;
+    const streakDays = primary.kind === 'streak-milestone' ? parseInt(primary.detail?.replace(' dias seguidos', '') ?? '', 10) : undefined;
+
+    const { title, body } = formatAchievementMessage(primary.kind, primary.detail, discName, studiedMinutes, streakDays);
     const showsTime = list.some((a) => a.kind === 'session-complete' || a.kind === 'daily-goal');
     setCelebration({ id: Date.now(), list, primary, title, body, extra: showsTime ? comparedToYesterday(sessions, today) : null });
     if (primary.tier !== 'info') setBurst((b) => b + 1);
-  }, [sessions, logs, settings, today]);
+  }, [sessions, logs, settings, today, disciplines]);
 
   // Fecha sozinho (mais tempo para marcos), pausando enquanto o aluno interage.
   useEffect(() => {

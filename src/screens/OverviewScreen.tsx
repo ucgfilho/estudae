@@ -128,7 +128,7 @@ export function OverviewScreen() {
     setActionError(null);
     try {
       await completeReview(reviewId);
-      setActionSuccess('Revisão concluída!');
+      setActionSuccess('Revisão concluída.');
     } catch (err) {
       setActionError(errorMessage(err));
     }
@@ -392,19 +392,19 @@ export function OverviewScreen() {
         open={sessionModalOpen}
         onClose={() => setSessionModalOpen(false)}
         defaultDate={today}
-        onSaved={() => setActionSuccess('Sessão planejada com sucesso!')}
+        onSaved={() => setActionSuccess('Sessão planejada.')}
       />
       <QuestionModal
         open={questionModalOpen}
         onClose={() => setQuestionModalOpen(false)}
         defaultDate={today}
-        onSaved={() => setActionSuccess('Questões registradas com sucesso!')}
+        onSaved={() => setActionSuccess('Questões registradas.')}
       />
       <ErrorNoteModal
         open={errorModalOpen}
         onClose={() => setErrorModalOpen(false)}
         defaultDate={today}
-        onSaved={() => setActionSuccess('Anotação de erro salva com sucesso!')}
+        onSaved={() => setActionSuccess('Anotação de erro salva.')}
       />
     </div>
   );

@@ -166,7 +166,7 @@ export function DisciplinesScreen() {
       await deleteTopic(topicToDelete.id);
       setDeleteConfirmOpen(false);
       setTopicToDelete(null);
-      setActionSuccess('Tópico excluído com sucesso!');
+      setActionSuccess('Tópico excluído .');
     } catch (err) {
       setActionError(errorMessage(err));
     }
@@ -181,8 +181,8 @@ export function DisciplinesScreen() {
       setDeleteAllConfirmOpen(false);
       setActionSuccess(
         deleteAllScope === 'current'
-          ? `${count} tópico(s) de ${currentDiscipline?.name} excluído(s) com sucesso!`
-          : `${count} tópico(s) excluído(s) de todas as disciplinas com sucesso!`
+          ? `${count} tópico(s) de ${currentDiscipline?.name} excluído(s) .`
+          : `${count} tópico(s) excluído(s) de todas as disciplinas .`
       );
     } catch (err) {
       setActionError(errorMessage(err));
@@ -596,7 +596,7 @@ export function DisciplinesScreen() {
         disciplineId={currentDiscipline?.id ?? ''}
         parentTopicId={modalParentTopicId}
         topicToEdit={topicToEdit}
-        onSaved={() => setActionSuccess('Tópico salvo com sucesso!')}
+        onSaved={() => setActionSuccess('Tópico salvo .')}
       />
 
       <ChecklistImportModal
@@ -604,7 +604,7 @@ export function DisciplinesScreen() {
         onClose={() => setImportModalOpen(false)}
         disciplineId={currentDiscipline?.id ?? ''}
         disciplineName={currentDiscipline?.name ?? ''}
-        onImported={(cnt) => setActionSuccess(`${cnt} tópico(s) importado(s) com sucesso!`)}
+        onImported={(cnt) => setActionSuccess(`${cnt} tópico(s) importado(s) .`)}
       />
 
       <ConfirmModal
@@ -643,7 +643,7 @@ export function DisciplinesScreen() {
         }
       >
         <div className="space-y-4 text-sm">
-          <Alert tone="danger" title="Atenção: Ação irreversível!">
+          <Alert tone="danger" title="Atenção: Ação irreversível">
             Todos os tópicos selecionados serão permanentemente excluídos. Suas sessões de estudo, histórico de tempo, registros de questões e notas do Caderno de Erros continuarão intactos (apenas desvinculados do tópico).
           </Alert>
 

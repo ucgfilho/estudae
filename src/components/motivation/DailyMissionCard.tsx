@@ -98,12 +98,12 @@ export function DailyMissionCard({
             ) : (
               <>
                 <div className="text-base sm:text-lg font-bold text-fg">
-                  {goalDone ? 'Meta diária concluída' : 'Iniciar bloco de estudo'}
+                  {goalDone ? 'Meta diária cumprida' : 'Iniciar bloco de estudo'}
                 </div>
                 <p className="text-sm text-fg-muted">
                   {goalDone
-                    ? 'Você atingiu a meta de hoje. Inicie uma sessão extra se desejar aprofundar um tópico.'
-                    : 'Nenhuma sessão pendente agendada para hoje. Inicie um estudo avulso com cronômetro.'}
+                    ? 'Meta do dia atingida. Inicie uma sessão extra se quiser aprofundar.'
+                    : 'Nenhuma sessão pendente agendada. Inicie um estudo avulso com cronômetro.'}
                 </p>
               </>
             )}
@@ -254,10 +254,10 @@ export function DailyMissionCard({
                 </span>
                 <span className="block text-fg-muted">
                   {p.studiedMinutes > 0
-                    ? 'Constância mantida hoje.'
+                    ? 'Sequência mantida hoje.'
                     : streak > 0
-                      ? 'Estude hoje para manter o ritmo.'
-                      : 'Inicie uma sequência hoje.'}
+                      ? 'Estude hoje para manter a sequência.'
+                      : 'Comece sua sequência hoje.'}
                 </span>
               </div>
             </div>

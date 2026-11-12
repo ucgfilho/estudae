@@ -97,7 +97,7 @@ export function ReviewsScreen() {
     setActionError(null);
     try {
       await completeReview(review.id);
-      setActionSuccess('Revisão marcada como concluída!');
+      setActionSuccess('Revisão marcada como concluída.');
     } catch (err) {
       setActionError(errorMessage(err));
     }
@@ -107,7 +107,7 @@ export function ReviewsScreen() {
     setActionError(null);
     try {
       await reopenReview(review.id);
-      setActionSuccess('Revisão reaberta com sucesso!');
+      setActionSuccess('Revisão reaberta .');
     } catch (err) {
       setActionError(errorMessage(err));
     }
@@ -120,7 +120,7 @@ export function ReviewsScreen() {
       await deleteReview(reviewToDelete.id);
       setDeleteConfirmOpen(false);
       setReviewToDelete(null);
-      setActionSuccess('Revisão excluída com sucesso!');
+      setActionSuccess('Revisão excluída .');
     } catch (err) {
       setActionError(errorMessage(err));
     }
@@ -292,16 +292,16 @@ export function ReviewsScreen() {
             icon={<CheckCircle className="size-8" />}
             title={
               activeTab === 'overdue'
-                ? 'Nenhuma revisão em atraso!'
+                ? 'Nenhuma revisão em atraso'
                 : activeTab === 'today'
-                ? 'Todas as revisões de hoje estão em dia!'
+                ? 'Todas as revisões de hoje estão em dia'
                 : activeTab === 'upcoming'
                 ? 'Nenhuma revisão futura agendada'
                 : 'Nenhuma revisão concluída ainda'
             }
             description={
               activeTab === 'today'
-                ? 'Ótimo trabalho! Seus ciclos de memória estão em dia.'
+                ? 'Seus ciclos de memória estão em dia.'
                 : 'Cadastre tarefas de repetição espaçada para reter os tópicos estudados.'
             }
             action={
@@ -322,14 +322,14 @@ export function ReviewsScreen() {
       <CreateReviewModal
         open={createModalOpen}
         onClose={() => setCreateModalOpen(false)}
-        onCreated={(cnt) => setActionSuccess(`${cnt} tarefa(s) de revisão agendada(s) com sucesso!`)}
+        onCreated={(cnt) => setActionSuccess(`${cnt} tarefa(s) de revisão agendada(s) .`)}
       />
 
       <PostponeReviewModal
         open={postponeModalOpen}
         onClose={() => setPostponeModalOpen(false)}
         review={reviewToPostpone}
-        onPostponed={() => setActionSuccess('Revisão adiada com sucesso!')}
+        onPostponed={() => setActionSuccess('Revisão adiada .')}
       />
 
       <ConfirmModal

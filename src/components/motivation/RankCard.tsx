@@ -77,17 +77,17 @@ export function RankCard(input: RankInput) {
       }
     >
       <div className="grid grid-cols-1 gap-6 md:grid-cols-[auto_1fr] md:items-center">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <div
             key={rank.id}
             className={cn(
-              'grid size-20 shrink-0 place-items-center rounded-2xl bg-surface-muted ring-2',
+              'grid size-14 shrink-0 place-items-center rounded-xl bg-surface-muted ring-2',
               tier.ring,
               anim === 'up' && 'animate-pop',
               anim === 'down' && 'animate-rank-drop',
             )}
           >
-            <Icon className={cn('size-10', tier.color)} aria-hidden />
+            <Icon className={cn('size-7', tier.color)} aria-hidden />
           </div>
           <div>
             <p className="text-xs font-medium text-fg-muted">Patente atual</p>

@@ -370,7 +370,7 @@ export function ExamErrorNotebooks({ exam, disciplines }: { exam: MockExam; disc
         defaultDate={exam.date}
         onSaved={() => {
           setSuccessMsg(
-            noteToEdit ? 'Caderno de erros atualizado com sucesso!' : 'Caderno de erros criado com sucesso!'
+            noteToEdit ? 'Caderno de erros atualizado.' : 'Caderno de erros criado.'
           );
         }}
       />

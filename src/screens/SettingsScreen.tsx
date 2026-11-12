@@ -128,7 +128,7 @@ export function SettingsScreen() {
         geminiApiKey: geminiApiKey.trim(),
         aiProvider,
       });
-      setActionSuccess('Configurações e metas salvas com sucesso!');
+      setActionSuccess('Configurações e metas salvas.');
     } catch (err) {
       setActionError(errorMessage(err));
     } finally {
@@ -143,7 +143,7 @@ export function SettingsScreen() {
       const backup = await createBackup();
       const json = JSON.stringify(backup, null, 2);
       downloadFile(`backup_estudos_bnb_${todayKey()}.json`, json, 'application/json');
-      setActionSuccess('Backup exportado com sucesso!');
+      setActionSuccess('Backup exportado.');
     } catch (err) {
       setActionError(errorMessage(err));
     }
@@ -184,7 +184,7 @@ export function SettingsScreen() {
       await restoreBackup(pendingBackup.backup);
       setRestoreConfirmOpen(false);
       setPendingBackup(null);
-      setActionSuccess('Backup restaurado com sucesso! Seus dados foram atualizados.');
+      setActionSuccess('Backup restaurado. Seus dados foram atualizados.');
     } catch (err) {
       setActionError(errorMessage(err));
     } finally {
@@ -199,7 +199,7 @@ export function SettingsScreen() {
     try {
       await resetDatabase();
       setResetConfirmOpen(false);
-      setActionSuccess('O sistema foi reiniciado. As disciplinas padrão foram restauradas.');
+      setActionSuccess('Sistema reiniciado. Disciplinas padrão restauradas.');
     } catch (err) {
       setActionError(errorMessage(err));
     } finally {

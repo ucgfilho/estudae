@@ -92,7 +92,7 @@ export function FocusMode({ timer, elapsed, disciplineName, disciplineColor, top
       <p className="min-h-5 text-sm font-medium text-fg-muted" aria-live="polite">
         {reached ? (
           <span className="inline-flex items-center gap-1.5 text-success">
-            <Coffee className="size-4" aria-hidden /> Meta atingida. Uma pausa de 5 min ajuda a render no próximo bloco.
+            <Coffee className="size-4" aria-hidden /> Meta atingida. Pausa de 5 min recomendada antes do próximo bloco.
           </span>
         ) : remainingMin <= 5 && planned > 0 ? (
           `Reta final: faltam ${remainingMin} min.`

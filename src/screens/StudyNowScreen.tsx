@@ -350,7 +350,7 @@ export function StudyNowScreen() {
                 {reached && !goalBannerDismissed && (
                   <div className="relative rounded-lg bg-success-soft p-2.5 pr-9 text-xs font-semibold text-success flex items-center justify-center gap-1.5 animate-pop">
                     <Sparkles className="size-4 shrink-0" aria-hidden />
-                    <span>Meta planejada atingida! Finalize agora ou faça uma pausa de 5 min antes de seguir.</span>
+                    <span>Meta planejada atingida. Finalize agora ou faça uma pausa de 5 min antes de seguir.</span>
                     <IconButton
                       label="Fechar aviso"
                       icon={<X className="size-3.5" />}
@@ -480,7 +480,7 @@ export function StudyNowScreen() {
                 </div>
 
                 <p className="text-sm text-fg-muted">
-                  Registre as questões agora, enquanto o conteúdo está fresco: recuperar a informação logo após estudar fortalece a memória.
+                  Registre as questões enquanto o conteúdo está fresco. Recuperar a informação logo após estudar fortalece a memória.
                 </p>
                 <div className="flex flex-wrap items-center gap-2">
                   <Button
@@ -710,7 +710,7 @@ export function StudyNowScreen() {
                   onClick={handleStartAdHoc}
                   loading={loading}
                 >
-                  Começar a Estudar Agora
+                  Começar a estudar
                 </Button>
               </div>
             </Card>
