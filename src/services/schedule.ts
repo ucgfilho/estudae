@@ -65,8 +65,6 @@ export async function generateSchedule(
     await db.sessions.bulkDelete(replaceable);
     await db.weeklyPlans.clear();
 
-    await db.weeklyPlans.bulkAdd(aiResult.weeklyPlans);
-
     const preservedSessions = await db.sessions.toArray();
     const finalSessions = filterAndAdjustAiSessions(aiResult.sessions, preservedSessions);
 
@@ -91,9 +89,22 @@ export async function generateSchedule(
       }
       session.topicId = topic.id;
       session.objective = topic.title;
+      session.notes = `Estudar o tópico "${topic.title}", conforme o Edital Verticalizado.`;
     }
+    const kept = finalSessions.filter((x) => !orphans.has(x));
 
-    await db.sessions.bulkAdd(finalSessions.filter((x) => !orphans.has(x)));
+    // Objetivos e conteúdo da semana derivam apenas dos tópicos das sessões mantidas.
+    await db.weeklyPlans.bulkAdd(
+      aiResult.weeklyPlans.map((wp) => {
+        const end = addDays(wp.weekStart, 6);
+        const titles = [
+          ...new Set(kept.filter((x) => x.topicId && x.date >= wp.weekStart && x.date <= end).map((x) => x.objective)),
+        ];
+        return titles.length > 0 ? { ...wp, objectives: `Estudar: ${titles.join('; ')}.`, plannedContent: titles.join(' ') } : wp;
+      }),
+    );
+
+    await db.sessions.bulkAdd(kept);
     await syncWeeklyPlansWithSessions();
     await db.settings.update('settings', { scheduleStartDate: startDate });
   });
