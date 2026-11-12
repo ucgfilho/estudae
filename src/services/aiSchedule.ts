@@ -2730,6 +2730,7 @@ export function createAiStudySession(
 ): StudySession {
   const now = nowIso();
   const isSimulado = disciplineId === SIMULADO_DISCIPLINE_ID;
+  const cleanTopicTitle = objective.replace(/^Revisão e Questões:\s*/i, '').trim();
   return {
     id: createId(),
     date,
@@ -2739,10 +2740,10 @@ export function createAiStudySession(
     plannedMinutes,
     actualSeconds: 0,
     status: 'planejada',
-    objective,
+    objective: isSimulado ? objective : cleanTopicTitle || objective,
     notes: isSimulado
-      ? 'Sábado exclusivo de resolução de questões ou simulados baseado rigorosamente no Edital Verticalizado BNB 2022.'
-      : 'Sessão gerada exclusivamente por IA com base rigorosa no Edital Verticalizado BNB 2022 (Perfil 1: Desenvolvimento de Sistemas).',
+      ? `Sábado exclusivo de resolução de questões e simulado sobre os tópicos estudados na semana (${cleanTopicTitle || objective}).`
+      : `Estudo focado no tópico "${cleanTopicTitle || objective}", conforme o Edital Verticalizado.`,
     origin: 'planejada',
     startedAt: null,
     endedAt: null,
@@ -2753,8 +2754,8 @@ export function createAiStudySession(
         at: now,
         type: 'criada',
         description: isSimulado
-          ? 'Sábado de questões/simulado (2h) gerado pelo cronograma IA (Edital Verticalizado BNB 2022).'
-          : 'Sessão de 2h diárias gerada pelo cronograma IA segundo o Edital Verticalizado BNB 2022.',
+          ? 'Sábado de questões/simulado (2h) gerado pelo cronograma conforme o Edital Verticalizado.'
+          : `Sessão gerada pelo cronograma para o tópico "${cleanTopicTitle || objective}".`,
       },
     ],
     createdAt: now,
@@ -2792,18 +2793,34 @@ export function findMatchingTopic(
     }
   }
 
-  // 3. Correspondência por palavras-chave significativas
-  const targetWords = targetNorm.split(' ').filter((w) => w.length > 2);
+  // 3. Correspondência semântica por palavras-chave e radicais significativos
+  const STOPWORDS = new Set([
+    'de', 'da', 'do', 'das', 'dos', 'em', 'na', 'no', 'nas', 'nos',
+    'para', 'por', 'com', 'sem', 'sob', 'sobre', 'entre', 'ate', 'como',
+    'estudo', 'revisao', 'questoes', 'topico', 'topicos', 'conceitos', 'basicos', 'gerais',
+  ]);
+  const targetWords = targetNorm
+    .split(' ')
+    .filter((w) => w.length > 2 && !STOPWORDS.has(w));
   let bestMatch: Topic | null = null;
   let bestScore = 0;
 
   for (const t of discTopics) {
-    const titleWords = normalizeText(t.title).split(' ').filter((w) => w.length > 2);
+    const titleWords = normalizeText(t.title)
+      .split(' ')
+      .filter((w) => w.length > 2 && !STOPWORDS.has(w));
     let score = 0;
     for (const w of targetWords) {
-      if (titleWords.includes(w)) score += 1;
+      if (titleWords.includes(w)) {
+        score += 2;
+      } else if (
+        w.length >= 4 &&
+        titleWords.some((tw) => tw.length >= 4 && (tw.startsWith(w.slice(0, 5)) || w.startsWith(tw.slice(0, 5))))
+      ) {
+        score += 1;
+      }
     }
-    if (score > bestScore && score >= Math.min(2, titleWords.length)) {
+    if (score > bestScore) {
       bestScore = score;
       bestMatch = t;
     }
@@ -2838,7 +2855,9 @@ export function buildDynamicCurriculumFromEdital(
   topics: Topic[],
   contestLabel = 'Concurso Selecionado',
 ): AiWeekTemplate[] {
-  const activeDiscs = disciplines.filter((d) => d.active).sort((a, b) => a.order - b.order);
+  const activeDiscs = disciplines
+    .filter((d) => d.active && topics.some((t) => t.disciplineId === d.id && t.active))
+    .sort((a, b) => a.order - b.order);
   const fallbackDisc: Discipline = activeDiscs[0] ?? {
     id: 'geral',
     name: 'Conhecimentos Gerais',
@@ -2880,17 +2899,14 @@ export function buildDynamicCurriculumFromEdital(
   }
 
   const discTopicCursor = new Map<string, number>();
-  const nextTopicForDiscipline = (disc: Discipline, weekNum: number): string => {
+  const nextTopicForDiscipline = (disc: Discipline, _weekNum: number): string => {
     const list = topicsByDisc.get(disc.id) ?? [];
     if (list.length === 0) {
-      return `Estudo dirigido de ${disc.name} — Bloco ${weekNum}`;
+      return '';
     }
     const idx = discTopicCursor.get(disc.id) ?? 0;
     discTopicCursor.set(disc.id, idx + 1);
     const topic = list[idx % list.length];
-    if (idx >= list.length && weekNum >= 15) {
-      return `Revisão e Questões: ${topic.title}`;
-    }
     return topic.title;
   };
 
@@ -2913,24 +2929,29 @@ export function buildDynamicCurriculumFromEdital(
       const d2 = slots[dayOffset * 2 + 1];
       const t1 = nextTopicForDiscipline(d1, w);
       const t2 = nextTopicForDiscipline(d2, w);
-      weekTopics.push(t1, t2);
+      if (t1) weekTopics.push(t1);
+      if (t2) weekTopics.push(t2);
 
+      const daySessions: AiSessionTemplate[] = [];
+      if (t1) {
+        daySessions.push({
+          disciplineId: d1.id,
+          plannedMinutes: 60,
+          objective: t1,
+          topicKeyword: t1,
+        });
+      }
+      if (t2) {
+        daySessions.push({
+          disciplineId: d2.id,
+          plannedMinutes: 60,
+          objective: t2,
+          topicKeyword: t2,
+        });
+      }
       days.push({
         dayOffset,
-        sessions: [
-          {
-            disciplineId: d1.id,
-            plannedMinutes: 60,
-            objective: t1,
-            topicKeyword: t1.replace(/^Revisão e Questões:\s*/i, ''),
-          },
-          {
-            disciplineId: d2.id,
-            plannedMinutes: 60,
-            objective: t2,
-            topicKeyword: t2.replace(/^Revisão e Questões:\s*/i, ''),
-          },
-        ],
+        sessions: daySessions,
       });
     }
 
@@ -2969,7 +2990,9 @@ export function formatDynamicEditalForPrompt(
   if (isDefaultBnbSyllabus(disciplines, topics)) {
     return formatEditalVerticalizadoForPrompt();
   }
-  const activeDiscs = disciplines.filter((d) => d.active).sort((a, b) => a.order - b.order);
+  const activeDiscs = disciplines
+    .filter((d) => d.active && topics.some((t) => t.disciplineId === d.id && t.active))
+    .sort((a, b) => a.order - b.order);
   return activeDiscs
     .map((d) => {
       const kindLabel =

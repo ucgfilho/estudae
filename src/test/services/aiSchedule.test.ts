@@ -5,10 +5,12 @@ import {
   generateAiSchedulePlan,
   filterAndAdjustAiSessions,
   enforceOfficialEditalObjective,
+  findMatchingTopic,
   BNB_TI_DISCIPLINES,
   BNB_BASIC_DISCIPLINES,
   EDITAL_VERTICALIZADO_BNB_2022,
 } from '../../services/aiSchedule';
+import { parseEditalVerticalizado } from '../../domain/contests';
 import { DEFAULT_DISCIPLINES, DEFAULT_SETTINGS, DEFAULT_TOPICS } from '../../db/seed';
 import type { StudySession } from '../../db/types';
 import { addDays, weekdayIndex } from '../../lib/dates';
@@ -306,5 +308,48 @@ describe('services/aiSchedule - BNB TI 24-week AI Generation (Edital Verticaliza
     const mondaySessions = sessions.filter((s) => s.date === '2026-10-26');
     expect(mondaySessions.length).toBeGreaterThan(0);
     expect(mondaySessions.every((s) => s.disciplineId !== SIMULADO_DISCIPLINE_ID)).toBe(true);
+  });
+
+  it('validates custom Edital Verticalizado: every session links to an exact topic with matching objective and notes', () => {
+    const customEditalText = `
+Língua Portuguesa:
+1. Interpretação e compreensão de textos diversos.
+2. Coesão, coerência e reescrita de frases.
+
+Segurança da Informação:
+1. Criptografia simétrica, assimétrica e funções hash.
+2. Segurança em redes, firewalls, IDS e IPS.
+3. Gestão de vulnerabilidades e OWASP Top 10.
+    `;
+    const parsed = parseEditalVerticalizado(customEditalText, 'custom');
+    const { sessions } = buildBuiltinAiSchedule(
+      '2026-10-12',
+      parsed.disciplines,
+      parsed.topics,
+      undefined,
+      'Concurso Customizado',
+    );
+
+    const studySessions = sessions.filter((s) => s.disciplineId !== SIMULADO_DISCIPLINE_ID);
+    expect(studySessions.length).toBe(240);
+
+    const topicMap = new Map(parsed.topics.map((t) => [t.id, t]));
+    for (const s of studySessions) {
+      expect(s.topicId).toBeTruthy();
+      const linkedTopic = topicMap.get(s.topicId!);
+      expect(linkedTopic).toBeDefined();
+      expect(linkedTopic!.disciplineId).toBe(s.disciplineId);
+      // Objetivo e observações seguem estritamente o título do tópico do edital enviado
+      expect(s.objective).toBe(linkedTopic!.title);
+      expect(s.notes).toContain(linkedTopic!.title);
+    }
+
+    // Valida que paráfrases da IA com apenas 1 palavra-chave ou radical parecido encontram o tópico mais próximo do edital
+    const secDisc = parsed.disciplines.find((d) => d.name.includes('Segurança'))!;
+    const matchedCrypto = findMatchingTopic('Estudo de criptografia moderna', secDisc.id, parsed.topics);
+    expect(matchedCrypto?.title).toBe('Criptografia simétrica, assimétrica e funções hash.');
+
+    const matchedFirewall = findMatchingTopic('Configuração de firewall corporativo', secDisc.id, parsed.topics);
+    expect(matchedFirewall?.title).toBe('Segurança em redes, firewalls, IDS e IPS.');
   });
 });

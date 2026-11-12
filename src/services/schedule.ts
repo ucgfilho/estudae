@@ -127,6 +127,7 @@ export async function generateSchedule(
 export async function applyDistributionToWeek(weekStart: DateKey, today: DateKey = todayKey()): Promise<number> {
   const settings = await getSettings();
   const disciplines = await db.disciplines.toArray();
+  const topics = (await db.topics.toArray()).filter((t) => t.active);
   const end = addDays(weekStart, 6);
   return db.transaction('rw', db.sessions, db.weeklyPlans, async () => {
     const replaceable = await db.sessions
@@ -141,9 +142,25 @@ export async function applyDistributionToWeek(weekStart: DateKey, today: DateKey
       .between(weekStart, end, true, true)
       .toArray();
 
+    const cursor = new Map<string, number>();
     const sessions = distributeWeek(weekStart, settings.distribution, disciplines, true, remainingSessions)
       .filter((b) => b.date >= today)
-      .map((b) => blockToSession(b));
+      .flatMap((b) => {
+        if (b.disciplineId === SIMULADO_DISCIPLINE_ID) {
+          return [blockToSession(b)];
+        }
+        const pool = topics
+          .filter((t) => t.disciplineId === b.disciplineId)
+          .sort((x, y) => Number(!!x.parentTopicId) - Number(!!y.parentTopicId) || x.order - y.order);
+        if (pool.length === 0) return [];
+        const n = cursor.get(b.disciplineId) ?? 0;
+        cursor.set(b.disciplineId, n + 1);
+        const topic = pool[n % pool.length];
+        const s = blockToSession(b, topic.title);
+        s.topicId = topic.id;
+        s.notes = `Estudar o tópico "${topic.title}", conforme o Edital Verticalizado.`;
+        return [s];
+      });
     await db.sessions.bulkAdd(sessions);
     await syncWeeklyPlansWithSessions();
     return sessions.length;
