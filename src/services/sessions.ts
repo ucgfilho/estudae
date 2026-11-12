@@ -289,6 +289,22 @@ export async function recoverSession(id: string, date: DateKey): Promise<StudySe
 }
 
 /**
+ * Atualiza o status do tópico após concluir uma sessão: "não iniciado" passa a
+ * "em andamento" e, sem sessões pendentes para o tópico, a "concluído".
+ * Tópicos "dominados" nunca são rebaixados.
+ */
+export async function syncTopicStatusAfterSession(topicId: string | null): Promise<void> {
+  if (!topicId) return;
+  const topic = await db.topics.get(topicId);
+  if (!topic || topic.status === 'dominado' || topic.status === 'concluido') return;
+  const related = await db.sessions.filter((s) => s.topicId === topicId).toArray();
+  if (!related.some((s) => s.status === 'concluida')) return;
+  const pending = related.some((s) => s.status === 'planejada');
+  const next = pending ? 'em-andamento' : 'concluido';
+  if (topic.status !== next) await db.topics.update(topicId, { status: next, updatedAt: nowIso() });
+}
+
+/**
  * Altera o status. Ao concluir manualmente, `actualMinutes` registra o tempo
  * efetivamente estudado informado pelo usuário (opcional).
  */
@@ -296,7 +312,7 @@ export async function setSessionStatus(id: string, status: SessionStatus, actual
   if (actualMinutes !== undefined && (!Number.isInteger(actualMinutes) || actualMinutes < 0 || actualMinutes > MAX_SESSION_MINUTES)) {
     throw new ValidationError(`O tempo realizado deve ser um número inteiro entre 0 e ${MAX_SESSION_MINUTES} minutos.`);
   }
-  await db.transaction('rw', db.sessions, db.weeklyPlans, async () => {
+  await db.transaction('rw', db.sessions, db.weeklyPlans, db.topics, async () => {
     const current = await requireSession(id);
     const history = [...current.history, entry('status', `Status alterado para ${SESSION_STATUS_LABELS[status]}.`)];
     const nextActualSeconds =
@@ -314,6 +330,7 @@ export async function setSessionStatus(id: string, status: SessionStatus, actual
       history,
       updatedAt: nowIso(),
     });
+    if (status === 'concluida') await syncTopicStatusAfterSession(current.topicId);
     await syncWeeklyPlansWithSessions();
   });
 }

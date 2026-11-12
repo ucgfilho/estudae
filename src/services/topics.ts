@@ -149,18 +149,18 @@ export async function moveTopic(id: string, direction: -1 | 1): Promise<void> {
   });
 }
 
-/** Reposiciona `draggedId` antes de `targetId` (arrastar e soltar entre irmãos). */
-export async function reorderTopic(draggedId: string, targetId: string): Promise<void> {
+/** Reposiciona `draggedId` antes de `targetId` (`null` = fim da lista) entre irmãos. */
+export async function reorderTopic(draggedId: string, targetId: string | null): Promise<void> {
   if (draggedId === targetId) return;
   await db.transaction('rw', db.topics, async () => {
     const dragged = await db.topics.get(draggedId);
-    const target = await db.topics.get(targetId);
-    if (!dragged || !target) return;
-    if (dragged.disciplineId !== target.disciplineId || dragged.parentTopicId !== target.parentTopicId) {
+    const target = targetId ? await db.topics.get(targetId) : null;
+    if (!dragged || (targetId && !target)) return;
+    if (target && (dragged.disciplineId !== target.disciplineId || dragged.parentTopicId !== target.parentTopicId)) {
       throw new ValidationError('Só é possível reordenar itens do mesmo nível.');
     }
     const list = (await siblingsOf(dragged)).filter((t) => t.id !== draggedId);
-    const index = list.findIndex((t) => t.id === targetId);
+    const index = targetId ? list.findIndex((t) => t.id === targetId) : list.length;
     list.splice(index, 0, dragged);
     await persistOrder(list);
   });

@@ -5,9 +5,11 @@ import {
   blockToSession,
   distributeWeek,
   isManualSession,
+  SIMULADO_DISCIPLINE_ID,
 } from '../domain/schedule';
 import { addDays, isValidDateKey, todayKey, type DateKey } from '../lib/dates';
 import { replaceUserWorkspaceInApi, waitForPendingSync } from './auth';
+import { createId, nowIso } from '../lib/utils';
 import { getSettings, updateSettings } from './settings';
 import { ValidationError, syncWeeklyPlansWithSessions } from './sessions';
 import {
@@ -59,7 +61,7 @@ export async function generateSchedule(
     options,
   });
 
-  await db.transaction('rw', db.weeklyPlans, db.sessions, db.settings, async () => {
+  await db.transaction('rw', db.weeklyPlans, db.sessions, db.settings, db.topics, async () => {
     const replaceable = await db.sessions.filter(isReplaceable).primaryKeys();
     await db.sessions.bulkDelete(replaceable);
     await db.weeklyPlans.clear();
@@ -68,6 +70,34 @@ export async function generateSchedule(
 
     const preservedSessions = await db.sessions.toArray();
     const finalSessions = filterAndAdjustAiSessions(aiResult.sessions, preservedSessions);
+
+    // Garante que toda sessão de estudo gerada tenha tópico vinculado (cria o tópico se faltar).
+    const allTopics = await db.topics.toArray();
+    const norm = (t: string) => t.trim().toLowerCase();
+    for (const session of finalSessions) {
+      if (session.topicId || session.disciplineId === SIMULADO_DISCIPLINE_ID || !session.objective.trim()) continue;
+      const title = session.objective.trim();
+      let topic = allTopics.find((t) => t.disciplineId === session.disciplineId && norm(t.title) === norm(title));
+      if (!topic) {
+        const siblings = allTopics.filter((t) => t.disciplineId === session.disciplineId && !t.parentTopicId);
+        const now = nowIso();
+        topic = {
+          id: createId(),
+          disciplineId: session.disciplineId,
+          title,
+          parentTopicId: null,
+          status: 'nao-iniciado',
+          notes: '',
+          order: siblings.reduce((m, t) => Math.max(m, t.order + 1), 0),
+          active: true,
+          createdAt: now,
+          updatedAt: now,
+        };
+        await db.topics.add(topic);
+        allTopics.push(topic);
+      }
+      session.topicId = topic.id;
+    }
 
     await db.sessions.bulkAdd(finalSessions);
     await syncWeeklyPlansWithSessions();

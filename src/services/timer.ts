@@ -4,7 +4,7 @@ import { elapsedSeconds, pausedState, resumedState } from '../domain/timer';
 import { toDateKey } from '../lib/dates';
 import { createId, nowIso } from '../lib/utils';
 import { formatMinutes } from '../lib/format';
-import { MAX_SESSION_MINUTES, ValidationError, syncWeeklyPlansWithSessions } from './sessions';
+import { MAX_SESSION_MINUTES, ValidationError, syncTopicStatusAfterSession, syncWeeklyPlansWithSessions } from './sessions';
 
 export interface AdHocTimerInput {
   disciplineId: string;
@@ -101,7 +101,7 @@ export async function updateTimerNotes(notes: string): Promise<void> {
  * pois a segunda chamada não encontra mais o estado ativo e retorna `null`.
  */
 export async function finishTimer(now: number = Date.now()): Promise<StudySession | null> {
-  return db.transaction('rw', db.timer, db.sessions, db.weeklyPlans, async () => {
+  return db.transaction('rw', db.timer, db.sessions, db.weeklyPlans, db.topics, async () => {
     const state = await db.timer.get(ACTIVE_TIMER_ID);
     if (!state) return null;
     const elapsed = elapsedSeconds(state, now);
@@ -150,6 +150,7 @@ export async function finishTimer(now: number = Date.now()): Promise<StudySessio
       await db.sessions.add(saved);
     }
     await db.timer.delete(ACTIVE_TIMER_ID);
+    await syncTopicStatusAfterSession(saved.topicId);
     await syncWeeklyPlansWithSessions();
     return saved;
   });

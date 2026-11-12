@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useSortableDrag } from '../hooks/useSortableDrag';
 import {
   BookMarked,
   Plus,
@@ -65,7 +66,6 @@ export function DisciplinesScreen() {
   const [expandedTopics, setExpandedTopics] = useState<Set<string>>(new Set());
   const [actionError, setActionError] = useState<string | null>(null);
   const setActionSuccess = useSuccessToast();
-  const [draggedTopicId, setDraggedTopicId] = useState<string | null>(null);
 
 
   const currentDiscipline = useMemo(
@@ -203,29 +203,11 @@ export function DisciplinesScreen() {
     setTopicModalOpen(true);
   };
 
-  // Drag and drop handlers
-  const handleDragStart = (e: React.DragEvent, id: string) => {
-    e.dataTransfer.setData('text/plain', id);
-    setDraggedTopicId(id);
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-  };
-
-  const handleDrop = async (e: React.DragEvent, targetId: string) => {
-    e.preventDefault();
-    const sourceId = e.dataTransfer.getData('text/plain') || draggedTopicId;
-    setDraggedTopicId(null);
-    if (!sourceId || sourceId === targetId) return;
-
+  // Arrastar para reordenar (mesma mecânica do cronograma)
+  const handleSortPointerDown = useSortableDrag((draggedId, beforeId) => {
     setActionError(null);
-    try {
-      await reorderTopic(sourceId, targetId);
-    } catch (err) {
-      setActionError(errorMessage(err));
-    }
-  };
+    reorderTopic(draggedId, beforeId).catch((err) => setActionError(errorMessage(err)));
+  });
 
   return (
     <div className="space-y-6">
@@ -365,7 +347,7 @@ export function DisciplinesScreen() {
           )}
 
           {/* Topics and Subtopics Tree */}
-          <div className="space-y-2">
+          <div className="space-y-2" data-sort-group="topics">
             {filteredDisciplineTopics.length > 0 ? (
               filteredDisciplineTopics.map((topic, index) => {
                 const subtopics = subtopicsByParent.get(topic.id) ?? [];
@@ -374,10 +356,8 @@ export function DisciplinesScreen() {
                 return (
                   <div
                     key={topic.id}
-                    draggable
-                    onDragStart={(e) => handleDragStart(e, topic.id)}
-                    onDragOver={handleDragOver}
-                    onDrop={(e) => handleDrop(e, topic.id)}
+                    data-sort-id={topic.id}
+                    onPointerDown={(e) => handleSortPointerDown(e, topic.id, 'topics')}
                     className={cn(
                       'rounded-xl border border-border bg-surface transition-all',
                       !topic.active && 'opacity-60 bg-surface-muted/20'
@@ -386,7 +366,7 @@ export function DisciplinesScreen() {
                     {/* Main Topic Row */}
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5">
                       <div className="flex items-center gap-2 min-w-0 flex-1">
-                        <span title="Arrastar para reordenar" className="cursor-grab">
+                        <span title="Arrastar para reordenar" className="cursor-grab touch-none" data-drag-handle>
                           <GripVertical className="size-4 text-fg-subtle shrink-0" />
                         </span>
 
@@ -499,18 +479,16 @@ export function DisciplinesScreen() {
 
                     {/* Subtopics List (nested) */}
                     {isExpanded && subtopics.length > 0 && (
-                      <div className="border-t border-border bg-surface-muted/30 px-6 py-2 space-y-1.5">
+                      <div className="border-t border-border bg-surface-muted/30 px-6 py-2 space-y-1.5" data-sort-group={`sub-${topic.id}`}>
                         {subtopics.map((sub, sIdx) => (
                           <div
                             key={sub.id}
-                            draggable
-                            onDragStart={(e) => handleDragStart(e, sub.id)}
-                            onDragOver={handleDragOver}
-                            onDrop={(e) => handleDrop(e, sub.id)}
+                            data-sort-id={sub.id}
+                            onPointerDown={(e) => handleSortPointerDown(e, sub.id, `sub-${topic.id}`)}
                             className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-lg bg-surface p-2 border border-border/70 text-xs"
                           >
                             <div className="flex items-center gap-2 min-w-0">
-                              <GripVertical className="size-3 text-fg-subtle cursor-grab shrink-0" />
+                              <span className="touch-none" data-drag-handle><GripVertical className="size-3 text-fg-subtle cursor-grab shrink-0" /></span>
                               <span className="font-medium text-fg truncate">{sub.title}</span>
                               <Badge
                                 tone={
