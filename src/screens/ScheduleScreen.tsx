@@ -1203,7 +1203,7 @@ export function ScheduleScreen() {
                   value={doneMinutes}
                   max={plannedMinutes || 1}
                   label="Cumprimento da semana"
-                  tone={doneMinutes >= plannedMinutes ? 'success' : 'primary'}
+                  tone={plannedMinutes > 0 && doneMinutes >= plannedMinutes ? 'success' : 'primary'}
                 />
               </StatCard>
 
@@ -1295,7 +1295,7 @@ export function ScheduleScreen() {
                   value={doneMinutes}
                   max={plannedMinutes || 1}
                   label="Cumprimento da semana"
-                  tone={doneMinutes >= plannedMinutes ? 'success' : 'primary'}
+                  tone={plannedMinutes > 0 && doneMinutes >= plannedMinutes ? 'success' : 'primary'}
                 />
               </StatCard>
 
