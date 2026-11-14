@@ -107,10 +107,10 @@ export function OverviewScreen() {
   );
 
   const urgentReviews = useMemo(
-    () => [...revBuckets.overdue, ...revBuckets.today].slice(0, 4),
+    () => [...revBuckets.overdue, ...revBuckets.today],
     [revBuckets.overdue, revBuckets.today],
   );
-  const totalUrgentReviews = revBuckets.overdue.length + revBuckets.today.length;
+  const totalUrgentReviews = urgentReviews.length;
 
   const discMap = useMemo(() => new Map(disciplines.map((d) => [d.id, d])), [disciplines]);
 
@@ -208,7 +208,7 @@ export function OverviewScreen() {
           }
         >
           {urgentReviews.length > 0 ? (
-            <ul className="divide-y divide-border">
+            <ul className="max-h-64 divide-y divide-border overflow-y-auto pr-1">
               {urgentReviews.map((rev) => {
                 const disc = discMap.get(rev.disciplineId);
                 const linkedNote = rev.errorNoteId ? errorNoteMap.get(rev.errorNoteId) : undefined;
