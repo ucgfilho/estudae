@@ -67,7 +67,7 @@ export function DailyMissionCard({
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs font-semibold text-primary">
                 {nextToday
-                  ? 'Próxima tarefa de hoje'
+                  ? 'Vamos começar? Seu próximo bloco de hoje'
                   : primaryTask
                     ? `Próxima sessão (${formatDate(primaryTask.date)})`
                     : 'Execução imediata'}

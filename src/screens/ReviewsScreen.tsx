@@ -107,7 +107,7 @@ export function ReviewsScreen() {
     setActionError(null);
     try {
       await reopenReview(review.id);
-      setActionSuccess('Revisão reaberta .');
+      setActionSuccess('Revisão reaberta.');
     } catch (err) {
       setActionError(errorMessage(err));
     }
@@ -120,7 +120,7 @@ export function ReviewsScreen() {
       await deleteReview(reviewToDelete.id);
       setDeleteConfirmOpen(false);
       setReviewToDelete(null);
-      setActionSuccess('Revisão excluída .');
+      setActionSuccess('Revisão excluída.');
     } catch (err) {
       setActionError(errorMessage(err));
     }
@@ -322,14 +322,18 @@ export function ReviewsScreen() {
       <CreateReviewModal
         open={createModalOpen}
         onClose={() => setCreateModalOpen(false)}
-        onCreated={(cnt) => setActionSuccess(`${cnt} tarefa(s) de revisão agendada(s) .`)}
+        onCreated={(cnt) =>
+          setActionSuccess(
+            cnt === 1 ? '1 tarefa de revisão agendada.' : `${cnt} tarefas de revisão agendadas.`
+          )
+        }
       />
 
       <PostponeReviewModal
         open={postponeModalOpen}
         onClose={() => setPostponeModalOpen(false)}
         review={reviewToPostpone}
-        onPostponed={() => setActionSuccess('Revisão adiada .')}
+        onPostponed={() => setActionSuccess('Revisão adiada.')}
       />
 
       <ConfirmModal

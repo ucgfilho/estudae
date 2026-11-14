@@ -66,7 +66,8 @@ export function ChecklistImportModal({
             disabled={parsed.length === 0 || loading}
             loading={loading}
           >
-            Importar {counts.topics} tópico(s) e {counts.subtopics} subtópico(s)
+            Importar {counts.topics} {counts.topics === 1 ? 'tópico' : 'tópicos'} e {counts.subtopics}{' '}
+            {counts.subtopics === 1 ? 'subtópico' : 'subtópicos'}
           </Button>
         </>
       }
@@ -97,7 +98,8 @@ export function ChecklistImportModal({
               <ListChecks className="size-4" /> Prévia da Importação
             </span>
             <span className="text-xs font-medium text-fg-muted">
-              {counts.topics} tópico(s) | {counts.subtopics} subtópico(s)
+              {counts.topics} {counts.topics === 1 ? 'tópico' : 'tópicos'} | {counts.subtopics}{' '}
+              {counts.subtopics === 1 ? 'subtópico' : 'subtópicos'}
             </span>
           </div>
 

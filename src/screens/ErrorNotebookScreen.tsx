@@ -107,7 +107,7 @@ export function ErrorNotebookScreen() {
     setActionError(null);
     try {
       await setErrorStatus(id, status);
-      setActionSuccess('Status da anotação atualizado .');
+      setActionSuccess('Status da anotação atualizado.');
     } catch (err) {
       setActionError(errorMessage(err));
     }
@@ -120,7 +120,7 @@ export function ErrorNotebookScreen() {
       await deleteErrorNote(noteToDelete.id);
       setDeleteConfirmOpen(false);
       setNoteToDelete(null);
-      setActionSuccess('Anotação excluída .');
+      setActionSuccess('Anotação excluída.');
     } catch (err) {
       setActionError(errorMessage(err));
     }
@@ -484,7 +484,7 @@ export function ErrorNotebookScreen() {
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         noteToEdit={noteToEdit}
-        onSaved={() => setActionSuccess('Anotação salva .')}
+        onSaved={() => setActionSuccess('Anotação salva.')}
       />
 
       <ConfirmModal

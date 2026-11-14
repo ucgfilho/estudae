@@ -22,7 +22,7 @@ import {
 } from '../../services/contests';
 import { cn } from '../../lib/utils';
 
-const BASE_TITLE = 'estudaê — Sua Plataforma de Estudos para Concursos';
+const BASE_TITLE = 'estudaê';
 
 interface AppLayoutProps {
   onSwitchContestScreen?: () => void;

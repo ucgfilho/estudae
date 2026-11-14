@@ -164,13 +164,13 @@ describe('domain/motivation - deterministic messages', () => {
   it('generates consistent messages for questions-great', () => {
     const msg = formatAchievementMessage('questions-great', '8/10 acertos (80%)', 'Direito Administrativo');
     expect(msg.title).toBe('Ótimo desempenho em Direito Administrativo');
-    expect(msg.body).toBe('Acertou 8/10 acertos (80%). Acima da sua meta de acerto.');
+    expect(msg.body).toBe('Você acertou 8/10 (80%). Acima da sua meta de acerto.');
   });
 
   it('generates consistent messages for questions-perfect', () => {
     const msg = formatAchievementMessage('questions-perfect', '10/10 acertos (100%)', 'Português');
     expect(msg.title).toBe('Gabaritou em Português');
-    expect(msg.body).toBe('Acertou 10/10 acertos (100%). Domínio demonstrado.');
+    expect(msg.body).toBe('Você acertou 10/10 (100%). Excelente domínio do conteúdo.');
   });
 
   it('generates consistent messages for personal-best', () => {
@@ -182,12 +182,12 @@ describe('domain/motivation - deterministic messages', () => {
   it('generates consistent messages for streak-milestone', () => {
     const msg = formatAchievementMessage('streak-milestone', '7 dias seguidos');
     expect(msg.title).toBe('7 dias seguidos de estudo');
-    expect(msg.body).toBe('Constância é o diferencial que aprova. Mantenha a sequência.');
+    expect(msg.body).toBe('Sua constância constrói resultados sólidos. Continue avançando!');
   });
 
   it('generates consistent messages for questions-logged', () => {
     const msg = formatAchievementMessage('questions-logged', '6/10 acertos (60%)', 'Matemática');
     expect(msg.title).toBe('Questões registradas em Matemática');
-    expect(msg.body).toBe('Acertou 6/10 acertos (60%). Cada erro mapeado vira revisão no Caderno de Erros.');
+    expect(msg.body).toBe('Você acertou 6/10 (60%). Cada erro mapeado vira revisão no Caderno de Erros.');
   });
 });

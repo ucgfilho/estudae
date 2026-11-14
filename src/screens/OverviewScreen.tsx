@@ -192,7 +192,9 @@ export function OverviewScreen() {
           title="Revisões Pendentes"
           description={
             totalUrgentReviews > 0
-              ? `${totalUrgentReviews} revisão(ões) exigem atenção hoje`
+              ? totalUrgentReviews === 1
+                ? 'Você tem 1 revisão pendente. Vamos colocá-la em dia?'
+                : `Você tem ${totalUrgentReviews} revisões pendentes. Vamos colocá-las em dia?`
               : 'Ciclo de retenção em dia — nenhuma revisão vencida ou prevista para hoje'
           }
           actions={
@@ -245,7 +247,9 @@ export function OverviewScreen() {
               </span>
               {revBuckets.upcoming.length > 0 && (
                 <span className="text-xs text-fg-subtle tabular-nums">
-                  {revBuckets.upcoming.length} próxima(s) agendada(s)
+                  {revBuckets.upcoming.length === 1
+                    ? '1 próxima agendada'
+                    : `${revBuckets.upcoming.length} próximas agendadas`}
                 </span>
               )}
             </div>
@@ -257,7 +261,9 @@ export function OverviewScreen() {
           title="Pendências do Cronograma"
           description={
             overdueSessionsInWeek.length > 0
-              ? `${overdueSessionsInWeek.length} bloco(s) de dias anteriores aguardam execução nesta semana`
+              ? overdueSessionsInWeek.length === 1
+                ? '1 bloco de dias anteriores aguarda execução. Vamos retomar?'
+                : `${overdueSessionsInWeek.length} blocos de dias anteriores aguardam execução. Vamos retomar?`
               : 'Cronograma da semana sem blocos atrasados'
           }
           actions={

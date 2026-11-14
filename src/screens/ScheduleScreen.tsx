@@ -324,7 +324,7 @@ export function ScheduleScreen() {
     try {
       await saveDistribution(tempDistribution);
       setDistributionModalOpen(false);
-      setActionSuccess('Distribuição padrão salva .');
+      setActionSuccess('Distribuição padrão salva.');
     } catch (err) {
       setActionError(errorMessage(err));
     }
@@ -399,7 +399,7 @@ export function ScheduleScreen() {
     try {
       await clearSchedule();
       setClearConfirmOpen(false);
-      setActionSuccess('Cronograma limpo . Planos semanais e sessões planejadas foram removidos.');
+      setActionSuccess('Cronograma limpo. Planos semanais e sessões planejadas foram removidos.');
     } catch (err) {
       setActionError(errorMessage(err));
     } finally {
@@ -434,7 +434,7 @@ export function ScheduleScreen() {
       await deleteSession(sessionToDelete.id);
       setDeleteConfirmOpen(false);
       setSessionToDelete(null);
-      setActionSuccess('Sessão excluída .');
+      setActionSuccess('Sessão excluída.');
     } catch (err) {
       setActionError(errorMessage(err));
     } finally {
@@ -1852,7 +1852,7 @@ export function ScheduleScreen() {
         defaultDate={justFinishedSession?.date}
         defaultDisciplineId={justFinishedSession?.disciplineId}
         defaultTopicId={justFinishedSession?.topicId}
-        onSaved={() => setActionSuccess('Anotação salva no Caderno de Erros .')}
+        onSaved={() => setActionSuccess('Anotação salva no Caderno de Erros.')}
       />
 
       {/* Manual / Planned Session Modal */}
@@ -1867,7 +1867,7 @@ export function ScheduleScreen() {
         onSaved={(saved) => {
           setSessionModalOpen(false);
           setSessionToEdit(null);
-          setActionSuccess('Sessão planejada .');
+          setActionSuccess('Sessão planejada.');
           if (weeklyPlans.length > 0) {
             const targetPlan = weeklyPlans.find(
               (wp) => saved.date >= wp.weekStart && saved.date <= addDays(wp.weekStart, 6),

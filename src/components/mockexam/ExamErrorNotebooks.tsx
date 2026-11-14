@@ -83,7 +83,11 @@ export function ExamErrorNotebooks({ exam, disciplines }: { exam: MockExam; disc
     setError(null);
     try {
       const made = await createExamErrorNotebooks(exam.id, pendingIds);
-      setSuccessMsg(`${made.length} caderno(s) criado(s) com revisões agendadas.`);
+      setSuccessMsg(
+        made.length === 1
+          ? '1 caderno criado com revisões agendadas.'
+          : `${made.length} cadernos criados com revisões agendadas.`
+      );
       setSelected(new Set());
     } catch (err) {
       setError(errorMessage(err));
@@ -265,7 +269,9 @@ export function ExamErrorNotebooks({ exam, disciplines }: { exam: MockExam; disc
                       <div>
                         {pendingReviews.length > 0 ? (
                           <Badge tone="warning">
-                            {pendingReviews.length} revisão(ões) pendente(s)
+                            {pendingReviews.length === 1
+                              ? '1 revisão pendente'
+                              : `${pendingReviews.length} revisões pendentes`}
                           </Badge>
                         ) : (
                           <Badge tone="success">Revisões em dia</Badge>
@@ -327,7 +333,7 @@ export function ExamErrorNotebooks({ exam, disciplines }: { exam: MockExam; disc
                       <DisciplineDot color={d.color} />
                       <Checkbox
                         label={d.name}
-                        description={`${count} erro(s)`}
+                        description={count === 1 ? '1 erro' : `${count} erros`}
                         disabled={done}
                         checked={done || selected.has(d.id)}
                         onChange={(e) => toggle(d.id, e.target.checked)}
@@ -351,7 +357,11 @@ export function ExamErrorNotebooks({ exam, disciplines }: { exam: MockExam; disc
                 disabled={pendingIds.length === 0 || busy}
                 onClick={() => void submitBatch()}
               >
-                Criar {pendingIds.length > 0 ? `${pendingIds.length} ` : ''}caderno(s) em lote
+                {pendingIds.length === 1
+                  ? 'Criar 1 caderno em lote'
+                  : pendingIds.length > 1
+                    ? `Criar ${pendingIds.length} cadernos em lote`
+                    : 'Criar cadernos em lote'}
               </Button>
             </div>
           </div>

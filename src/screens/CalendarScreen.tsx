@@ -164,7 +164,7 @@ export function CalendarScreen() {
       }
       setDeleteConfirmOpen(false);
       setSessionToDelete(null);
-      setActionSuccess('Sessão excluída .');
+      setActionSuccess('Sessão excluída.');
     } catch (err) {
       setActionError(errorMessage(err));
     }
@@ -706,7 +706,7 @@ export function CalendarScreen() {
         defaultDate={modalDefaultDate}
         onSaved={(s) => {
           if (selectedSessionDetail?.id === s.id) setSelectedSessionDetail(s);
-          setActionSuccess(sessionToEdit ? 'Sessão atualizada .' : 'Sessão planejada .');
+          setActionSuccess(sessionToEdit ? 'Sessão atualizada.' : 'Sessão planejada.');
         }}
       />
 
@@ -716,7 +716,7 @@ export function CalendarScreen() {
         session={sessionToReschedule}
         onRescheduled={(s) => {
           setSelectedSessionDetail(s);
-          setActionSuccess('Sessão reagendada .');
+          setActionSuccess('Sessão reagendada.');
         }}
       />
 

@@ -166,7 +166,7 @@ export function DisciplinesScreen() {
       await deleteTopic(topicToDelete.id);
       setDeleteConfirmOpen(false);
       setTopicToDelete(null);
-      setActionSuccess('Tópico excluído .');
+      setActionSuccess('Tópico excluído.');
     } catch (err) {
       setActionError(errorMessage(err));
     }
@@ -181,8 +181,12 @@ export function DisciplinesScreen() {
       setDeleteAllConfirmOpen(false);
       setActionSuccess(
         deleteAllScope === 'current'
-          ? `${count} tópico(s) de ${currentDiscipline?.name} excluído(s) .`
-          : `${count} tópico(s) excluído(s) de todas as disciplinas .`
+          ? count === 1
+            ? `1 tópico de ${currentDiscipline?.name} excluído.`
+            : `${count} tópicos de ${currentDiscipline?.name} excluídos.`
+          : count === 1
+            ? '1 tópico excluído de todas as disciplinas.'
+            : `${count} tópicos excluídos de todas as disciplinas.`
       );
     } catch (err) {
       setActionError(errorMessage(err));
@@ -596,7 +600,7 @@ export function DisciplinesScreen() {
         disciplineId={currentDiscipline?.id ?? ''}
         parentTopicId={modalParentTopicId}
         topicToEdit={topicToEdit}
-        onSaved={() => setActionSuccess('Tópico salvo .')}
+        onSaved={() => setActionSuccess('Tópico salvo.')}
       />
 
       <ChecklistImportModal
@@ -604,7 +608,9 @@ export function DisciplinesScreen() {
         onClose={() => setImportModalOpen(false)}
         disciplineId={currentDiscipline?.id ?? ''}
         disciplineName={currentDiscipline?.name ?? ''}
-        onImported={(cnt) => setActionSuccess(`${cnt} tópico(s) importado(s) .`)}
+        onImported={(cnt) =>
+          setActionSuccess(cnt === 1 ? '1 tópico importado.' : `${cnt} tópicos importados.`)
+        }
       />
 
       <ConfirmModal
@@ -690,7 +696,7 @@ export function DisciplinesScreen() {
                     <span>Apenas da disciplina atual: {currentDiscipline?.name}</span>
                   </div>
                   <p className="text-xs text-fg-muted mt-0.5">
-                    Excluirá {currentDisciplineAllTopicsCount} tópico(s) e subtópico(s) de {currentDiscipline?.name}. Os tópicos das outras disciplinas não serão afetados.
+                    Excluirá {currentDisciplineAllTopicsCount === 1 ? '1 tópico' : `${currentDisciplineAllTopicsCount} tópicos`} de {currentDiscipline?.name}. Os tópicos das outras disciplinas não serão afetados.
                   </p>
                 </div>
               </label>
@@ -729,7 +735,7 @@ export function DisciplinesScreen() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="font-semibold text-fg">
-                    Todas as 8 disciplinas ({totalTopicsCount} tópicos no total)
+                    Todas as {disciplines.length} disciplinas ({totalTopicsCount} {totalTopicsCount === 1 ? 'tópico' : 'tópicos'} no total)
                   </div>
                   <p className="text-xs text-fg-muted mt-0.5">
                     Limpará completamente a lista de tópicos de todo o edital (útil para reiniciar ou reimportar todos os checklists).

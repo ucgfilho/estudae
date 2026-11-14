@@ -423,7 +423,7 @@ export function SettingsScreen() {
             <span>Persistência, Privacidade e Backup</span>
           </div>
         }
-        description="Seus dados ficam 100% sincronizados na nuvem do MongoDB. Você pode acessar de qualquer dispositivo."
+        description="Seus dados são salvos automaticamente e você pode exportar ou restaurar uma cópia de segurança a qualquer momento."
       >
         <div className="space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-lg border border-border bg-surface-muted/30 p-4">
@@ -556,7 +556,7 @@ export function SettingsScreen() {
         open={resetConfirmOpen}
         onClose={() => setResetConfirmOpen(false)}
         title="Reiniciar o Sistema e Apagar Todos os Dados?"
-        message="Esta ação é permanente e irreversível. Todos os seus tópicos, sessões estudadas, baterias de questões e anotações de erros serão excluídos. O banco será recriado apenas com as 8 disciplinas iniciais."
+        message="Esta ação é permanente e irreversível. Todos os seus tópicos, sessões estudadas, baterias de questões e anotações de erros serão excluídos. O sistema será restaurado apenas com as disciplinas iniciais do concurso."
         confirmLabel="Sim, Reiniciar Tudo"
         variant="danger"
         onConfirm={handleConfirmReset}

@@ -63,7 +63,7 @@ export function RankCard(input: RankInput) {
   return (
     <Card
       title="Patente"
-      description="Estudar gera XP; faltar gera penalidade; consistência protege sua patente."
+      description="Estudar e revisar soma XP e fortalece sua constância. Mantenha o ritmo para avançar de patente."
       actions={
         anim && (
           <span
@@ -134,9 +134,9 @@ export function RankCard(input: RankInput) {
           </div>
 
           {state.atRiskPenalty > 0 && (
-            <p role="alert" className="flex items-center gap-2 rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger">
+            <p role="alert" className="flex items-center gap-2 rounded-lg bg-warning-soft px-3 py-2 text-sm text-warning">
               <Flame className="size-4 shrink-0" aria-hidden />
-              Estude {XP.validMinutes} min hoje para evitar −{state.atRiskPenalty} XP à meia-noite.
+              Complete {XP.validMinutes} min de estudo hoje para proteger sua patente ({state.atRiskPenalty} XP em risco).
             </p>
           )}
           {state.todayValid && <p className="text-xs text-success">Dia válido: patente protegida hoje.</p>}

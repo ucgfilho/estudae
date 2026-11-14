@@ -71,11 +71,11 @@ export function dailyProgress(
 export function progressFraming(studied: number, goal: number): string {
   const done = Math.round(studied);
   if (goal <= 0) return `${done} min estudados hoje.`;
-  if (done >= goal) return 'Meta diária cumprida. Todo minuto extra agora é vantagem competitiva.';
+  if (done >= goal) return 'Excelente! Sua meta diária foi cumprida.';
   const remaining = Math.max(1, Math.round(goal - studied));
-  if (done === 0) return 'O primeiro bloco é o mais difícil. Comece com 25 minutos.';
-  if (studied / goal < 0.5) return `Você já estudou ${done} min hoje. Bom ritmo, continue.`;
-  if (remaining <= 15) return `Faltam ${remaining} min para fechar a meta de hoje.`;
+  if (done === 0) return 'Hoje ainda não teve sessão de estudos. Que tal começar o primeiro bloco?';
+  if (studied / goal < 0.5) return `Você já estudou ${done} min hoje. Continue avançando!`;
+  if (remaining <= 15) return `Faltam ${remaining} min para fechar a meta de hoje. Você está quase lá!`;
   return `Mais da metade feita. Faltam ${remaining} min para a meta.`;
 }
 
@@ -282,13 +282,13 @@ export function formatAchievementMessage(
     case 'questions-great': {
       return {
         title: `Ótimo desempenho${disc}`,
-        body: detail ? `Acertou ${detail}. Acima da sua meta de acerto.` : 'Desempenho acima da sua meta de acerto.',
+        body: detail ? `Você acertou ${detail.replace(/\s*acertos?/i, '')}. Acima da sua meta de acerto.` : 'Desempenho acima da sua meta de acerto.',
       };
     }
     case 'questions-perfect': {
       return {
         title: `Gabaritou${disc}`,
-        body: detail ? `Acertou ${detail}. Domínio demonstrado.` : '100% de acerto nesta bateria. Considere aumentar a dificuldade.',
+        body: detail ? `Você acertou ${detail.replace(/\s*acertos?/i, '')}. Excelente domínio do conteúdo.` : '100% de acerto nesta bateria. Considere aumentar a dificuldade.',
       };
     }
     case 'personal-best': {
@@ -301,14 +301,14 @@ export function formatAchievementMessage(
       const days = streakDays ?? (detail ? parseInt(detail.replace(' dias seguidos', ''), 10) : null);
       return {
         title: days ? `${days} dias seguidos de estudo` : 'Marco de constância atingido',
-        body: 'Constância é o diferencial que aprova. Mantenha a sequência.',
+        body: 'Sua constância constrói resultados sólidos. Continue avançando!',
       };
     }
     case 'questions-logged': {
       return {
         title: `Questões registradas${disc}`,
         body: detail
-          ? `Acertou ${detail}. Cada erro mapeado vira revisão no Caderno de Erros.`
+          ? `Você acertou ${detail.replace(/\s*acertos?/i, '')}. Cada erro mapeado vira revisão no Caderno de Erros.`
           : 'Bateria registrada. Erros viram revisão; acertos confirmam o que você já domina.',
       };
     }
