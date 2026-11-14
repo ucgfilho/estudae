@@ -157,6 +157,13 @@ export function computeRank(input: RankInput): RankState {
   const goalMin = goal > 0 ? goal : Infinity;
   const activity = collectActivity(input);
   const isValid = (a?: DayActivity) => !!a && (a.minutes >= XP.validMinutes || a.minutes >= goalMin);
+  const daysWithSessions = new Set<DateKey>();
+  for (const s of input.sessions) {
+    if (s.date) daysWithSessions.add(s.date);
+    const studyDate = sessionStudyDate(s);
+    if (studyDate) daysWithSessions.add(studyDate);
+  }
+  const hasSessionOnDay = (day: DateKey) => daysWithSessions.has(day);
 
   let xp = 0;
   let missStreak = 0;
@@ -226,7 +233,7 @@ export function computeRank(input: RankInput): RankState {
         recoveredCycle = true;
         lostPending = 0;
       }
-    } else if (closed) {
+    } else if (closed && hasSessionOnDay(day)) {
       studyRun = 0;
       const n = missStreak + 1;
       if (n === 1 && freezeFree(day)) {
@@ -274,7 +281,7 @@ export function computeRank(input: RankInput): RankState {
       todayXp,
       todayValid,
       missStreak,
-      atRiskPenalty: todayValid || frozen || events.length === 0 ? 0 : missPenalty(wouldBeMiss),
+      atRiskPenalty: todayValid || frozen || !hasSessionOnDay(today) || events.length === 0 ? 0 : missPenalty(wouldBeMiss),
       freezeAvailable: freezeFree(today),
       freezeCooldownLeft: lastFreeze === null ? 0 : Math.max(0, XP.freezeCooldownDays - daysBetween(lastFreeze, today)),
       shield,
