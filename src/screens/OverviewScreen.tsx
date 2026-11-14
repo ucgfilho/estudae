@@ -223,6 +223,13 @@ export function OverviewScreen() {
                         <Badge tone={isOverdue ? 'danger' : 'warning'}>
                           {isOverdue ? 'Vencida' : 'Para hoje'}
                         </Badge>
+                        <button
+                          type="button"
+                          onClick={() => navigate('/revisoes')}
+                          className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                        >
+                          Ver revisão <ArrowRight className="size-3" aria-hidden="true" />
+                        </button>
                       </div>
                       <p className="mt-0.5 truncate text-sm font-medium text-fg">{displayTitle}</p>
                     </div>
