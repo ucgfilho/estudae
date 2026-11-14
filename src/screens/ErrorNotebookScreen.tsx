@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   AlertOctagon,
   Plus,
@@ -41,6 +42,9 @@ import { FormattedText } from '../components/ui/RichText';
 import { useSuccessToast } from '../components/ui/Toast';
 
 export function ErrorNotebookScreen() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const focusedNoteId = searchParams.get('noteId') || '';
+
   const disciplines = useDisciplines();
   const topics = useTopics();
   const errorNotes = useErrorNotes();
@@ -48,11 +52,18 @@ export function ErrorNotebookScreen() {
   const mockExams = useMockExams();
 
   // Filters
-  const [filterDisciplineId, setFilterDisciplineId] = useState('');
+  const [filterDisciplineId, setFilterDisciplineId] = useState(() => searchParams.get('disciplineId') || '');
   const [filterMockExamId, setFilterMockExamId] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('');
   const [filterType, setFilterType] = useState<string>('');
-  const [filterSearch, setFilterSearch] = useState('');
+  const [filterSearch, setFilterSearch] = useState(() => searchParams.get('q') || '');
+
+  useEffect(() => {
+    const paramDisc = searchParams.get('disciplineId');
+    const paramQuery = searchParams.get('q');
+    if (paramDisc !== null) setFilterDisciplineId(paramDisc);
+    if (paramQuery !== null) setFilterSearch(paramQuery);
+  }, [searchParams]);
 
   // Modals state
   const [modalOpen, setModalOpen] = useState(false);
@@ -70,6 +81,10 @@ export function ErrorNotebookScreen() {
 
   // Filtered notes
   const filteredNotes = useMemo(() => {
+    if (focusedNoteId) {
+      const exact = errorNotes.find((n) => n.id === focusedNoteId);
+      if (exact) return [exact];
+    }
     return errorNotes
       .filter((n) => {
         if (filterDisciplineId && n.disciplineId !== filterDisciplineId) return false;
@@ -92,7 +107,7 @@ export function ErrorNotebookScreen() {
         return true;
       })
       .sort((a, b) => b.errorDate.localeCompare(a.errorDate) || b.createdAt.localeCompare(a.createdAt));
-  }, [errorNotes, filterDisciplineId, filterStatus, filterType, filterMockExamId, filterSearch, topicMap]);
+  }, [errorNotes, focusedNoteId, filterDisciplineId, filterStatus, filterType, filterMockExamId, filterSearch, topicMap]);
 
   const counts = useMemo(() => {
     return {
@@ -164,10 +179,13 @@ export function ErrorNotebookScreen() {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4" role="tablist" aria-label="Filtrar por status">
         <button
           type="button"
-          onClick={() => setFilterStatus('')}
+          onClick={() => {
+            if (focusedNoteId) setSearchParams({});
+            setFilterStatus('');
+          }}
           className={cn(
             'rounded-xl border p-4 text-left transition-all cursor-pointer',
-            filterStatus === ''
+            filterStatus === '' && !focusedNoteId
               ? 'border-primary bg-surface shadow-xs ring-2 ring-primary/40'
               : 'border-border bg-surface hover:bg-surface-muted/60'
           )}
@@ -178,10 +196,13 @@ export function ErrorNotebookScreen() {
 
         <button
           type="button"
-          onClick={() => setFilterStatus(filterStatus === 'revisar' ? '' : 'revisar')}
+          onClick={() => {
+            if (focusedNoteId) setSearchParams({});
+            setFilterStatus(filterStatus === 'revisar' ? '' : 'revisar');
+          }}
           className={cn(
             'rounded-xl border p-4 text-left transition-all cursor-pointer',
-            filterStatus === 'revisar'
+            filterStatus === 'revisar' && !focusedNoteId
               ? 'border-warning bg-warning-soft/40 shadow-xs ring-2 ring-warning/50'
               : 'border-warning/30 bg-warning-soft/20 hover:bg-warning-soft/30'
           )}
@@ -192,10 +213,13 @@ export function ErrorNotebookScreen() {
 
         <button
           type="button"
-          onClick={() => setFilterStatus(filterStatus === 'revisado' ? '' : 'revisado')}
+          onClick={() => {
+            if (focusedNoteId) setSearchParams({});
+            setFilterStatus(filterStatus === 'revisado' ? '' : 'revisado');
+          }}
           className={cn(
             'rounded-xl border p-4 text-left transition-all cursor-pointer',
-            filterStatus === 'revisado'
+            filterStatus === 'revisado' && !focusedNoteId
               ? 'border-info bg-info-soft/40 shadow-xs ring-2 ring-info/50'
               : 'border-info/30 bg-info-soft/20 hover:bg-info-soft/30'
           )}
@@ -206,10 +230,13 @@ export function ErrorNotebookScreen() {
 
         <button
           type="button"
-          onClick={() => setFilterStatus(filterStatus === 'dominado' ? '' : 'dominado')}
+          onClick={() => {
+            if (focusedNoteId) setSearchParams({});
+            setFilterStatus(filterStatus === 'dominado' ? '' : 'dominado');
+          }}
           className={cn(
             'rounded-xl border p-4 text-left transition-all cursor-pointer',
-            filterStatus === 'dominado'
+            filterStatus === 'dominado' && !focusedNoteId
               ? 'border-success bg-success-soft/40 shadow-xs ring-2 ring-success/50'
               : 'border-success/30 bg-success-soft/20 hover:bg-success-soft/30'
           )}
@@ -228,12 +255,13 @@ export function ErrorNotebookScreen() {
           </div>
         }
         actions={
-          (filterDisciplineId || filterStatus || filterType || filterMockExamId || filterSearch) && (
+          (focusedNoteId || filterDisciplineId || filterStatus || filterType || filterMockExamId || filterSearch) && (
             <Button
               variant="ghost"
               size="sm"
               icon={<X className="size-3.5" />}
               onClick={() => {
+                setSearchParams({});
                 setFilterDisciplineId('');
                 setFilterStatus('');
                 setFilterType('');
@@ -241,7 +269,7 @@ export function ErrorNotebookScreen() {
                 setFilterSearch('');
               }}
             >
-              Limpar Filtros
+              {focusedNoteId ? 'Ver todos os erros' : 'Limpar Filtros'}
             </Button>
           )
         }

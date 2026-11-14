@@ -225,10 +225,27 @@ export function OverviewScreen() {
                         </Badge>
                         <button
                           type="button"
-                          onClick={() => navigate('/revisoes')}
+                          onClick={() => {
+                            const targetNote =
+                              linkedNote ??
+                              errorNotes.find(
+                                (n) =>
+                                  n.disciplineId === rev.disciplineId &&
+                                  n.sourceReference &&
+                                  rev.title.toLowerCase().includes(n.sourceReference.toLowerCase())
+                              );
+                            if (targetNote) {
+                              navigate(`/erros?noteId=${encodeURIComponent(targetNote.id)}`);
+                            } else {
+                              const query = rev.title.replace(/^Erro:\s*/i, '').trim();
+                              navigate(
+                                `/erros?disciplineId=${encodeURIComponent(rev.disciplineId)}&q=${encodeURIComponent(query)}`
+                              );
+                            }
+                          }}
                           className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
                         >
-                          Ver revisão <ArrowRight className="size-3" aria-hidden="true" />
+                          Ver revisão
                         </button>
                       </div>
                       <p className="mt-0.5 truncate text-sm font-medium text-fg">{displayTitle}</p>
