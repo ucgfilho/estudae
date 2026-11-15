@@ -25,7 +25,8 @@ import {
   restoreBackup,
 } from '../../services/backup';
 import { generateSchedule, clearSchedule } from '../../services/schedule';
-import { completeReview, saveErrorNote, saveQuestionLog, scheduleTopicReviews } from '../../services/performance';
+import { completeReview, reconcileReviewsAndErrorNotes, saveErrorNote, saveQuestionLog, scheduleTopicReviews } from '../../services/performance';
+import { processAssistantMessage } from '../../services/aiAssistant';
 import { createTopic, deleteAllTopics } from '../../services/topics';
 
 describe('services/persistence & workflows', () => {
@@ -419,6 +420,120 @@ describe('services/persistence & workflows', () => {
     await completeReview(review30d.id);
     reviews = await db.reviews.where('disciplineId').equals('logica-programacao').toArray();
     expect(reviews.length).toBe(3);
+  });
+
+  it('synchronizes review dueDate when nextReviewDate is changed on an ErrorNote and prunes legacy future reviews', async () => {
+    const note = await saveErrorNote(
+      {
+        disciplineId: 'arquitetura',
+        topicId: null,
+        questionLogId: null,
+        sourceReference: 'Prova BNB 2022 · questão 65',
+        errorType: 'falta-conteudo',
+        explanation: 'Revisar microsserviços.',
+        errorDate: '2026-11-09',
+        status: 'revisar',
+        nextReviewDate: null,
+      },
+      { scheduleReviews: true },
+    );
+
+    // Simulate legacy future reviews (7d, 30d) created before progressive feature
+    await db.reviews.bulkAdd([
+      {
+        id: 'legacy-7d',
+        disciplineId: 'arquitetura',
+        topicId: null,
+        errorNoteId: note.id,
+        title: 'Erro: Prova BNB 2022 · questão 65',
+        dueDate: '2026-11-16',
+        intervalDays: 7,
+        status: 'pendente',
+        completedAt: null,
+        createdAt: '2026-11-09T10:00:00.000Z',
+      },
+      {
+        id: 'legacy-30d',
+        disciplineId: 'arquitetura',
+        topicId: null,
+        errorNoteId: note.id,
+        title: 'Erro: Prova BNB 2022 · questão 65',
+        dueDate: '2026-12-09',
+        intervalDays: 30,
+        status: 'pendente',
+        completedAt: null,
+        createdAt: '2026-11-09T10:00:00.000Z',
+      },
+    ]);
+
+    // User edits ErrorNote changing nextReviewDate from 2026-11-10 to 2026-11-16
+    await saveErrorNote(
+      {
+        disciplineId: 'arquitetura',
+        topicId: null,
+        questionLogId: null,
+        sourceReference: 'Prova BNB 2022 · questão 65',
+        errorType: 'falta-conteudo',
+        explanation: 'Revisar microsserviços.',
+        errorDate: '2026-11-09',
+        status: 'revisar',
+        nextReviewDate: '2026-11-16',
+      },
+      { id: note.id },
+    );
+
+    const reviewsAfterEdit = await db.reviews.where('errorNoteId').equals(note.id).toArray();
+    expect(reviewsAfterEdit.length).toBe(1);
+    expect(reviewsAfterEdit[0].intervalDays).toBe(1);
+    expect(reviewsAfterEdit[0].dueDate).toBe('2026-11-16');
+
+    // Also verify reconcileReviewsAndErrorNotes heals pre-existing out-of-sync data
+    await db.reviews.update(reviewsAfterEdit[0].id, { dueDate: '2026-11-10' });
+    const res = await reconcileReviewsAndErrorNotes();
+    expect(res.updatedReviews).toBe(1);
+    const healed = await db.reviews.get(reviewsAfterEdit[0].id);
+    expect(healed?.dueDate).toBe('2026-11-16');
+  });
+
+  it('executes platform commands via AI Assistant (reschedule reviews, add error note, add session)', async () => {
+    await saveErrorNote(
+      {
+        disciplineId: 'arquitetura',
+        topicId: null,
+        questionLogId: null,
+        sourceReference: 'Prova BNB · questão 70',
+        errorType: 'falta-conteudo',
+        explanation: 'DevOps',
+        errorDate: '2026-11-09',
+        status: 'revisar',
+        nextReviewDate: '2026-11-10',
+      },
+      { scheduleReviews: true },
+    );
+
+    const rescheduleReply = await processAssistantMessage(
+      'Quero mudar minhas revisões do dia 10/11/2026 para o dia 16/11/2026',
+      '2026-11-15',
+    );
+    expect(rescheduleReply.reply).toContain('16/11/2026');
+    const reviews = await db.reviews.toArray();
+    expect(reviews[0].dueDate).toBe('2026-11-16');
+
+    const addErrorReply = await processAssistantMessage(
+      'Quero adicionar um erro no meu caderno de erros de Engenharia sobre Scrum questão 78',
+      '2026-11-15',
+    );
+    expect(addErrorReply.navigateTo).toBe('/erros');
+    const notes = await db.errorNotes.toArray();
+    expect(notes.length).toBe(2);
+
+    const addSessionReply = await processAssistantMessage(
+      'Quero adicionar uma sessão de Banco de Dados de 90 minutos hoje',
+      '2026-11-15',
+    );
+    expect(addSessionReply.navigateTo).toBe('/calendario');
+    const sessions = await db.sessions.toArray();
+    expect(sessions.some((s) => s.disciplineId === 'banco-dados' && s.plannedMinutes === 90)).toBe(true);
   });
 
   it('moves a session to another date freely via drag and drop and preserves history', async () => {

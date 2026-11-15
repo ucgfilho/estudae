@@ -1,8 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Menu,
-  Search,
   Sun,
   Moon,
   Monitor,
@@ -15,16 +14,18 @@ import {
 import { IconButton } from '../ui/Button';
 import { Badge } from '../ui/Display';
 import { Avatar } from '../ui/Avatar';
-import { SearchModal } from './SearchModal';
 import { ProfileModal } from '../profile/ProfileModal';
-import { useSettings, useActiveTimer, useNow } from '../../hooks/useData';
+import { tierOf } from '../motivation/RankCard';
+import { useSettings, useActiveTimer, useNow, useSessions, useReviews } from '../../hooks/useData';
 import { updateSettings } from '../../services/settings';
 import { getAuthSession, setAuthSession, subscribeAuth } from '../../services/auth';
 import { db } from '../../db/db';
 import { todayKey, formatLongDate } from '../../lib/dates';
 import { daysUntil } from '../../domain/metrics';
+import { computeRank } from '../../domain/rank';
 import { elapsedSeconds } from '../../domain/timer';
 import { formatClock } from '../../lib/format';
+import { cn } from '../../lib/utils';
 import { BnbLogo } from '../ui/BnbLogo';
 import type { ThemePreference } from '../../db/types';
 import type { UserContestProfile } from '../../services/contests';
@@ -38,14 +39,22 @@ export function Header({
   onToggleMobileMenu,
   activeContest: _activeContest,
 }: HeaderProps) {
-  const [searchOpen, setSearchOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [authUser, setAuthUser] = useState(() => getAuthSession()?.user ?? null);
   const settings = useSettings();
+  const sessions = useSessions();
+  const reviews = useReviews();
   const timer = useActiveTimer();
   const now = useNow(1000, Boolean(timer && timer.status === 'running'));
   const today = todayKey(now);
   const navigate = useNavigate();
+
+  const rankState = useMemo(
+    () => computeRank({ sessions, reviews, settings, today }),
+    [sessions, reviews, settings, today],
+  );
+  const rankTier = tierOf(rankState.rankIndex);
+  const RankIcon = rankTier.icon;
 
   useEffect(() => {
     return subscribeAuth(() => {
@@ -68,23 +77,6 @@ export function Header({
       document.documentElement.classList.remove('dark');
     }
   }, [themePreference]);
-
-  // Global keyboard shortcut: Ctrl+K or /
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (
-        (e.key === 'k' && (e.metaKey || e.ctrlKey)) ||
-        (e.key === '/' &&
-          (e.target as HTMLElement).tagName !== 'INPUT' &&
-          (e.target as HTMLElement).tagName !== 'TEXTAREA')
-      ) {
-        e.preventDefault();
-        setSearchOpen(true);
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
 
   const cycleTheme = async () => {
     const next: Record<ThemePreference, ThemePreference> = {
@@ -161,29 +153,25 @@ export function Header({
             </button>
           )}
 
-          <button
-            type="button"
-            onClick={() => setSearchOpen(true)}
-            aria-label="Buscar conteúdo (Ctrl+K ou /)"
-            title="Buscar conteúdo (Ctrl+K ou /)"
-            className="inline-flex h-8 items-center gap-2 rounded-md border border-border bg-surface-muted/60 hover:bg-surface-muted px-2.5 text-xs text-fg-muted hover:text-fg transition-colors"
-          >
-            <Search className="size-3.5" aria-hidden="true" />
-            <span className="hidden sm:inline">Buscar</span>
-            <kbd className="hidden md:inline-block rounded border border-border bg-surface px-1 py-0.5 font-mono text-[10px] text-fg-subtle">
-              /
-            </kbd>
-          </button>
-
           {authUser && (
             <button
               type="button"
               data-testid="header-profile-button"
               onClick={() => setProfileOpen(true)}
-              title={`Editar perfil (${authUser.name} · ${authUser.email})`}
-              className="inline-flex h-8 items-center gap-2 rounded-md border border-border bg-surface hover:bg-surface-muted px-2 text-xs font-medium text-fg transition-colors cursor-pointer"
+              title={`Editar perfil (${authUser.name} · Patente: ${rankState.rank.name} · ${rankState.xp} XP)`}
+              className="inline-flex h-9 items-center gap-2 rounded-md border border-border bg-surface hover:bg-surface-muted px-2.5 py-1.5 text-xs font-medium text-fg transition-colors cursor-pointer"
             >
-              <Avatar name={authUser.name || authUser.email} src={authUser.avatarUrl} size="sm" />
+              <span
+                data-testid="header-rank-icon"
+                title={`Patente atual: ${rankState.rank.name} (${rankState.xp} XP)`}
+                className={cn(
+                  'inline-flex size-5 shrink-0 items-center justify-center rounded-md bg-surface-muted ring-1',
+                  rankTier.ring,
+                )}
+              >
+                <RankIcon className={cn('size-3.5', rankTier.color)} aria-hidden="true" />
+              </span>
+              <Avatar name={authUser.name || authUser.email} src={authUser.avatarUrl} size="xs" />
               <span className="hidden md:inline-block max-w-28 truncate font-medium text-fg">
                 {authUser.name}
               </span>
@@ -209,7 +197,6 @@ export function Header({
         </div>
       </header>
 
-      <SearchModal open={searchOpen} onClose={() => setSearchOpen(false)} />
       <ProfileModal open={profileOpen} onClose={() => setProfileOpen(false)} />
     </>
   );

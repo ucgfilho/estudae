@@ -16,7 +16,7 @@ const RANK_ICONS: LucideIcon[] = [
 ];
 
 /** Emblema e cor por faixa de patente (índice em RANKS). */
-function tierOf(index: number): { icon: LucideIcon; color: string; ring: string } {
+export function tierOf(index: number): { icon: LucideIcon; color: string; ring: string } {
   const icon = RANK_ICONS[index] ?? Trophy;
   if (index < 4) return { icon, color: 'text-fg-muted', ring: 'ring-border-strong' };
   if (index < 8) return { icon, color: 'text-info', ring: 'ring-info' };

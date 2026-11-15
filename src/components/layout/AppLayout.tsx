@@ -11,6 +11,7 @@ import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { CelebrationLayer } from '../motivation/CelebrationLayer';
 import { NewContestModal } from '../modals/NewContestModal';
+import { AiAssistantWidget } from '../assistant/AiAssistantWidget';
 import { useActiveTimer, useDisciplines, useSettings } from '../../hooks/useData';
 import { elapsedSeconds } from '../../domain/timer';
 import { formatClock } from '../../lib/format';
@@ -167,6 +168,7 @@ export function AppLayout({ onSwitchContestScreen }: AppLayoutProps) {
         </nav>
       </div>
       <CelebrationLayer />
+      <AiAssistantWidget />
 
       <NewContestModal
         open={newContestModalOpen}

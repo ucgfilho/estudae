@@ -963,7 +963,7 @@ export function ScheduleScreen() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Cronograma de Estudos (24 Semanas)"
+        title="Cronograma de Estudos"
         description={
           settings?.contestName
             ? `Planejamento semanal adaptado ao edital de ${settings.contestName}${settings.contestRole ? ` (${settings.contestRole})` : ''}.`
@@ -980,7 +980,7 @@ export function ScheduleScreen() {
                 setGenerateModalOpen(true);
               }}
             >
-              Gerar com IA (24 Semanas)
+              Gerar com IA
             </Button>
             <Button
               variant="secondary"

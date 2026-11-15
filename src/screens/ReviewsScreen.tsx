@@ -23,9 +23,9 @@ import {
   completeReview,
   reopenReview,
   deleteReview,
+  reconcileReviewsAndErrorNotes,
   resolveReviewDisplayTitle,
 } from '../services/performance';
-import { db } from '../db/db';
 import { reviewBuckets } from '../domain/metrics';
 import { formatDate } from '../lib/dates';
 import type { ReviewTask } from '../db/types';
@@ -61,23 +61,11 @@ export function ReviewsScreen() {
   const topicMap = useMemo(() => new Map(topics.map((t) => [t.id, t])), [topics]);
   const errorNoteMap = useMemo(() => new Map(errorNotes.map((e) => [e.id, e])), [errorNotes]);
 
-  // Sincroniza automaticamente revisões antigas cujo caderno de erros foi atualizado com o número da questão
+  // Sincroniza rigorosamente revisões com o Caderno de Erros e remove revisões futuras duplicadas
   useEffect(() => {
-    if (reviews.length === 0 || errorNoteMap.size === 0) return;
-    const toHeal: ReviewTask[] = [];
-    for (const r of reviews) {
-      if (!r.errorNoteId) continue;
-      const linked = errorNoteMap.get(r.errorNoteId);
-      if (!linked) continue;
-      const expectedTitle = resolveReviewDisplayTitle(r, linked);
-      if (r.title !== expectedTitle) {
-        toHeal.push({ ...r, title: expectedTitle });
-      }
-    }
-    if (toHeal.length > 0) {
-      void db.reviews.bulkPut(toHeal);
-    }
-  }, [reviews, errorNoteMap]);
+    if (reviews.length === 0 && errorNotes.length === 0) return;
+    void reconcileReviewsAndErrorNotes();
+  }, [reviews.length, errorNotes]);
 
   const buckets = useMemo(() => reviewBuckets(reviews, today), [reviews, today]);
   const completedReviews = useMemo(() => {

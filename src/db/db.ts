@@ -682,10 +682,14 @@ export async function ensureSeed(database: AppDatabase = db): Promise<void> {
 export async function ensureLocalDefaults(database: AppDatabase = db): Promise<void> {
   await database.transaction(
     'rw',
-    database.disciplines,
-    database.settings,
-    database.weeklyPlans,
-    database.sessions,
+    [
+      database.disciplines,
+      database.settings,
+      database.weeklyPlans,
+      database.sessions,
+      database.reviews,
+      database.errorNotes,
+    ],
     async () => {
       const existingList = await database.disciplines.toArray();
       const settings = await database.settings.get(SETTINGS_ID);
@@ -750,6 +754,83 @@ export async function ensureLocalDefaults(database: AppDatabase = db): Promise<v
             weekStart: newStart,
             plannedMinutes: weekPlanned || plan.plannedMinutes,
           });
+        }
+      }
+
+      // Remove revisões futuras duplicadas do intervalo (mantendo apenas a atual)
+      // e sincroniza datas entre Caderno de Erros e Revisões.
+      const allReviews = await database.reviews.toArray();
+      const allNotes = await database.errorNotes.toArray();
+      if (allReviews.length > 0 || allNotes.length > 0) {
+        const idsToDelete = new Set<string>();
+        const reviewsToPut = new Map<string, ReviewTask>();
+        const notesToPut = new Map<string, ErrorNote>();
+
+        const pendingGroups = new Map<string, ReviewTask[]>();
+        for (const r of allReviews) {
+          if (r.status !== 'pendente') continue;
+          const key = r.errorNoteId
+            ? `err:${r.errorNoteId}`
+            : `topic:${r.disciplineId}:${r.topicId ?? ''}:${r.title.trim().toLowerCase()}`;
+          const list = pendingGroups.get(key) ?? [];
+          list.push(r);
+          pendingGroups.set(key, list);
+        }
+
+        const activePendingByNote = new Map<string, ReviewTask>();
+        for (const group of pendingGroups.values()) {
+          group.sort(
+            (a, b) =>
+              a.intervalDays - b.intervalDays ||
+              a.dueDate.localeCompare(b.dueDate) ||
+              a.createdAt.localeCompare(b.createdAt),
+          );
+          const keeper = group[0];
+          if (keeper.errorNoteId) {
+            activePendingByNote.set(keeper.errorNoteId, keeper);
+          }
+          for (let i = 1; i < group.length; i++) {
+            idsToDelete.add(group[i].id);
+          }
+        }
+
+        for (const note of allNotes) {
+          const activePending = activePendingByNote.get(note.id);
+          if (note.status === 'dominado') {
+            if (activePending) idsToDelete.add(activePending.id);
+            if (note.nextReviewDate !== null) {
+              notesToPut.set(note.id, { ...note, nextReviewDate: null });
+            }
+            continue;
+          }
+          if (activePending) {
+            const expectedDueDate = note.nextReviewDate ?? activePending.dueDate;
+            if (
+              activePending.dueDate !== expectedDueDate ||
+              activePending.disciplineId !== note.disciplineId ||
+              activePending.topicId !== note.topicId
+            ) {
+              reviewsToPut.set(activePending.id, {
+                ...activePending,
+                dueDate: expectedDueDate,
+                disciplineId: note.disciplineId,
+                topicId: note.topicId,
+              });
+            }
+            if (note.nextReviewDate !== expectedDueDate) {
+              notesToPut.set(note.id, { ...note, nextReviewDate: expectedDueDate });
+            }
+          }
+        }
+
+        if (idsToDelete.size > 0) {
+          await database.reviews.bulkDelete([...idsToDelete]);
+        }
+        if (reviewsToPut.size > 0) {
+          await database.reviews.bulkPut([...reviewsToPut.values()]);
+        }
+        if (notesToPut.size > 0) {
+          await database.errorNotes.bulkPut([...notesToPut.values()]);
         }
       }
     },

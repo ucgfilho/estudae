@@ -1,0 +1,214 @@
+import { useState, useRef, useEffect, type FormEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Bot, Send, Sparkles, X, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { processAssistantMessage } from '../../services/aiAssistant';
+import { cn, errorMessage } from '../../lib/utils';
+
+interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  navigateTo?: string;
+}
+
+const QUICK_SUGGESTIONS = [
+  'Sincronizar revisões com caderno de erros',
+  'Mudar revisões do dia 10 para o dia 16',
+  'Adicionar sessão de Arquitetura 60 min hoje',
+  'Adicionar erro no caderno de erros de Engenharia',
+  'Resumo de hoje',
+];
+
+export function AiAssistantWidget() {
+  const [open, setOpen] = useState(false);
+  const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    {
+      id: 'welcome',
+      role: 'assistant',
+      content:
+        'Olá! Sou o Assistente IA do estudaê. Posso mudar datas de revisões, adicionar erros no Caderno de Erros, criar ou concluir sessões, iniciar o cronômetro, registrar questões ou ajustar suas metas. Como posso ajudar agora?',
+    },
+  ]);
+  const endRef = useRef<HTMLDivElement | null>(null);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (open && typeof endRef.current?.scrollIntoView === 'function') {
+      endRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages, open]);
+
+  const sendPrompt = async (text: string) => {
+    const trimmed = text.trim();
+    if (!trimmed || loading) return;
+
+    const userMsg: ChatMessage = {
+      id: `u-${Date.now()}`,
+      role: 'user',
+      content: trimmed,
+    };
+    setMessages((prev) => [...prev, userMsg]);
+    setInput('');
+    setLoading(true);
+
+    try {
+      const result = await processAssistantMessage(trimmed);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `a-${Date.now()}`,
+          role: 'assistant',
+          content: result.reply,
+          navigateTo: result.navigateTo,
+        },
+      ]);
+    } catch (err) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `err-${Date.now()}`,
+          role: 'assistant',
+          content: `Não foi possível concluir a ação: ${errorMessage(err)}`,
+        },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    void sendPrompt(input);
+  };
+
+  return (
+    <div className="fixed bottom-16 right-4 lg:bottom-6 lg:right-6 z-40 flex flex-col items-end">
+      {open && (
+        <section
+          aria-label="Assistente IA estudaê"
+          data-testid="ai-assistant-panel"
+          className="mb-3 flex h-[480px] max-h-[75dvh] w-[calc(100vw-2rem)] sm:w-96 flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl"
+        >
+          <div className="flex items-center justify-between border-b border-border bg-surface-muted/70 px-4 py-3">
+            <div className="flex items-center gap-2.5">
+              <span className="inline-flex size-8 items-center justify-center rounded-xl bg-primary text-primary-fg shadow-xs">
+                <Bot className="size-4.5" aria-hidden="true" />
+              </span>
+              <div>
+                <h2 className="text-sm font-semibold text-fg flex items-center gap-1.5">
+                  Assistente IA
+                  <Sparkles className="size-3.5 text-primary" aria-hidden="true" />
+                </h2>
+                <p className="text-[11px] text-fg-muted">
+                  Controle total de revisões, erros, sessões e metas
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              aria-label="Fechar assistente IA"
+              className="rounded-lg p-1.5 text-fg-muted hover:bg-surface hover:text-fg transition-colors cursor-pointer"
+            >
+              <X className="size-4" />
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-3.5 space-y-3 text-xs">
+            {messages.map((msg) => (
+              <div
+                key={msg.id}
+                className={cn(
+                  'flex flex-col gap-1.5 max-w-[88%] rounded-xl px-3 py-2.5 whitespace-pre-line leading-relaxed',
+                  msg.role === 'user'
+                    ? 'ml-auto bg-primary text-primary-fg'
+                    : 'mr-auto border border-border bg-surface-muted/70 text-fg',
+                )}
+              >
+                {msg.role === 'assistant' && msg.id !== 'welcome' && (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-success">
+                    <CheckCircle2 className="size-3.5" aria-hidden="true" /> Ação executada
+                  </span>
+                )}
+                <div>{msg.content}</div>
+                {msg.navigateTo && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigate(msg.navigateTo!);
+                    }}
+                    className="mt-1 inline-flex items-center gap-1 self-start rounded-md bg-primary-soft px-2 py-1 text-[11px] font-semibold text-primary hover:brightness-95 transition-all cursor-pointer"
+                  >
+                    Abrir seção <ArrowRight className="size-3" aria-hidden="true" />
+                  </button>
+                )}
+              </div>
+            ))}
+
+            {loading && (
+              <div className="mr-auto rounded-xl border border-border bg-surface-muted/60 px-3 py-2 text-xs text-fg-muted animate-pulse">
+                Executando seu pedido...
+              </div>
+            )}
+            <div ref={endRef} />
+          </div>
+
+          <div className="border-t border-border bg-surface px-3 pt-2 pb-1">
+            <div className="flex gap-1.5 overflow-x-auto pb-1.5 no-scrollbar">
+              {QUICK_SUGGESTIONS.map((suggestion) => (
+                <button
+                  key={suggestion}
+                  type="button"
+                  onClick={() => void sendPrompt(suggestion)}
+                  disabled={loading}
+                  className="shrink-0 rounded-full border border-border bg-surface-muted/60 hover:bg-surface-muted px-2.5 py-1 text-[11px] text-fg-muted hover:text-fg transition-colors cursor-pointer"
+                >
+                  {suggestion}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <form
+            onSubmit={handleSubmit}
+            className="flex items-center gap-2 border-t border-border bg-surface p-2.5"
+          >
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Ex: Mudar revisões do dia 10 para 16..."
+              aria-label="Mensagem para o assistente IA"
+              className="flex-1 rounded-lg border border-border bg-surface-muted/50 px-3 py-2 text-xs text-fg placeholder:text-fg-subtle focus:border-primary focus:outline-hidden"
+            />
+            <button
+              type="submit"
+              disabled={!input.trim() || loading}
+              aria-label="Enviar comando para o assistente"
+              className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-fg disabled:opacity-40 hover:brightness-95 transition-all cursor-pointer"
+            >
+              <Send className="size-3.5" aria-hidden="true" />
+            </button>
+          </form>
+        </section>
+      )}
+
+      <button
+        type="button"
+        data-testid="ai-assistant-fab"
+        onClick={() => setOpen((prev) => !prev)}
+        aria-label="Abrir Assistente IA"
+        title="Assistente IA estudaê"
+        className="group relative inline-flex size-12 items-center justify-center rounded-full bg-primary text-primary-fg shadow-lg ring-2 ring-primary/30 transition-transform hover:scale-105 active:scale-95 cursor-pointer"
+      >
+        {open ? (
+          <X className="size-5" aria-hidden="true" />
+        ) : (
+          <Bot className="size-5.5" aria-hidden="true" />
+        )}
+      </button>
+    </div>
+  );
+}

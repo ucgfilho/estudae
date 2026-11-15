@@ -4,11 +4,12 @@ interface AvatarProps {
   name: string;
   src?: string | null;
   /** Tamanhos fixos para evitar que o avatar mude de dimensão entre telas. */
-  size?: 'sm' | 'md' | 'lg' | 'xl';
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
   className?: string;
 }
 
 const SIZES = {
+  xs: 'size-5 text-[10px]',
   sm: 'size-7 text-[11px]',
   md: 'size-9 text-xs',
   lg: 'size-14 text-lg',
