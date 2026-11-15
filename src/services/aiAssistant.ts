@@ -4,13 +4,12 @@ import type {
   ErrorStatus,
   ErrorType,
   ThemePreference,
-  Topic,
   TopicStatus,
 } from '../db/types';
 import { reviewBuckets } from '../domain/metrics';
 import { computeRank } from '../domain/rank';
 import { parseIntervals } from '../domain/reviews';
-import { addDays, formatDate, isValidDateKey, todayKey, type DateKey } from '../lib/dates';
+import { addDays, diffDays, formatDate, isValidDateKey, todayKey, type DateKey } from '../lib/dates';
 import {
   bulkRescheduleReviews,
   completeReview,
@@ -72,10 +71,34 @@ export interface AssistantAction {
   params?: Record<string, unknown>;
 }
 
+export interface AssistantChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
 export interface AssistantResponse {
   reply: string;
   executedActions: string[];
   navigateTo?: string;
+}
+
+export interface ProcessAssistantOptions {
+  today?: DateKey;
+  history?: AssistantChatMessage[];
+  apiKey?: string;
+}
+
+const DEFAULT_GEMINI_MODELS = [
+  'gemini-2.5-flash',
+  'gemini-2.0-flash',
+  'gemini-1.5-flash',
+  'gemini-1.5-pro',
+];
+
+const geminiModelsCache = new Map<string, string[]>();
+
+export function clearGeminiModelsCache(): void {
+  geminiModelsCache.clear();
 }
 
 function normalize(text = ''): string {
@@ -88,21 +111,16 @@ function normalize(text = ''): string {
 
 function matchDiscipline(text: string, disciplines: Discipline[]): Discipline | null {
   const norm = normalize(text);
-  // 1. Exact or substring match on name/shortName/id
   for (const d of disciplines) {
     const nName = normalize(d.name);
     const nId = normalize(d.id.replace(/-/g, ' '));
-    if (
-      (nName && norm.includes(nName)) ||
-      (nId.length >= 4 && norm.includes(nId))
-    ) {
+    if ((nName && norm.includes(nName)) || (nId.length >= 4 && norm.includes(nId))) {
       return d;
     }
   }
-  // 2. Common keywords mapping
   const keywords: Array<[RegExp, string]> = [
     [/\b(arquitetura|arq|devops|apis?|microsservicos?)\b/, 'arquitetura'],
-    [/\b(engenharia|eng|scrum|agile|requisitos|uml| historias?)\b/, 'engenharia'],
+    [/\b(engenharia|eng|scrum|agile|requisitos|uml|historias?)\b/, 'engenharia'],
     [/\b(linguagens?|java|python|javascript|typescript|poo)\b/, 'linguagens'],
     [/\b(banco de dados|bancos? de dados|sql|nosql|modelagem|bd)\b/, 'banco-dados'],
     [/\b(logica de programacao|algoritmos?|estrutura de dados|programacao)\b/, 'logica-programacao'],
@@ -119,95 +137,90 @@ function matchDiscipline(text: string, disciplines: Discipline[]): Discipline | 
   return null;
 }
 
-function matchTopic(text: string, topics: Topic[], disciplineId?: string): Topic | null {
-  const norm = normalize(text);
-  const pool = disciplineId ? topics.filter((t) => t.disciplineId === disciplineId) : topics;
-  let best: { topic: Topic; len: number } | null = null;
-  for (const t of pool) {
-    const nTitle = normalize(t.title);
-    if (nTitle.length >= 3 && norm.includes(nTitle)) {
-      if (!best || nTitle.length > best.len) {
-        best = { topic: t, len: nTitle.length };
-      }
-    }
-  }
-  return best?.topic ?? null;
-}
-
 /**
  * Extrai datas mencionadas no texto em português (ex.: "2026-11-16", "16/11/2026", "16/11", "dia 10", "dia 16", "hoje", "amanhã").
  */
 export function extractDatesFromText(text: string, today: DateKey = todayKey()): DateKey[] {
+  const results: DateKey[] = [];
   const norm = normalize(text);
-  const [currYear, currMonth] = today.split('-').map(Number);
-  const found: DateKey[] = [];
+  const [currentYear, currentMonth] = today.split('-').map(Number);
 
-  // 1. Explicit YYYY-MM-DD
+  const pushUnique = (d: DateKey) => {
+    if (isValidDateKey(d) && !results.includes(d)) {
+      results.push(d);
+    }
+  };
+
+  if (/\bdepois de amanha\b/.test(norm)) {
+    pushUnique(addDays(today, 2));
+  } else if (/\bamanha\b/.test(norm)) {
+    pushUnique(addDays(today, 1));
+  }
+  if (/\bhoje\b/.test(norm)) {
+    pushUnique(today);
+  }
+  if (/\bontem\b/.test(norm)) {
+    pushUnique(addDays(today, -1));
+  }
+
   for (const m of norm.matchAll(/\b(20\d{2})-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])\b/g)) {
-    const candidate = `${m[1]}-${m[2]}-${m[3]}`;
-    if (isValidDateKey(candidate)) found.push(candidate);
+    pushUnique(`${m[1]}-${m[2]}-${m[3]}`);
   }
 
-  // 2. DD/MM/YYYY or DD/MM
-  for (const m of norm.matchAll(/\b(0?[1-9]|[12]\d|3[01])\/(0?[1-9]|1[0-2])(?:\/(20\d{2}))?\b/g)) {
-    const d = String(Number(m[1])).padStart(2, '0');
-    const mo = String(Number(m[2])).padStart(2, '0');
-    const y = m[3] ? Number(m[3]) : currYear;
-    const candidate = `${y}-${mo}-${d}`;
-    if (isValidDateKey(candidate)) found.push(candidate);
+  for (const m of norm.matchAll(/\b(0?[1-9]|[12]\d|3[01])\/(0?[1-9]|1[0-2])(?:\/(20\d{2}|\d{2}))?\b/g)) {
+    const day = String(Number(m[1])).padStart(2, '0');
+    const month = String(Number(m[2])).padStart(2, '0');
+    const rawYear = m[3];
+    const year = rawYear
+      ? rawYear.length === 2
+        ? `20${rawYear}`
+        : rawYear
+      : String(currentYear);
+    pushUnique(`${year}-${month}-${day}`);
   }
 
-  // 3. "dia 10", "pro dia 16", "para o dia 16"
-  if (found.length < 2) {
-    for (const m of norm.matchAll(/\bdia\s+(0?[1-9]|[12]\d|3[01])(?:\s*\/\s*(0?[1-9]|1[0-2]))?\b/g)) {
-      const d = String(Number(m[1])).padStart(2, '0');
-      const mo = m[2] ? String(Number(m[2])).padStart(2, '0') : String(currMonth).padStart(2, '0');
-      const candidate = `${currYear}-${mo}-${d}`;
-      if (isValidDateKey(candidate) && !found.includes(candidate)) {
-        found.push(candidate);
-      }
+  for (const m of norm.matchAll(/\bdia\s+(0?[1-9]|[12]\d|3[01])(?:\s+para\s+(?:o\s+)?(?:dia\s+)?(0?[1-9]|[12]\d|3[01]))?\b/g)) {
+    const day1 = String(Number(m[1])).padStart(2, '0');
+    const monthStr = String(currentMonth).padStart(2, '0');
+    pushUnique(`${currentYear}-${monthStr}-${day1}`);
+    if (m[2]) {
+      const day2 = String(Number(m[2])).padStart(2, '0');
+      pushUnique(`${currentYear}-${monthStr}-${day2}`);
     }
   }
 
-  // 4. Relative words ("hoje", "amanha", "depois de amanha")
-  if (/\bdepois de amanha\b/.test(norm)) {
-    found.push(addDays(today, 2));
-  } else if (/\bamanha\b/.test(norm)) {
-    found.push(addDays(today, 1));
-  } else if (/\bhoje\b/.test(norm)) {
-    found.push(today);
+  for (const m of norm.matchAll(/\b(?:para\s+(?:o\s+)?|pro\s+|ate\s+(?:o\s+)?)?(?:dia\s+)(0?[1-9]|[12]\d|3[01])\b/g)) {
+    const day = String(Number(m[1])).padStart(2, '0');
+    const monthStr = String(currentMonth).padStart(2, '0');
+    pushUnique(`${currentYear}-${monthStr}-${day}`);
   }
 
-  return found;
+  return results;
 }
 
-function extractDurationMinutes(text: string): number | null {
+export function extractDurationMinutes(text: string): number | null {
   const norm = normalize(text);
-  const hmMatch = norm.match(/\b(\d+)\s*h(?:oras?)?\s*(?:e\s*)?(\d+)?\s*(?:m|min|minutos?)?\b/);
-  if (hmMatch) {
-    const hours = Number(hmMatch[1]);
-    const mins = hmMatch[2] ? Number(hmMatch[2]) : 0;
-    const total = hours * 60 + mins;
-    if (total >= 5 && total <= 720) return total;
-  }
-  const minMatch = norm.match(/\b(\d+)\s*(?:min|minutos?)\b/);
-  if (minMatch) {
-    const mins = Number(minMatch[1]);
-    if (mins >= 5 && mins <= 720) return mins;
+  const minMatch = norm.match(/\b(\d{1,3})\s*(?:min|minutos?|m)\b/);
+  if (minMatch) return Math.max(5, Math.min(480, Number(minMatch[1])));
+
+  const hourMatch = norm.match(/\b(\d{1,2})(?:[.,](\d))?\s*(?:h|horas?)\b/);
+  if (hourMatch) {
+    const hours = Number(hourMatch[1]);
+    const frac = hourMatch[2] ? Number(hourMatch[2]) * 6 : 0;
+    return Math.max(15, Math.min(480, hours * 60 + frac));
   }
   return null;
 }
 
 /**
- * Executa uma ação estruturada diretamente sobre o banco e serviços da plataforma.
+ * Executa uma ação estruturada diretamente no banco de dados da plataforma.
  */
 export async function executeAssistantAction(
   action: AssistantAction,
   today: DateKey = todayKey(),
 ): Promise<{ summary: string; navigateTo?: string }> {
-  const disciplines = await db.disciplines.toArray();
-  const topics = await db.topics.toArray();
   const params = action.params ?? {};
+  const disciplines = await db.disciplines.toArray();
 
   switch (action.type) {
     case 'SYNC_REVIEWS': {
@@ -220,25 +233,33 @@ export async function executeAssistantAction(
 
     case 'RESCHEDULE_REVIEWS': {
       await reconcileReviewsAndErrorNotes();
-      const newDueDate = (params.newDueDate as DateKey | undefined) ?? today;
-      const fromDueDate = params.fromDueDate as DateKey | undefined;
-      const disciplineId = params.disciplineId as string | undefined;
+      const rawNewDate = (params.newDueDate as DateKey | undefined) ?? today;
+      const newDueDate = isValidDateKey(rawNewDate) ? rawNewDate : today;
+      const fromDueDate =
+        typeof params.fromDueDate === 'string' && isValidDateKey(params.fromDueDate)
+          ? params.fromDueDate
+          : undefined;
+      const disciplineId =
+        typeof params.disciplineId === 'string' ? params.disciplineId : undefined;
       const onlyOverdue = Boolean(params.onlyOverdue);
-      const days = params.days as number | undefined;
+      const daysDelta = typeof params.days === 'number' ? params.days : undefined;
 
-      if (days && Number.isInteger(days) && days > 0) {
-        const allReviews = await db.reviews.toArray();
-        const targets = allReviews.filter(
-          (r) =>
-            r.status === 'pendente' &&
-            (!disciplineId || r.disciplineId === disciplineId) &&
-            (!onlyOverdue || r.dueDate < today),
-        );
-        for (const r of targets) {
-          await postponeReview(r.id, days, today);
+      if (daysDelta && !params.newDueDate) {
+        const pending = await db.reviews.where('status').equals('pendente').toArray();
+        const filtered = pending.filter((r) => {
+          if (disciplineId && r.disciplineId !== disciplineId) return false;
+          if (fromDueDate && r.dueDate !== fromDueDate) return false;
+          if (onlyOverdue && r.dueDate >= today) return false;
+          return true;
+        });
+        for (const r of filtered) {
+          await postponeReview(r.id, daysDelta);
         }
         return {
-          summary: `${targets.length} revisão(ões) adiada(s) em ${days} dia(s) (sincronizado com o Caderno de Erros).`,
+          summary:
+            filtered.length > 0
+              ? `${filtered.length} revisão(ões) adiada(s) em ${daysDelta} dia(s) (e sincronizadas com o Caderno de Erros).`
+              : 'Nenhuma revisão pendente encontrada com os critérios informados.',
           navigateTo: '/revisoes',
         };
       }
@@ -250,111 +271,161 @@ export async function executeAssistantAction(
         onlyOverdue,
         today,
       });
+
+      if (count === 0 && fromDueDate) {
+        const notes = await db.errorNotes.toArray();
+        const matchingNotes = notes.filter(
+          (n) =>
+            n.nextReviewDate === fromDueDate &&
+            (!disciplineId || n.disciplineId === disciplineId),
+        );
+        for (const note of matchingNotes) {
+          await db.errorNotes.update(note.id, {
+            nextReviewDate: newDueDate,
+            updatedAt: new Date().toISOString(),
+          });
+        }
+        await reconcileReviewsAndErrorNotes();
+        if (matchingNotes.length > 0) {
+          return {
+            summary: `${matchingNotes.length} registro(s) do Caderno de Erros e suas revisões foram movidos de ${formatDate(fromDueDate)} para ${formatDate(newDueDate)}.`,
+            navigateTo: '/revisoes',
+          };
+        }
+      }
+
+      if (count === 0) {
+        const fallbackCount = await bulkRescheduleReviews({
+          newDueDate,
+          disciplineId,
+          today,
+        });
+        if (fallbackCount > 0) {
+          return {
+            summary: `${fallbackCount} revisão(ões) pendente(s) reagendada(s) para ${formatDate(newDueDate)} (sincronizadas com o Caderno de Erros).`,
+            navigateTo: '/revisoes',
+          };
+        }
+      }
+
       return {
         summary:
           count > 0
-            ? `${count} revisão(ões) remarcada(s) para ${formatDate(newDueDate)} e sincronizada(s) com o Caderno de Erros.`
-            : `Nenhuma revisão pendente encontrada com esse filtro para remarcar para ${formatDate(newDueDate)}.`,
+            ? `${count} revisão(ões) reagendada(s) para ${formatDate(newDueDate)} e sincronizada(s) com o Caderno de Erros.`
+            : `Nenhuma revisão pendente encontrada para reagendar para ${formatDate(newDueDate)}.`,
         navigateTo: '/revisoes',
       };
     }
 
     case 'SCHEDULE_REVIEW': {
-      const discId = (params.disciplineId as string) || disciplines[0]?.id;
-      if (!discId) throw new Error('Nenhuma disciplina disponível.');
-      const disc = disciplines.find((d) => d.id === discId);
+      const discId =
+        (params.disciplineId as string) || disciplines[0]?.id || 'logica-programacao';
       const topicId = (params.topicId as string | null) ?? null;
-      const title =
-        (params.title as string)?.trim() ||
-        `Revisão de ${disc?.name ?? 'Conteúdo'}`;
-      const baseDate = (params.baseDate as DateKey) || today;
-      await scheduleTopicReviews(discId, topicId, title, baseDate);
+      const title = (params.title as string) || 'Revisão programada via Assistente IA';
+      const baseDate =
+        typeof params.baseDate === 'string' && isValidDateKey(params.baseDate)
+          ? params.baseDate
+          : today;
+      const created = await scheduleTopicReviews(discId, topicId, title, baseDate);
       return {
-        summary: `Revisão "${title}" (${disc?.name ?? discId}) agendada no ciclo inicial a partir de ${formatDate(baseDate)}.`,
+        summary:
+          created > 0
+            ? `Revisão "${title}" agendada com sucesso (iniciando pelo ciclo de 1 dia a partir de ${formatDate(baseDate)}).`
+            : `A revisão "${title}" já estava agendada.`,
         navigateTo: '/revisoes',
       };
     }
 
     case 'COMPLETE_REVIEW': {
+      const reviewId = params.reviewId as string | undefined;
       const disciplineId = params.disciplineId as string | undefined;
-      const all = Boolean(params.all);
-      const pending = (await db.reviews.toArray())
-        .filter(
-          (r) =>
-            r.status === 'pendente' &&
-            (!disciplineId || r.disciplineId === disciplineId),
-        )
-        .sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+      const completeAll = Boolean(params.all);
 
-      if (pending.length === 0) {
-        return { summary: 'Não há revisões pendentes para concluir no momento.' };
-      }
-
-      if (all) {
-        const dueOrOverdue = pending.filter((r) => r.dueDate <= today);
-        const list = dueOrOverdue.length > 0 ? dueOrOverdue : [pending[0]];
-        for (const r of list) {
-          await completeReview(r.id);
-        }
+      if (reviewId) {
+        await completeReview(reviewId);
         return {
-          summary: `${list.length} revisão(ões) concluída(s) com sucesso! A próxima revisão de cada intervalo foi liberada automaticamente.`,
+          summary: 'Revisão concluída! A próxima etapa do ciclo espaçado foi liberada automaticamente.',
           navigateTo: '/revisoes',
         };
       }
 
-      const target = pending[0];
-      await completeReview(target.id);
+      const pending = await db.reviews.where('status').equals('pendente').toArray();
+      const targets = pending
+        .filter((r) => !disciplineId || r.disciplineId === disciplineId)
+        .filter((r) => completeAll || r.dueDate <= today)
+        .sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+
+      if (targets.length === 0 && pending.length > 0) {
+        await completeReview(pending[0].id);
+        return {
+          summary: `Revisão "${pending[0].title}" concluída! Próximo ciclo liberado.`,
+          navigateTo: '/revisoes',
+        };
+      }
+
+      const toComplete = completeAll ? targets : targets.slice(0, 1);
+      for (const r of toComplete) {
+        await completeReview(r.id);
+      }
       return {
-        summary: `Revisão "${target.title}" concluída! A próxima revisão do intervalo foi liberada.`,
+        summary:
+          toComplete.length > 0
+            ? `${toComplete.length} revisão(ões) marcada(s) como concluída(s)! Próxima etapa do ciclo liberada.`
+            : 'Não há revisões pendentes para concluir.',
         navigateTo: '/revisoes',
       };
     }
 
     case 'REOPEN_REVIEW': {
-      const completed = (await db.reviews.toArray())
-        .filter((r) => r.status === 'concluida')
-        .sort((a, b) => (b.completedAt ?? '').localeCompare(a.completedAt ?? ''));
-      if (completed.length === 0) {
+      const completed = await db.reviews.where('status').equals('concluida').toArray();
+      const target = completed[completed.length - 1];
+      if (!target) {
         return { summary: 'Nenhuma revisão concluída encontrada para reabrir.' };
       }
-      await reopenReview(completed[0].id);
+      await reopenReview(target.id);
       return {
-        summary: `Revisão "${completed[0].title}" reaberta com sucesso.`,
+        summary: `Revisão "${target.title}" reaberta como pendente.`,
         navigateTo: '/revisoes',
       };
     }
 
     case 'DELETE_REVIEW': {
-      const disciplineId = params.disciplineId as string | undefined;
-      const pending = (await db.reviews.toArray()).filter(
-        (r) =>
-          r.status === 'pendente' &&
-          (!disciplineId || r.disciplineId === disciplineId),
-      );
-      if (pending.length === 0) {
-        return { summary: 'Nenhuma revisão pendente encontrada para excluir.' };
+      const reviewId = params.reviewId as string | undefined;
+      const titleQuery = typeof params.title === 'string' ? normalize(params.title) : '';
+      const all = await db.reviews.toArray();
+      const target = reviewId
+        ? all.find((r) => r.id === reviewId)
+        : titleQuery
+          ? all.find((r) => normalize(r.title).includes(titleQuery))
+          : all.find((r) => r.status === 'pendente');
+      if (!target) {
+        return { summary: 'Nenhuma revisão encontrada para excluir.' };
       }
-      await deleteReview(pending[0].id);
+      await deleteReview(target.id);
       return {
-        summary: `Revisão "${pending[0].title}" excluída com sucesso.`,
+        summary: `Revisão "${target.title}" excluída.`,
         navigateTo: '/revisoes',
       };
     }
 
     case 'ADD_ERROR_NOTE': {
-      const discId = (params.disciplineId as string) || disciplines[0]?.id;
-      if (!discId) throw new Error('Nenhuma disciplina cadastrada.');
-      const disc = disciplines.find((d) => d.id === discId);
+      const discId =
+        (params.disciplineId as string) || disciplines[0]?.id || 'logica-programacao';
       const topicId = (params.topicId as string | null) ?? null;
       const sourceReference =
-        (params.sourceReference as string)?.trim() ||
-        `Erro registrado via Assistente (${disc?.name ?? discId})`;
+        (params.sourceReference as string) || 'Registro via Assistente IA';
       const explanation =
-        (params.explanation as string)?.trim() ||
-        sourceReference;
+        (params.explanation as string) ||
+        'Revisar conceito e refazer questões equivalentes.';
       const errorType = ((params.errorType as ErrorType) || 'falta-conteudo') as ErrorType;
-      const errorDate = (params.errorDate as DateKey) || today;
-      const nextReviewDate = (params.nextReviewDate as DateKey | null) ?? null;
+      const errorDate =
+        typeof params.errorDate === 'string' && isValidDateKey(params.errorDate)
+          ? params.errorDate
+          : today;
+      const nextReviewDate =
+        typeof params.nextReviewDate === 'string' && isValidDateKey(params.nextReviewDate)
+          ? params.nextReviewDate
+          : null;
 
       const note = await saveErrorNote(
         {
@@ -370,125 +441,159 @@ export async function executeAssistantAction(
         },
         { scheduleReviews: true },
       );
+
+      const discName = disciplines.find((d) => d.id === discId)?.name ?? discId;
       return {
-        summary: `Erro adicionado ao Caderno de Erros em ${disc?.name ?? discId} ("${note.sourceReference}") com revisão agendada para ${formatDate(note.nextReviewDate ?? today)}.`,
+        summary: `Erro adicionado ao Caderno de Erros em **${discName}** ("${note.sourceReference}") com revisão agendada para ${formatDate(note.nextReviewDate ?? addDays(errorDate, 1))}.`,
         navigateTo: '/erros',
       };
     }
 
     case 'UPDATE_ERROR_STATUS': {
-      const status = ((params.status as ErrorStatus) || 'revisado') as ErrorStatus;
+      const status = ((params.status as ErrorStatus) || 'dominado') as ErrorStatus;
       const notes = await db.errorNotes.toArray();
-      if (notes.length === 0) {
-        return { summary: 'Nenhuma anotação encontrada no Caderno de Erros.' };
+      const target = notes.find((n) => n.status !== status) ?? notes[0];
+      if (!target) {
+        return { summary: 'Nenhum registro encontrado no Caderno de Erros.' };
       }
-      await setErrorStatus(notes[0].id, status);
+      await setErrorStatus(target.id, status);
       return {
-        summary: `Status do erro "${notes[0].sourceReference || notes[0].explanation}" atualizado para "${status}".`,
+        summary: `Status do erro "${target.sourceReference}" atualizado para **${status}**.`,
         navigateTo: '/erros',
       };
     }
 
     case 'DELETE_ERROR_NOTE': {
       const notes = await db.errorNotes.toArray();
-      if (notes.length === 0) {
-        return { summary: 'Nenhuma anotação encontrada no Caderno de Erros para excluir.' };
+      const target = notes[notes.length - 1];
+      if (!target) {
+        return { summary: 'Nenhum erro encontrado no Caderno de Erros para excluir.' };
       }
-      await deleteErrorNote(notes[0].id);
+      await deleteErrorNote(target.id);
       return {
-        summary: `Anotação "${notes[0].sourceReference || notes[0].explanation}" excluída do Caderno de Erros.`,
+        summary: `Erro "${target.sourceReference}" removido do Caderno de Erros e revisões vinculadas excluídas.`,
         navigateTo: '/erros',
       };
     }
 
     case 'ADD_SESSION': {
-      const discId = (params.disciplineId as string) || disciplines[0]?.id;
-      if (!discId) throw new Error('Nenhuma disciplina disponível.');
-      const disc = disciplines.find((d) => d.id === discId);
+      const discId =
+        (params.disciplineId as string) || disciplines[0]?.id || 'logica-programacao';
       const topicId = (params.topicId as string | null) ?? null;
-      const date = (params.date as DateKey) || today;
-      const plannedMinutes = Number(params.plannedMinutes) || 60;
-      const objective =
-        (params.objective as string)?.trim() ||
-        `Estudo de ${disc?.name ?? 'disciplina'}`;
+      const date =
+        typeof params.date === 'string' && isValidDateKey(params.date) ? params.date : today;
+      const plannedMinutes =
+        typeof params.plannedMinutes === 'number' ? params.plannedMinutes : 60;
+      const objective = (params.objective as string) || 'Sessão criada via Assistente IA';
       const plannedStart = (params.plannedStart as string | null) ?? null;
 
-      await createSession({
+      const session = await createSession({
         date,
         disciplineId: discId,
         topicId,
+        plannedStart,
         plannedMinutes,
         objective,
-        plannedStart,
         notes: 'Criada pelo Assistente IA',
       });
+
+      const discName = disciplines.find((d) => d.id === discId)?.name ?? discId;
       return {
-        summary: `Sessão de estudo de ${disc?.name ?? discId} (${plannedMinutes} min) agendada para ${formatDate(date)}.`,
+        summary: `Sessão de estudo criada em **${discName}** para ${formatDate(session.date)} (${session.plannedMinutes} min — "${session.objective}").`,
         navigateTo: '/calendario',
       };
     }
 
     case 'COMPLETE_SESSION': {
       const disciplineId = params.disciplineId as string | undefined;
-      const sessions = (await db.sessions.toArray()).filter(
-        (s) =>
-          s.status === 'planejada' &&
-          (!disciplineId || s.disciplineId === disciplineId),
-      );
-      const todaySessions = sessions.filter((s) => s.date === today);
-      const target = todaySessions[0] ?? sessions[0];
+      const date =
+        typeof params.date === 'string' && isValidDateKey(params.date) ? params.date : today;
+      const actualMinutes =
+        typeof params.actualMinutes === 'number' ? params.actualMinutes : undefined;
+
+      const sessions = await db.sessions.toArray();
+      const target =
+        sessions.find(
+          (s) =>
+            s.status !== 'concluida' &&
+            s.date === date &&
+            (!disciplineId || s.disciplineId === disciplineId),
+        ) ??
+        sessions.find(
+          (s) => s.status !== 'concluida' && (!disciplineId || s.disciplineId === disciplineId),
+        );
+
       if (!target) {
         return { summary: 'Nenhuma sessão pendente encontrada para concluir.' };
       }
-      const mins = Number(params.actualMinutes) || target.plannedMinutes;
-      await setSessionStatus(target.id, 'concluida', mins);
+
+      await setSessionStatus(target.id, 'concluida', actualMinutes ?? target.plannedMinutes);
+      const discName =
+        disciplines.find((d) => d.id === target.disciplineId)?.name ?? target.disciplineId;
       return {
-        summary: `Sessão "${target.objective || 'Estudo'}" marcada como concluída (${mins} min).`,
+        summary: `Sessão de **${discName}** ("${target.objective}") marcada como concluída (${actualMinutes ?? target.plannedMinutes} min)!`,
         navigateTo: '/calendario',
       };
     }
 
     case 'RESCHEDULE_SESSION': {
-      const newDate = (params.newDate as DateKey) || addDays(today, 1);
       const disciplineId = params.disciplineId as string | undefined;
-      const sessions = (await db.sessions.toArray()).filter(
-        (s) =>
-          s.status === 'planejada' &&
-          (!disciplineId || s.disciplineId === disciplineId),
-      );
-      if (sessions.length === 0) {
+      const fromDate =
+        typeof params.fromDate === 'string' && isValidDateKey(params.fromDate)
+          ? params.fromDate
+          : undefined;
+      const newDate =
+        typeof params.newDate === 'string' && isValidDateKey(params.newDate)
+          ? params.newDate
+          : addDays(today, 1);
+
+      const sessions = await db.sessions.toArray();
+      const target =
+        sessions.find(
+          (s) =>
+            s.status !== 'concluida' &&
+            (!fromDate || s.date === fromDate) &&
+            (!disciplineId || s.disciplineId === disciplineId),
+        ) ?? sessions.find((s) => s.status !== 'concluida');
+
+      if (!target) {
         return { summary: 'Nenhuma sessão pendente encontrada para reagendar.' };
       }
-      await rescheduleSession(sessions[0].id, newDate);
+
+      await rescheduleSession(target.id, newDate, 'Reagendada via Assistente IA');
+      const discName =
+        disciplines.find((d) => d.id === target.disciplineId)?.name ?? target.disciplineId;
       return {
-        summary: `Sessão "${sessions[0].objective || 'Estudo'}" reagendada para ${formatDate(newDate)}.`,
+        summary: `Sessão de **${discName}** ("${target.objective}") reagendada para ${formatDate(newDate)}.`,
         navigateTo: '/calendario',
       };
     }
 
     case 'DELETE_SESSION': {
       const disciplineId = params.disciplineId as string | undefined;
-      const sessions = (await db.sessions.toArray()).filter(
-        (s) =>
-          s.status === 'planejada' &&
-          (!disciplineId || s.disciplineId === disciplineId),
-      );
-      if (sessions.length === 0) {
-        return { summary: 'Nenhuma sessão pendente encontrada para excluir.' };
+      const sessions = await db.sessions.toArray();
+      const target =
+        sessions.find(
+          (s) => s.status !== 'concluida' && (!disciplineId || s.disciplineId === disciplineId),
+        ) ?? sessions[sessions.length - 1];
+      if (!target) {
+        return { summary: 'Nenhuma sessão encontrada para excluir.' };
       }
-      await deleteSession(sessions[0].id);
+      await deleteSession(target.id);
       return {
-        summary: `Sessão "${sessions[0].objective || 'Estudo'}" excluída com sucesso.`,
+        summary: `Sessão "${target.objective}" (${formatDate(target.date)}) excluída.`,
         navigateTo: '/calendario',
       };
     }
 
     case 'START_TIMER': {
-      const discId = (params.disciplineId as string) || disciplines[0]?.id;
-      if (!discId) throw new Error('Nenhuma disciplina disponível.');
-      const disc = disciplines.find((d) => d.id === discId);
+      const discId =
+        (params.disciplineId as string) || disciplines[0]?.id || 'logica-programacao';
       const topicId = (params.topicId as string | null) ?? null;
-      const plannedMinutes = Number(params.plannedMinutes) || 60;
+      const plannedMinutes =
+        typeof params.plannedMinutes === 'number' ? params.plannedMinutes : 60;
+      const objective = (params.objective as string) || 'Sessão de foco iniciada pelo Assistente IA';
+
       const active = await getActiveTimer();
       if (active) {
         await discardTimer();
@@ -497,31 +602,38 @@ export async function executeAssistantAction(
         disciplineId: discId,
         topicId,
         plannedMinutes,
-        objective: (params.objective as string) || `Foco em ${disc?.name ?? discId}`,
+        objective,
         notes: '',
       });
+      const discName = disciplines.find((d) => d.id === discId)?.name ?? discId;
       return {
-        summary: `Cronômetro iniciado para ${disc?.name ?? discId} (${plannedMinutes} min). Bons estudos!`,
+        summary: `Cronômetro iniciado para **${discName}** (${plannedMinutes} min)!`,
         navigateTo: '/estudar-agora',
       };
     }
 
     case 'PAUSE_TIMER': {
+      const active = await getActiveTimer();
+      if (!active) return { summary: 'Não há cronômetro ativo no momento.' };
       await pauseTimer();
       return { summary: 'Cronômetro pausado.', navigateTo: '/estudar-agora' };
     }
 
     case 'RESUME_TIMER': {
+      const active = await getActiveTimer();
+      if (!active) return { summary: 'Não há cronômetro pausado no momento.' };
       await resumeTimer();
       return { summary: 'Cronômetro retomado!', navigateTo: '/estudar-agora' };
     }
 
     case 'FINISH_TIMER': {
-      const finished = await finishTimer();
-      const mins = finished ? Math.max(1, Math.round(finished.actualSeconds / 60)) : 0;
+      const active = await getActiveTimer();
+      if (!active) return { summary: 'Não há cronômetro ativo para finalizar.' };
+      const session = await finishTimer();
+      const mins = session ? Math.max(1, Math.round(session.actualSeconds / 60)) : 0;
       return {
-        summary: finished
-          ? `Sessão finalizada e registrada com ${mins} min!`
+        summary: session
+          ? `Cronômetro finalizado! Sessão registrada com ${mins} min estudados.`
           : 'Cronômetro finalizado.',
         navigateTo: '/estudar-agora',
       };
@@ -529,22 +641,26 @@ export async function executeAssistantAction(
 
     case 'DISCARD_TIMER': {
       await discardTimer();
-      return { summary: 'Cronômetro descartado.', navigateTo: '/estudar-agora' };
+      return { summary: 'Cronômetro descartado.' };
     }
 
     case 'LOG_QUESTIONS': {
-      const discId = (params.disciplineId as string) || disciplines[0]?.id;
-      if (!discId) throw new Error('Nenhuma disciplina disponível.');
-      const disc = disciplines.find((d) => d.id === discId);
+      const discId =
+        (params.disciplineId as string) || disciplines[0]?.id || 'logica-programacao';
+      const topicId = (params.topicId as string | null) ?? null;
       const total = Math.max(1, Number(params.total) || 10);
-      const correct = Math.min(total, Math.max(0, Number(params.correct ?? Math.round(total * 0.8))));
+      const correct = Math.min(total, Math.max(0, Number(params.correct ?? total)));
       const incorrect = Math.max(0, total - correct);
+      const date =
+        typeof params.date === 'string' && isValidDateKey(params.date) ? params.date : today;
+      const source = (params.source as string) || 'Bateria registrada via Assistente IA';
+
       await saveQuestionLog(
         {
-          date: (params.date as DateKey) || today,
+          date,
           disciplineId: discId,
-          topicId: (params.topicId as string | null) ?? null,
-          source: (params.source as string) || 'Bateria registrada via Assistente',
+          topicId,
+          source,
           total,
           correct,
           incorrect,
@@ -554,25 +670,26 @@ export async function executeAssistantAction(
         },
         { allowDuplicate: true },
       );
+      const discName = disciplines.find((d) => d.id === discId)?.name ?? discId;
       const pct = Math.round((correct / total) * 100);
       return {
-        summary: `Bateria de questões registrada em ${disc?.name ?? discId}: ${correct}/${total} acertos (${pct}%).`,
+        summary: `Bateria registrada em **${discName}**: ${correct}/${total} acertos (${pct}%) em ${formatDate(date)}.`,
         navigateTo: '/questoes',
       };
     }
 
     case 'ADD_TOPIC': {
-      const discId = (params.disciplineId as string) || disciplines[0]?.id;
-      if (!discId) throw new Error('Nenhuma disciplina disponível.');
-      const disc = disciplines.find((d) => d.id === discId);
-      const title = (params.title as string)?.trim() || 'Novo Tópico';
-      await createTopic(discId, null, {
+      const discId =
+        (params.disciplineId as string) || disciplines[0]?.id || 'logica-programacao';
+      const title = (params.title as string) || 'Novo Tópico';
+      const topic = await createTopic(discId, null, {
         title,
         status: 'nao-iniciado',
         notes: '',
       });
+      const discName = disciplines.find((d) => d.id === discId)?.name ?? discId;
       return {
-        summary: `Tópico "${title}" adicionado na disciplina ${disc?.name ?? discId}.`,
+        summary: `Tópico "${topic.title}" adicionado à disciplina **${discName}**.`,
         navigateTo: '/disciplinas',
       };
     }
@@ -580,22 +697,24 @@ export async function executeAssistantAction(
     case 'UPDATE_TOPIC_STATUS': {
       const topicId = params.topicId as string | undefined;
       const status = ((params.status as TopicStatus) || 'concluido') as TopicStatus;
-      const target = topicId ? topics.find((t) => t.id === topicId) : topics[0];
-      if (!target) {
-        return { summary: 'Tópico não encontrado para atualizar.' };
+      if (!topicId) {
+        return { summary: 'Nenhum tópico específico encontrado para atualizar.' };
       }
-      await setTopicStatus(target.id, status);
+      await setTopicStatus(topicId, status);
       return {
-        summary: `Status do tópico "${target.title}" atualizado para "${status}".`,
+        summary: `Status do tópico atualizado para **${status}**.`,
         navigateTo: '/disciplinas',
       };
     }
 
     case 'GENERATE_SCHEDULE': {
-      const startDate = (params.startDate as DateKey) || today;
-      const count = await generateSchedule(startDate);
+      const startDate =
+        typeof params.startDate === 'string' && isValidDateKey(params.startDate)
+          ? params.startDate
+          : today;
+      const res = await generateSchedule(startDate);
       return {
-        summary: `Cronograma gerado com sucesso a partir de ${formatDate(startDate)} (${count} sessões planejadas).`,
+        summary: `Cronograma gerado a partir de ${formatDate(startDate)}: ${res.sessionCount} sessões distribuídas em ${res.weekCount} semanas.`,
         navigateTo: '/cronograma',
       };
     }
@@ -612,7 +731,12 @@ export async function executeAssistantAction(
       if (params.reviewIntervals !== undefined) {
         const intervals = Array.isArray(params.reviewIntervals)
           ? (params.reviewIntervals as number[])
-          : [1, 7, 30];
+          : typeof params.reviewIntervals === 'string'
+            ? (() => {
+                const parsed = parseIntervals(params.reviewIntervals);
+                return parsed.ok ? parsed.value : [1, 7, 30];
+              })()
+            : [1, 7, 30];
         patch.reviewIntervals = intervals;
         parts.push(`intervalos de revisão para ${intervals.join(', ')}d`);
       }
@@ -669,477 +793,635 @@ export async function executeAssistantAction(
 }
 
 /**
- * Interpreta o pedido em linguagem natural (motor local determinístico)
- * cobrindo todas as funcionalidades da plataforma.
+ * Constrói o snapshot completo e determinístico de todos os dados reais do usuário no banco de dados.
+ * Serve como fonte única da verdade (grounding) para impedir qualquer alucinação do modelo Gemini.
  */
-export async function parseBuiltinAssistantIntent(
-  userMessage: string,
-  today: DateKey = todayKey(),
-): Promise<{ actions: AssistantAction[]; directReply?: string }> {
-  const norm = normalize(userMessage);
-  const [disciplines, topics] = await Promise.all([
+export async function buildAssistantGroundingContext(today: DateKey = todayKey()): Promise<string> {
+  await reconcileReviewsAndErrorNotes();
+
+  const [
+    disciplines,
+    topics,
+    sessions,
+    reviews,
+    errorNotes,
+    questionLogs,
+    mockExams,
+    weeklyPlans,
+    settings,
+    activeTimer,
+  ] = await Promise.all([
     db.disciplines.toArray(),
     db.topics.toArray(),
+    db.sessions.toArray(),
+    db.reviews.toArray(),
+    db.errorNotes.toArray(),
+    db.questionLogs.toArray(),
+    db.mockExams.toArray(),
+    db.weeklyPlans.toArray(),
+    getSettings(),
+    getActiveTimer(),
   ]);
-  const disc = matchDiscipline(userMessage, disciplines);
-  const topic = matchTopic(userMessage, topics, disc?.id);
-  const dates = extractDatesFromText(userMessage, today);
-  const minutes = extractDurationMinutes(userMessage);
 
-  // 1. Limpar revisões futuras / sincronizar revisões com caderno de erros
-  if (
-    (/\b(remover|remova|limpar|limpe|apagar|excluir|sincronizar|sincronize)\b/.test(norm) &&
-      /\b(revisoes futuras|revisao futura|intervalos futuros|caderno de erros)\b/.test(norm)) ||
-    /\bsincroniz\w+\s+.*revis/.test(norm)
-  ) {
-    return { actions: [{ type: 'SYNC_REVIEWS' }] };
-  }
+  const discMap = new Map(disciplines.map((d) => [d.id, d]));
+  const topicMap = new Map(topics.map((t) => [t.id, t]));
 
-  // 2. Mudar/adiar data de revisão (ex.: "mudar data de revisão do dia 10 para o dia 16", "adiar revisões atrasadas para amanhã")
-  if (
-    /\b(revisao|revisoes)\b/.test(norm) &&
-    (/\b(mudar|mude|alterar|altere|passar|passe|mover|mova|adiar|adie|remarcar|remarque|transferir|transfira)\b/.test(norm) ||
-      dates.length >= 1)
-  ) {
-    // Check if postponing by N days ("adiar em 3 dias")
-    const daysMatch = norm.match(/\b(?:em|por|mais)\s+(\d+)\s*dias?\b/);
-    if (daysMatch && /\b(adiar|adie)\b/.test(norm) && dates.length === 0) {
-      return {
-        actions: [
-          {
-            type: 'RESCHEDULE_REVIEWS',
-            params: {
-              days: Number(daysMatch[1]),
-              disciplineId: disc?.id,
-              onlyOverdue: /\batrasad/.test(norm),
-            },
-          },
-        ],
-      };
-    }
+  const rankState = computeRank({
+    sessions,
+    reviews,
+    settings,
+    today,
+  });
 
-    if (dates.length >= 2) {
-      return {
-        actions: [
-          {
-            type: 'RESCHEDULE_REVIEWS',
-            params: {
-              fromDueDate: dates[0],
-              newDueDate: dates[1],
-              disciplineId: disc?.id,
-            },
-          },
-        ],
-      };
-    }
-
-    if (dates.length === 1) {
-      return {
-        actions: [
-          {
-            type: 'RESCHEDULE_REVIEWS',
-            params: {
-              newDueDate: dates[0],
-              disciplineId: disc?.id,
-              onlyOverdue: /\batrasad/.test(norm),
-            },
-          },
-        ],
-      };
+  const minsByDisc = new Map<string, number>();
+  for (const s of sessions) {
+    if (s.status === 'concluida' || s.actualSeconds > 0) {
+      const m = s.actualSeconds > 0 ? Math.round(s.actualSeconds / 60) : s.plannedMinutes;
+      minsByDisc.set(s.disciplineId, (minsByDisc.get(s.disciplineId) ?? 0) + m);
     }
   }
+  const totalStudiedMins = Array.from(minsByDisc.values()).reduce((acc, m) => acc + m, 0);
 
-  // 3. Concluir revisão ("concluir revisão", "marcar revisão como concluída")
-  if (
-    /\b(concluir|conclua|finalizar|finaliza|marcar como concluida|fechar)\b/.test(norm) &&
-    /\b(revisao|revisoes)\b/.test(norm)
-  ) {
-    return {
-      actions: [
-        {
-          type: 'COMPLETE_REVIEW',
-          params: {
-            disciplineId: disc?.id,
-            all: /\b(todas|tudo|atrasadas|hoje)\b/.test(norm),
-          },
-        },
-      ],
-    };
+  const qByDisc = new Map<string, { total: number; correct: number }>();
+  for (const q of questionLogs) {
+    const prev = qByDisc.get(q.disciplineId) ?? { total: 0, correct: 0 };
+    prev.total += q.total;
+    prev.correct += q.correct;
+    qByDisc.set(q.disciplineId, prev);
   }
 
-  // 4. Agendar nova revisão ("agendar revisão de Arquitetura", "criar revisão")
-  if (
-    /\b(agendar|agende|criar|crie|adicionar|adicione|nova)\b/.test(norm) &&
-    /\b(revisao|revisoes)\b/.test(norm)
-  ) {
-    return {
-      actions: [
-        {
-          type: 'SCHEDULE_REVIEW',
-          params: {
-            disciplineId: disc?.id ?? disciplines[0]?.id,
-            topicId: topic?.id ?? null,
-            title: topic?.title ?? (disc ? `Revisão de ${disc.name}` : 'Revisão geral'),
-            baseDate: dates[0] ?? today,
-          },
-        },
-      ],
-    };
-  }
+  const revBuckets = reviewBuckets(reviews, today);
 
-  // 5. Caderno de erros ("adicionar um erro no caderno de erros", "registrar erro")
-  if (
-    /\b(caderno de erros?|anotacao de erro|\berro\b)\b/.test(norm) &&
-    /\b(adicionar|adicione|cadastrar|cadastre|registrar|registre|novo|criar|crie|inserir)\b/.test(norm)
-  ) {
-    const qMatch = userMessage.match(/quest[aã]o\s*#?(\d+)/i);
-    const ref = qMatch
-      ? `Questão ${qMatch[1]} · ${disc?.name ?? 'Prova'}`
-      : topic?.title
-        ? `${disc?.name ?? 'Estudo'} · ${topic.title}`
-        : `Erro em ${disc?.name ?? 'Estudo'}`;
-    const cleanedExplanation = userMessage
-      .replace(/^(?:quero\s+)?(?:adicionar|adicione|registrar|registre|cadastrar|cadastre|criar|crie)\s+(?:um\s+)?erro\s+(?:no\s+(?:meu\s+)?caderno\s+de\s+erros\s*)?(?:de\s+|em\s+|sobre\s+)?/i, '')
-      .trim();
-
-    let errorType: ErrorType = 'falta-conteudo';
-    if (/\bdesatencao\b/.test(norm)) errorType = 'desatencao';
-    else if (/\binterpretacao\b/.test(norm)) errorType = 'interpretacao';
-    else if (/\balternativas\b/.test(norm)) errorType = 'confusao-alternativas';
-
-    return {
-      actions: [
-        {
-          type: 'ADD_ERROR_NOTE',
-          params: {
-            disciplineId: disc?.id ?? disciplines[0]?.id,
-            topicId: topic?.id ?? null,
-            sourceReference: ref,
-            explanation: cleanedExplanation || ref,
-            errorType,
-            errorDate: today,
-            nextReviewDate: dates[0] ?? null,
-          },
-        },
-      ],
-    };
-  }
-
-  // 6. Registrar bateria de questões ("registrei 20 questões de Português com 16 acertos", "adicionar 15 questões")
-  if (/\bquest(ao|oes)\b/.test(norm) && /\b(\d+)\b/.test(norm)) {
-    const totalMatch = norm.match(/\b(\d+)\s*quest(ao|oes)\b/);
-    const correctMatch =
-      norm.match(/\b(\d+)\s*(?:acertos?|certas?|corretas?)\b/) ||
-      norm.match(/\bacert(?:ei|ou)\s*(\d+)\b/);
-    if (totalMatch || correctMatch) {
-      const total = totalMatch ? Number(totalMatch[1]) : Number(correctMatch![1]);
-      const correct = correctMatch ? Number(correctMatch[1]) : total;
-      return {
-        actions: [
-          {
-            type: 'LOG_QUESTIONS',
-            params: {
-              disciplineId: disc?.id ?? disciplines[0]?.id,
-              topicId: topic?.id ?? null,
-              total,
-              correct,
-              date: dates[0] ?? today,
-            },
-          },
-        ],
-      };
-    }
-  }
-
-  // 7. Cronômetro / Estudar agora ("iniciar cronômetro", "pausar cronômetro", "finalizar cronômetro")
-  if (/\b(cronometro|timer|foco|estudar agora)\b/.test(norm)) {
-    if (/\b(pausar|pause)\b/.test(norm)) return { actions: [{ type: 'PAUSE_TIMER' }] };
-    if (/\b(retomar|retome|continuar|continue)\b/.test(norm)) return { actions: [{ type: 'RESUME_TIMER' }] };
-    if (/\b(finalizar|finalize|concluir|conclua|encerrar|salvar)\b/.test(norm)) {
-      return { actions: [{ type: 'FINISH_TIMER' }] };
-    }
-    if (/\b(descartar|descarte|cancelar|cancele)\b/.test(norm)) {
-      return { actions: [{ type: 'DISCARD_TIMER' }] };
-    }
-    return {
-      actions: [
-        {
-          type: 'START_TIMER',
-          params: {
-            disciplineId: disc?.id ?? disciplines[0]?.id,
-            topicId: topic?.id ?? null,
-            plannedMinutes: minutes ?? 60,
-          },
-        },
-      ],
-    };
-  }
-
-  // 8. Sessões de estudo ("adicionar uma sessão", "agendar sessão", "concluir sessão", "reagendar sessão", "excluir sessão")
-  if (/\b(sessao|sessoes|aula|bloco de estudo)\b/.test(norm)) {
-    if (/\b(concluir|conclua|finalizar|marcar como concluida)\b/.test(norm)) {
-      return {
-        actions: [
-          {
-            type: 'COMPLETE_SESSION',
-            params: { disciplineId: disc?.id, actualMinutes: minutes ?? undefined },
-          },
-        ],
-      };
-    }
-    if (/\b(excluir|exclua|remover|remova|apagar|apague)\b/.test(norm)) {
-      return {
-        actions: [{ type: 'DELETE_SESSION', params: { disciplineId: disc?.id } }],
-      };
-    }
-    if (/\b(reagendar|reagende|mover|mova|adiar|adie|mudar|mude)\b/.test(norm) && dates.length >= 1) {
-      return {
-        actions: [
-          {
-            type: 'RESCHEDULE_SESSION',
-            params: { disciplineId: disc?.id, newDate: dates[dates.length - 1] },
-          },
-        ],
-      };
-    }
-
-    const timeMatch = norm.match(/\b([01]?\d|2[0-3]):([0-5]\d)\b/);
-    const plannedStart = timeMatch
-      ? `${String(Number(timeMatch[1])).padStart(2, '0')}:${timeMatch[2]}`
+  const daysUntilExam =
+    settings.examDate && isValidDateKey(settings.examDate)
+      ? diffDays(settings.examDate, today)
       : null;
 
-    return {
-      actions: [
-        {
-          type: 'ADD_SESSION',
-          params: {
-            disciplineId: disc?.id ?? disciplines[0]?.id,
-            topicId: topic?.id ?? null,
-            date: dates[0] ?? today,
-            plannedMinutes: minutes ?? 60,
-            objective: topic?.title ?? (disc ? `Estudo de ${disc.name}` : 'Sessão de estudo'),
-            plannedStart,
-          },
-        },
-      ],
-    };
+  const lines: string[] = [];
+
+  lines.push('=== DADOS REAIS DO USUÁRIO NA PLATAFORMA ESTUDAÊ (FONTE ÚNICA DA VERDADE) ===');
+  lines.push(
+    `Data de hoje: ${today} (${formatDate(today)}) | Ontem: ${addDays(today, -1)} (${formatDate(addDays(today, -1))}) | Amanhã: ${addDays(today, 1)} (${formatDate(addDays(today, 1))})`,
+  );
+
+  // 1. Concurso e Configurações
+  lines.push('\n[1. CONCURSO E CONFIGURAÇÕES]');
+  lines.push(`- Concurso: ${settings.contestName || 'Banco do Nordeste (BNB)'}`);
+  lines.push(`- Cargo/Perfil: ${settings.contestRole || 'Analista de Sistemas'}`);
+  lines.push(
+    `- Data da prova: ${settings.examDate ? `${settings.examDate} (${formatDate(settings.examDate)}) — faltam ${daysUntilExam} dia(s)` : 'Não definida'}`,
+  );
+  lines.push(`- Meta diária: ${settings.dailyGoalMinutes} min/dia (${(settings.dailyGoalMinutes / 60).toFixed(1)}h/dia)`);
+  lines.push(`- Intervalos de revisão espaçada: ${(settings.reviewIntervals ?? [1, 7, 30]).join(', ')} dias`);
+  lines.push(
+    `- Início do cronograma: ${
+      settings.scheduleStartDate
+        ? `${settings.scheduleStartDate} (${formatDate(settings.scheduleStartDate)})`
+        : 'Não definido'
+    }`,
+  );
+  lines.push(`- Tema visual: ${settings.theme}`);
+
+  // 2. Gamificação, Patente, XP, Ofensiva e Escudos
+  lines.push('\n[2. PATENTE, XP, OFENSIVA E ESCUDOS]');
+  lines.push(`- Patente atual: ${rankState.rank.name} (nível ${rankState.rankIndex + 1} de 18)`);
+  lines.push(`- XP Total atual: ${rankState.xp} XP (XP ganho hoje: +${rankState.todayXp} XP)`);
+  lines.push(
+    `- Próxima patente: ${
+      rankState.nextRank
+        ? `${rankState.nextRank.name} (necessário: ${rankState.nextRank.minXp} XP | faltam ${rankState.xpToNext} XP | progresso no nível atual: ${Math.round(rankState.progress * 100)}%)`
+        : 'Patente máxima alcançada (Aprovado de Elite — 18.000+ XP)'
+    }`,
+  );
+  lines.push(`- Tempo líquido total estudado: ${(totalStudiedMins / 60).toFixed(1)}h (${totalStudiedMins} min)`);
+  lines.push(`- Sequência atual (streak): ${rankState.streak} dia(s) consecutivo(s) válidos (recorde: ${rankState.bestStreak} dia(s))`);
+  lines.push(
+    `- Proteções ativas: Escudo de Patente=${rankState.shield ? 'Ativo' : 'Indisponível'} | Streak Freeze=${rankState.freezeAvailable ? 'Disponível' : `Em recarga (${rankState.freezeCooldownLeft}d)`}`,
+  );
+  lines.push(
+    '- Regras oficiais de XP e Patentes da plataforma: Dia estudado válido (>=30 min ou meta diária): +100 XP; Meta diária cumprida: +50 XP; Revisão concluída no dia: +30 XP (máx. 4/dia); Bônus de retorno após >=2 ausências: +50 XP; Penalidades em dias previstos sem estudo: 1ª ausência -250 XP, 2ª em diante -400 XP/dia (XP nunca fica negativo; Streak Freeze protege 1 ausência a cada 30 dias; Escudo de Patente ganho a cada 7 dias válidos seguidos impede 1 queda de patente).',
+  );
+
+  // 3. Cronômetro Ativo
+  lines.push('\n[3. CRONÔMETRO ATIVO AGORA]');
+  if (activeTimer) {
+    const dName = discMap.get(activeTimer.disciplineId)?.name ?? activeTimer.disciplineId;
+    const plannedMins = Math.round(activeTimer.plannedSeconds / 60);
+    lines.push(
+      `- Cronômetro ativo: Disciplina "${dName}" (id: ${activeTimer.disciplineId}) | Objetivo: "${activeTimer.objective}" | Planejado: ${plannedMins} min | Status: ${activeTimer.status === 'running' ? 'Em andamento' : 'Pausado'}`,
+    );
+  } else {
+    lines.push('- Nenhum cronômetro ativo no momento.');
   }
 
-  // 9. Tópicos do edital ("adicionar tópico", "marcar tópico como concluído")
-  if (/\btopico\b/.test(norm)) {
-    if (/\b(concluir|concluido|dominado|em andamento)\b/.test(norm) && topic) {
-      const status: TopicStatus = /\bdominado\b/.test(norm)
-        ? 'dominado'
-        : /\bandamento\b/.test(norm)
-          ? 'em-andamento'
-          : 'concluido';
-      return {
-        actions: [{ type: 'UPDATE_TOPIC_STATUS', params: { topicId: topic.id, status } }],
-      };
+  // 4. Disciplinas e Estatísticas por Disciplina
+  lines.push('\n[4. DISCIPLINAS E DESEMPENHO POR DISCIPLINA]');
+  for (const d of disciplines) {
+    const mins = minsByDisc.get(d.id) ?? 0;
+    const qStat = qByDisc.get(d.id) ?? { total: 0, correct: 0 };
+    const acc = qStat.total > 0 ? Math.round((qStat.correct / qStat.total) * 100) : 0;
+    const dTopics = topics.filter((t) => t.disciplineId === d.id && t.active);
+    const doneTopics = dTopics.filter((t) => t.status === 'concluido' || t.status === 'dominado').length;
+    const dSessions = sessions.filter((s) => s.disciplineId === d.id);
+    const completedSessions = dSessions.filter((s) => s.status === 'concluida').length;
+    const dErrors = errorNotes.filter((e) => e.disciplineId === d.id).length;
+
+    lines.push(
+      `- ID: "${d.id}" | Nome: "${d.name}" (${d.kind === 'technical' ? 'Conhecimentos Específicos' : 'Conhecimentos Básicos'}) | Ativa: ${d.active ? 'Sim' : 'Não'} | Estudado: ${mins} min (${(mins / 60).toFixed(1)}h) em ${completedSessions}/${dSessions.length} sessões | Questões: ${qStat.correct}/${qStat.total} acertos (${acc}%) | Tópicos concluídos/dominados: ${doneTopics}/${dTopics.length} | Erros no caderno: ${dErrors}`,
+    );
+  }
+
+  // 5. Tópicos do Edital Verticalizado
+  lines.push('\n[5. TÓPICOS DO EDITAL VERTICALIZADO POR DISCIPLINA]');
+  for (const d of disciplines.filter((disc) => disc.active)) {
+    const dTopics = topics
+      .filter((t) => t.disciplineId === d.id && t.active)
+      .sort((a, b) => a.order - b.order);
+    if (dTopics.length === 0) continue;
+    lines.push(`* ${d.name} (${d.id}):`);
+    for (const t of dTopics) {
+      lines.push(`  - [id: ${t.id}] "${t.title}" (status: ${t.status})`);
     }
-    if (/\b(adicionar|adicione|criar|crie|novo)\b/.test(norm)) {
-      const cleanedTitle = userMessage
-        .replace(/^(?:quero\s+)?(?:adicionar|adicione|criar|crie)\s+(?:um\s+)?(?:novo\s+)?t[oó]pico\s*(?:de|em|sobre)?\s*/i, '')
-        .trim();
-      return {
-        actions: [
-          {
-            type: 'ADD_TOPIC',
-            params: {
-              disciplineId: disc?.id ?? disciplines[0]?.id,
-              title: cleanedTitle || 'Novo Tópico de Estudo',
-            },
-          },
-        ],
-      };
+  }
+
+  // 6. Sessões de Estudo
+  const todaySessions = sessions.filter((s) => s.date === today);
+  const overdueSessions = sessions
+    .filter((s) => s.date < today && s.status !== 'concluida')
+    .sort((a, b) => a.date.localeCompare(b.date));
+  const upcomingSessions = sessions
+    .filter((s) => s.date > today && s.date <= addDays(today, 14) && s.status !== 'concluida')
+    .sort((a, b) => a.date.localeCompare(b.date));
+  const completedSessionsList = sessions
+    .filter((s) => s.status === 'concluida')
+    .sort((a, b) => b.date.localeCompare(a.date));
+
+  lines.push('\n[6. SESSÕES DE ESTUDO]');
+  lines.push(
+    `Resumo de sessões: Total=${sessions.length} | Concluídas=${completedSessionsList.length} | Hoje (${today})=${todaySessions.length} | Atrasadas=${overdueSessions.length}`,
+  );
+  lines.push(`* Sessões de HOJE (${today} — ${formatDate(today)}):`);
+  if (todaySessions.length === 0) {
+    lines.push('  - Nenhuma sessão agendada para hoje.');
+  } else {
+    for (const s of todaySessions) {
+      const dName = discMap.get(s.disciplineId)?.name ?? s.disciplineId;
+      const actualMins = Math.round(s.actualSeconds / 60);
+      lines.push(
+        `  - [id: ${s.id}] Disciplina: ${dName} (${s.disciplineId}) | Objetivo: "${s.objective}" | Planejado: ${s.plannedMinutes} min | Realizado: ${actualMins} min | Horário: ${s.plannedStart ?? 'livre'} | Status: ${s.status}`,
+      );
     }
   }
 
-  // 10. Configurações ("mudar meta diária para 180 minutos", "intervalo de revisão para 1, 7, 30", "tema escuro")
-  if (/\b(meta diaria|meta de estudo)\b/.test(norm) && (minutes || /\b(\d+)\b/.test(norm))) {
-    const numMatch = norm.match(/\b(\d+)\b/);
-    const goal = minutes ?? (numMatch ? Number(numMatch[1]) : 120);
-    return {
-      actions: [{ type: 'UPDATE_SETTINGS', params: { dailyGoalMinutes: goal } }],
-    };
-  }
-
-  if (/\bintervalos?\s+de\s+revis(ao|oes)\b/.test(norm)) {
-    const nums = [...norm.matchAll(/\b(\d+)\b/g)].map((m) => Number(m[1]));
-    const parsed = parseIntervals(nums.join(', '));
-    if (parsed.ok) {
-      return {
-        actions: [{ type: 'UPDATE_SETTINGS', params: { reviewIntervals: parsed.value } }],
-      };
+  lines.push(`* Sessões ATRASADAS (${overdueSessions.length}):`);
+  if (overdueSessions.length === 0) {
+    lines.push('  - Nenhuma sessão atrasada.');
+  } else {
+    for (const s of overdueSessions.slice(0, 25)) {
+      const dName = discMap.get(s.disciplineId)?.name ?? s.disciplineId;
+      lines.push(
+        `  - [id: ${s.id}] Data: ${s.date} (${formatDate(s.date)}) | Disciplina: ${dName} (${s.disciplineId}) | Objetivo: "${s.objective}" | ${s.plannedMinutes} min | Status: ${s.status}`,
+      );
     }
   }
 
-  if (/\btema\s+(escuro|dark|claro|light|sistema)\b/.test(norm)) {
-    const theme: ThemePreference = /\b(escuro|dark)\b/.test(norm)
-      ? 'dark'
-      : /\b(claro|light)\b/.test(norm)
-        ? 'light'
-        : 'system';
-    return {
-      actions: [{ type: 'UPDATE_SETTINGS', params: { theme } }],
-    };
+  lines.push(`* Próximas sessões agendadas nos próximos 14 dias (${upcomingSessions.length}):`);
+  if (upcomingSessions.length === 0) {
+    lines.push('  - Nenhuma sessão agendada para os próximos 14 dias.');
+  } else {
+    for (const s of upcomingSessions.slice(0, 30)) {
+      const dName = discMap.get(s.disciplineId)?.name ?? s.disciplineId;
+      lines.push(
+        `  - [id: ${s.id}] Data: ${s.date} (${formatDate(s.date)}) | Disciplina: ${dName} (${s.disciplineId}) | Objetivo: "${s.objective}" | ${s.plannedMinutes} min | Status: ${s.status}`,
+      );
+    }
   }
 
-  // 11. Gerar cronograma ("gerar cronograma")
-  if (/\b(gerar|gere|criar|crie)\s+(?:o\s+)?cronograma\b/.test(norm)) {
-    return {
-      actions: [{ type: 'GENERATE_SCHEDULE', params: { startDate: dates[0] ?? today } }],
-    };
+  if (completedSessionsList.length > 0) {
+    lines.push(`* Últimas sessões concluídas (até 15 mais recentes):`);
+    for (const s of completedSessionsList.slice(0, 15)) {
+      const dName = discMap.get(s.disciplineId)?.name ?? s.disciplineId;
+      const actualMins = Math.round(s.actualSeconds / 60) || s.plannedMinutes;
+      lines.push(
+        `  - Data: ${s.date} (${formatDate(s.date)}) | Disciplina: ${dName} (${s.disciplineId}) | Objetivo: "${s.objective}" | Tempo estudado: ${actualMins} min`,
+      );
+    }
   }
 
-  // 12. Navegação ("ir para revisões", "abrir simulados", "abrir caderno de erros")
-  if (/\b(ir para|abrir|abra|mostrar|mostre|navegar para)\b/.test(norm)) {
-    const routes: Array<[RegExp, string]> = [
-      [/\brevis(ao|oes)\b/, '/revisoes'],
-      [/\b(caderno de erros?|erros?)\b/, '/erros'],
-      [/\b(calendario|agenda)\b/, '/calendario'],
-      [/\bcronograma\b/, '/cronograma'],
-      [/\b(estudar agora|cronometro|foco)\b/, '/estudar-agora'],
-      [/\bquest(ao|oes)\b/, '/questoes'],
-      [/\bsimulados?\b/, '/simulados'],
-      [/\b(disciplinas?|edital|topicos?)\b/, '/disciplinas'],
-      [/\b(relatorios?|estatisticas?|desempenho)\b/, '/relatorios'],
-      [/\bconfigurac(ao|oes)\b/, '/configuracoes'],
-      [/\b(visao geral|inicio|home|dashboard)\b/, '/'],
-    ];
-    for (const [regex, route] of routes) {
-      if (regex.test(norm)) {
-        return { actions: [{ type: 'NAVIGATE', params: { route } }] };
+  // 7. Revisões Espaçadas
+  const completedReviewsCount = reviews.filter((r) => r.status === 'concluida').length;
+  lines.push('\n[7. REVISÕES ESPAÇADAS]');
+  lines.push(
+    `Resumo de revisões: Atrasadas=${revBuckets.overdue.length} | Para hoje (${today})=${revBuckets.today.length} | Próximas=${revBuckets.upcoming.length} | Concluídas=${completedReviewsCount}`,
+  );
+  lines.push('* Revisões ATRASADAS (pendentes com data anterior a hoje):');
+  if (revBuckets.overdue.length === 0) {
+    lines.push('  - Nenhuma revisão atrasada.');
+  } else {
+    for (const r of revBuckets.overdue) {
+      const dName = discMap.get(r.disciplineId)?.name ?? r.disciplineId;
+      lines.push(
+        `  - [id: ${r.id}] Data: ${r.dueDate} (${formatDate(r.dueDate)}) | Disciplina: ${dName} (${r.disciplineId}) | Título: "${r.title}" | Ciclo: ${r.intervalDays}d`,
+      );
+    }
+  }
+
+  lines.push(`* Revisões para HOJE (${today} — ${formatDate(today)}):`);
+  if (revBuckets.today.length === 0) {
+    lines.push('  - Nenhuma revisão pendente para hoje.');
+  } else {
+    for (const r of revBuckets.today) {
+      const dName = discMap.get(r.disciplineId)?.name ?? r.disciplineId;
+      lines.push(
+        `  - [id: ${r.id}] Data: ${r.dueDate} (${formatDate(r.dueDate)}) | Disciplina: ${dName} (${r.disciplineId}) | Título: "${r.title}" | Ciclo: ${r.intervalDays}d`,
+      );
+    }
+  }
+
+  lines.push('* Próximas revisões pendentes (futuras):');
+  if (revBuckets.upcoming.length === 0) {
+    lines.push('  - Nenhuma revisão futura agendada.');
+  } else {
+    for (const r of revBuckets.upcoming.slice(0, 30)) {
+      const dName = discMap.get(r.disciplineId)?.name ?? r.disciplineId;
+      lines.push(
+        `  - [id: ${r.id}] Data: ${r.dueDate} (${formatDate(r.dueDate)}) | Disciplina: ${dName} (${r.disciplineId}) | Título: "${r.title}" | Ciclo: ${r.intervalDays}d`,
+      );
+    }
+  }
+
+  // 8. Caderno de Erros
+  lines.push('\n[8. CADERNO DE ERROS]');
+  lines.push(
+    `Total de erros registrados: ${errorNotes.length} (Para revisar: ${errorNotes.filter((e) => e.status === 'revisar').length} | Revisados: ${errorNotes.filter((e) => e.status === 'revisado').length} | Dominados: ${errorNotes.filter((e) => e.status === 'dominado').length})`,
+  );
+  if (errorNotes.length === 0) {
+    lines.push('  - Nenhum erro registrado no Caderno de Erros.');
+  } else {
+    for (const e of errorNotes.slice(0, 40)) {
+      const dName = discMap.get(e.disciplineId)?.name ?? e.disciplineId;
+      const tTitle = e.topicId ? topicMap.get(e.topicId)?.title : null;
+      lines.push(
+        `  - [id: ${e.id}] Disciplina: ${dName} (${e.disciplineId})${tTitle ? ` | Tópico: "${tTitle}"` : ''} | Ref: "${e.sourceReference}" | Tipo: ${e.errorType} | Status: ${e.status} | Data do erro: ${e.errorDate} (${formatDate(e.errorDate)}) | Próxima revisão: ${e.nextReviewDate ? `${e.nextReviewDate} (${formatDate(e.nextReviewDate)})` : 'Sem data'} | Explicação/Anotação: "${e.explanation}"`,
+      );
+    }
+  }
+
+  // 9. Baterias de Questões e Simulados
+  const totalQuestions = questionLogs.reduce((acc, q) => acc + q.total, 0);
+  const totalCorrect = questionLogs.reduce((acc, q) => acc + q.correct, 0);
+  const globalAcc = totalQuestions > 0 ? Math.round((totalCorrect / totalQuestions) * 100) : 0;
+
+  lines.push('\n[9. BATERIAS DE QUESTÕES E SIMULADOS]');
+  lines.push(
+    `Total global de questões resolvidas: ${totalQuestions} | Acertos: ${totalCorrect} | Aproveitamento global: ${globalAcc}%`,
+  );
+  if (questionLogs.length > 0) {
+    const recentLogs = [...questionLogs].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 20);
+    lines.push('* Últimas baterias de questões registradas:');
+    for (const q of recentLogs) {
+      const dName = discMap.get(q.disciplineId)?.name ?? q.disciplineId;
+      const pct = q.total > 0 ? Math.round((q.correct / q.total) * 100) : 0;
+      lines.push(
+        `  - Data: ${q.date} (${formatDate(q.date)}) | Disciplina: ${dName} (${q.disciplineId}) | Acertos: ${q.correct}/${q.total} (${pct}%) | Fonte: "${q.source}"`,
+      );
+    }
+  } else {
+    lines.push('* Nenhuma bateria de questões registrada até o momento.');
+  }
+
+  if (mockExams.length > 0) {
+    lines.push(`* Simulados realizados (${mockExams.length}):`);
+    for (const m of mockExams) {
+      let correctCount = 0;
+      for (const [qNum, ans] of Object.entries(m.answerKey ?? {})) {
+        if (m.responses?.[qNum] && m.responses[qNum] === ans) {
+          correctCount++;
+        }
       }
+      const totalQ = m.questionCount || Object.keys(m.answerKey ?? {}).length;
+      const pct = totalQ > 0 ? Math.round((correctCount / totalQ) * 100) : 0;
+      const dateStr = m.date ? `${m.date} (${formatDate(m.date)})` : 'Sem data';
+      lines.push(
+        `  - Data: ${dateStr} | Título: "${m.title}" | Resultado: ${correctCount}/${totalQ} (${pct}%) | Status: ${m.submittedAt ? 'Finalizado' : 'Em aberto'}`,
+      );
+    }
+  } else {
+    lines.push('* Nenhum simulado registrado até o momento.');
+  }
+
+  // 10. Planos Semanais (Cronograma Macro)
+  if (weeklyPlans.length > 0) {
+    const sortedWeeks = [...weeklyPlans].sort((a, b) => a.weekIndex - b.weekIndex);
+    lines.push(`\n[10. PLANO SEMANAL DE ESTUDOS (${sortedWeeks.length} semanas)]`);
+    for (const w of sortedWeeks.slice(0, 12)) {
+      lines.push(
+        `  - Semana ${w.weekIndex} (início ${w.weekStart} — ${formatDate(w.weekStart)}, status: ${w.status}): ${w.objectives}`,
+      );
     }
   }
 
-  // 13. Caso mencione mudar data de erro/caderno de erros ("mudar data do caderno de erros do dia 10 para 16")
-  if (/\b(caderno de erros?|erros?)\b/.test(norm) && dates.length >= 1) {
-    return {
-      actions: [
-        {
-          type: 'RESCHEDULE_REVIEWS',
-          params: {
-            fromDueDate: dates.length >= 2 ? dates[0] : undefined,
-            newDueDate: dates[dates.length - 1],
-            disciplineId: disc?.id,
-          },
-        },
-      ],
-    };
-  }
-
-  // Default: Resumo inteligente + orientações de comandos
-  return {
-    actions: [{ type: 'STATUS_SUMMARY' }],
-  };
+  return lines.join('\n');
 }
 
-async function tryGeminiAssistantIntent(
-  userMessage: string,
-  apiKey: string,
-  today: DateKey,
-): Promise<{ actions: AssistantAction[]; directReply?: string } | null> {
+async function getAvailableGeminiModelsForAssistant(apiKey: string): Promise<string[]> {
+  const cached = geminiModelsCache.get(apiKey);
+  if (cached && cached.length > 0) {
+    return cached;
+  }
+
   try {
-    const [disciplines, topics, reviews, errorNotes] = await Promise.all([
-      db.disciplines.toArray(),
-      db.topics.toArray(),
-      db.reviews.toArray(),
-      db.errorNotes.toArray(),
-    ]);
-    const discSummary = disciplines.map((d) => `${d.id}: ${d.name}`).join(', ');
-    const pendingReviewsCount = reviews.filter((r) => r.status === 'pendente').length;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 8_000);
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey)}`,
+      { signal: controller.signal },
+    ).finally(() => clearTimeout(timer));
 
-    const systemPrompt = `Você é o Assistente IA oficial da plataforma estudaê.
-Data de hoje: ${today}.
-Disciplinas disponíveis (id: nome): ${discSummary}.
-Total de tópicos ativos: ${topics.length}. Revisões pendentes: ${pendingReviewsCount}. Cadernos de erro: ${errorNotes.length}.
+    if (response.ok) {
+      const data = (await response.json()) as {
+        models?: Array<{ name?: string; supportedGenerationMethods?: string[] }>;
+      };
+      if (Array.isArray(data.models) && data.models.length > 0) {
+        const models = data.models
+          .filter((m) => m.supportedGenerationMethods?.includes('generateContent'))
+          .map((m) => (m.name ?? '').replace(/^models\//, ''))
+          .filter(
+            (name) =>
+              Boolean(name) &&
+              !name.includes('embedding') &&
+              !name.includes('aqa') &&
+              !name.includes('imagen') &&
+              !name.includes('tts') &&
+              !name.includes('vision'),
+          );
 
-Sua tarefa é traduzir o pedido do usuário em JSON estrito no formato:
+        if (models.length > 0) {
+          models.sort((a, b) => {
+            const rankModel = (n: string) => {
+              if (n === 'gemini-2.5-flash') return 0;
+              if (n.startsWith('gemini-2.5-flash')) return 1;
+              if (n === 'gemini-2.0-flash') return 2;
+              if (n.startsWith('gemini-2.0-flash')) return 3;
+              if (n.includes('flash')) return 4;
+              if (n.includes('pro')) return 5;
+              return 6;
+            };
+            return rankModel(a) - rankModel(b);
+          });
+          geminiModelsCache.set(apiKey, models);
+          return models;
+        }
+      }
+    }
+  } catch {
+    // Fallback silencioso para a lista padrão de modelos Gemini
+  }
+
+  geminiModelsCache.set(apiKey, DEFAULT_GEMINI_MODELS);
+  return DEFAULT_GEMINI_MODELS;
+}
+
+function extractJsonObject(raw: string): string {
+  const trimmed = raw.trim();
+  const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fenced?.[1]) {
+    return fenced[1].trim();
+  }
+  const firstBrace = trimmed.indexOf('{');
+  const lastBrace = trimmed.lastIndexOf('}');
+  if (firstBrace !== -1 && lastBrace > firstBrace) {
+    return trimmed.slice(firstBrace, lastBrace + 1);
+  }
+  return trimmed;
+}
+
+async function callGeminiAssistant(params: {
+  userMessage: string;
+  apiKey: string;
+  today: DateKey;
+  history?: AssistantChatMessage[];
+}): Promise<{ reply: string; actions: AssistantAction[] }> {
+  const { userMessage, apiKey, today, history = [] } = params;
+  const groundingContext = await buildAssistantGroundingContext(today);
+  const disciplines = await db.disciplines.toArray();
+
+  const systemInstruction = `Você é o Assistente IA oficial e especialista da plataforma de estudos "estudaê".
+Sua missão é responder a QUALQUER pergunta do usuário de forma certeira, exata, didática e SEM ALUCINAR, além de executar comandos na plataforma quando solicitado.
+
+REGRAS INEGOCIÁVEIS CONTRA ALUCINAÇÃO (GROUNDING ESTRITO):
+1. FIDELIDADE ABSOLUTA AOS DADOS DO USUÁRIO:
+   - Abaixo está o bloco "DADOS REAIS DO USUÁRIO NA PLATAFORMA ESTUDAÊ (FONTE ÚNICA DA VERDADE)".
+   - Sempre que o usuário perguntar sobre suas revisões, sessões de estudo, cronograma, disciplinas, tópicos do edital, caderno de erros, questões resolvidas, taxa de acerto, simulados, patente/elo, XP, ofensiva (streak), escudos ou configurações, baseie sua resposta EXCLUSIVAMENTE nesses dados reais.
+   - NUNCA invente sessões, revisões, datas, quantidades, porcentagens, nomes de tópicos ou erros que não constem explicitamente no contexto abaixo.
+   - Se uma lista estiver vazia (ex.: 0 revisões hoje, 0 erros registrados em uma matéria, 0 simulados), diga claramente que não há registros para aquele item.
+
+2. PERGUNTAS TEÓRICAS, DE CONTEÚDO DO EDITAL OU DE RESOLUÇÃO DE PROVAS:
+   - Se o usuário fizer uma pergunta teórica ou conceitual sobre qualquer matéria (ex.: Arquitetura de Software, Engenharia de Software, Banco de Dados, Computação em Nuvem, Lógica de Programação, Linguagens de Programação, Língua Portuguesa, Raciocínio Lógico, Conhecimentos Bancários, etc.), explique com precisão técnica, clareza e foco em como as bancas de concurso (como Cesgranrio, CEBRASPE, FCC, FGV) cobram o tema.
+   - Não invente conceitos, leis ou regras inexistentes. Se a pergunta for ambígua, esclareça os pontos com rigor técnico.
+
+3. QUANDO USAR "actions" VS QUANDO APENAS RESPONDER ("actions": []):
+   - Se o usuário estiver FAZENDO UMA PERGUNTA, pedindo explicação, tirando dúvida, pedindo análise de desempenho, consultando sua agenda/revisões/erros ou conversando: retorne \`"actions": []\` (array vazio) e coloque a resposta completa, precisa e bem formatada no campo \`"reply"\`.
+   - NUNCA adicione ações em \`"actions"\` se o usuário não pediu explicitamente para criar, alterar, reagendar, concluir, excluir ou abrir algo na plataforma.
+   - NUNCA use \`"STATUS_SUMMARY"\` quando você mesmo já puder responder diretamente no campo \`"reply"\` usando os dados reais fornecidos abaixo.
+   - Quando o usuário pedir explicitamente uma ação na plataforma (ex.: "reagende minhas revisões do dia X para Y", "adicione uma sessão de Banco de Dados hoje", "registre 20 questões de Português com 16 acertos", "adicione um erro no caderno de erros", "inicie o cronômetro", "mude minha meta diária para 180 minutos"), inclua a ação correspondente em \`"actions"\` e confirme no campo \`"reply"\`.
+
+4. FORMATO DE SAÍDA (JSON ESTRITO):
+Responda APENAS com um objeto JSON válido no seguinte formato:
 {
-  "reply": "resposta cordial e objetiva em português",
+  "reply": "Sua resposta completa, certeira e sem alucinações em português (pode usar quebras de linha e marcadores • ou **negrito**).",
   "actions": [
     {
-      "type": "RESCHEDULE_REVIEWS" | "SCHEDULE_REVIEW" | "COMPLETE_REVIEW" | "REOPEN_REVIEW" | "DELETE_REVIEW" | "SYNC_REVIEWS" | "ADD_ERROR_NOTE" | "UPDATE_ERROR_STATUS" | "DELETE_ERROR_NOTE" | "ADD_SESSION" | "COMPLETE_SESSION" | "RESCHEDULE_SESSION" | "DELETE_SESSION" | "START_TIMER" | "PAUSE_TIMER" | "RESUME_TIMER" | "FINISH_TIMER" | "DISCARD_TIMER" | "LOG_QUESTIONS" | "ADD_TOPIC" | "UPDATE_TOPIC_STATUS" | "GENERATE_SCHEDULE" | "UPDATE_SETTINGS" | "NAVIGATE" | "STATUS_SUMMARY",
+      "type": "NOME_DA_ACAO",
       "params": { ... }
     }
   ]
 }
-Parâmetros aceitos por tipo:
+
+AÇÕES DISPONÍVEIS PARA O ARRAY "actions" (use SOMENTE quando o usuário pedir para executar uma operação):
 - RESCHEDULE_REVIEWS: { newDueDate: "YYYY-MM-DD", fromDueDate?: "YYYY-MM-DD", disciplineId?: string, onlyOverdue?: boolean, days?: number }
 - SCHEDULE_REVIEW: { disciplineId: string, topicId?: string | null, title: string, baseDate?: "YYYY-MM-DD" }
-- COMPLETE_REVIEW: { disciplineId?: string, all?: boolean }
+- COMPLETE_REVIEW: { reviewId?: string, disciplineId?: string, all?: boolean }
+- REOPEN_REVIEW: {}
+- DELETE_REVIEW: { reviewId?: string, title?: string }
 - SYNC_REVIEWS: {}
-- ADD_ERROR_NOTE: { disciplineId: string, topicId?: string | null, sourceReference: string, explanation: string, errorType?: "falta-conteudo" | "desatencao" | "interpretacao" | "chute", errorDate?: "YYYY-MM-DD", nextReviewDate?: "YYYY-MM-DD" | null }
-- ADD_SESSION: { disciplineId: string, topicId?: string | null, date?: "YYYY-MM-DD", plannedMinutes?: number, type?: "teoria" | "questoes" | "revisao" | "simulado", objective?: string, plannedStart?: "HH:mm" | null }
-- COMPLETE_SESSION: { disciplineId?: string, actualMinutes?: number }
-- RESCHEDULE_SESSION: { disciplineId?: string, newDate: "YYYY-MM-DD" }
+- ADD_ERROR_NOTE: { disciplineId: string, topicId?: string | null, sourceReference: string, explanation: string, errorType?: "falta-conteudo" | "desatencao" | "interpretacao" | "confusao-alternativas", errorDate?: "YYYY-MM-DD", nextReviewDate?: "YYYY-MM-DD" | null }
+- UPDATE_ERROR_STATUS: { status: "revisar" | "revisado" | "dominado" }
+- DELETE_ERROR_NOTE: {}
+- ADD_SESSION: { disciplineId: string, topicId?: string | null, date?: "YYYY-MM-DD", plannedMinutes?: number, objective?: string, plannedStart?: "HH:mm" | null }
+- COMPLETE_SESSION: { disciplineId?: string, date?: "YYYY-MM-DD", actualMinutes?: number }
+- RESCHEDULE_SESSION: { disciplineId?: string, fromDate?: "YYYY-MM-DD", newDate: "YYYY-MM-DD" }
 - DELETE_SESSION: { disciplineId?: string }
-- START_TIMER: { disciplineId: string, plannedMinutes?: number, objective?: string }
-- PAUSE_TIMER / RESUME_TIMER / FINISH_TIMER / DISCARD_TIMER: {}
-- LOG_QUESTIONS: { disciplineId: string, total: number, correct: number, date?: "YYYY-MM-DD", source?: string }
+- START_TIMER: { disciplineId: string, topicId?: string | null, plannedMinutes?: number, objective?: string }
+- PAUSE_TIMER: {}
+- RESUME_TIMER: {}
+- FINISH_TIMER: {}
+- DISCARD_TIMER: {}
+- LOG_QUESTIONS: { disciplineId: string, topicId?: string | null, total: number, correct: number, date?: "YYYY-MM-DD", source?: string }
 - ADD_TOPIC: { disciplineId: string, title: string }
+- UPDATE_TOPIC_STATUS: { topicId: string, status: "nao-iniciado" | "em-andamento" | "concluido" | "dominado" }
+- GENERATE_SCHEDULE: { startDate?: "YYYY-MM-DD" }
 - UPDATE_SETTINGS: { dailyGoalMinutes?: number, reviewIntervals?: number[], examDate?: "YYYY-MM-DD", theme?: "light" | "dark" | "system" }
 - NAVIGATE: { route: "/" | "/calendario" | "/cronograma" | "/estudar-agora" | "/questoes" | "/erros" | "/revisoes" | "/simulados" | "/disciplinas" | "/relatorios" | "/configuracoes" }
-- STATUS_SUMMARY: {}
-Responda APENAS com o objeto JSON.`;
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-goog-api-key': apiKey,
-        },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: systemPrompt }] },
-          contents: [{ role: 'user', parts: [{ text: userMessage }] }],
-          generationConfig: {
-            temperature: 0.1,
-            responseMimeType: 'application/json',
+${groundingContext}`;
+
+  const recentHistory = history
+    .filter((m) => m.content && m.content.trim().length > 0)
+    .slice(-10)
+    .map((m) => ({
+      role: m.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: m.content }],
+    }));
+
+  const contents = [
+    ...recentHistory,
+    {
+      role: 'user',
+      parts: [{ text: userMessage }],
+    },
+  ];
+
+  const models = await getAvailableGeminiModelsForAssistant(apiKey);
+  let lastError = 'Não foi possível obter resposta da API do Google Gemini.';
+
+  for (const model of models) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 45_000);
+    try {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-goog-api-key': apiKey,
           },
-        }),
-      },
-    );
-    if (!response.ok) return null;
-    const data = (await response.json()) as {
-      candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
-    };
-    const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!rawText) return null;
-    const parsed = JSON.parse(rawText) as {
-      reply?: string;
-      actions?: AssistantAction[];
-    };
-    if (!Array.isArray(parsed.actions) || parsed.actions.length === 0) return null;
-    return {
-      actions: parsed.actions,
-      directReply: parsed.reply,
-    };
-  } catch {
-    return null;
+          signal: controller.signal,
+          body: JSON.stringify({
+            systemInstruction: { parts: [{ text: systemInstruction }] },
+            contents,
+            generationConfig: {
+              temperature: 0.1,
+              topP: 0.8,
+              responseMimeType: 'application/json',
+            },
+          }),
+        },
+      );
+
+      if (!response.ok) {
+        const errBody = (await response.text()).slice(0, 300);
+        lastError = `Erro na API do Gemini (${response.status} em ${model}): ${errBody}`;
+        if (response.status === 401 || response.status === 403) {
+          throw new Error(
+            'Chave de API do Google Gemini inválida ou sem permissão. Verifique sua chave em Configurações.',
+          );
+        }
+        if (response.status === 400 && /API_KEY_INVALID|API key not valid/i.test(errBody)) {
+          throw new Error(
+            'Chave de API do Google Gemini inválida. Verifique sua chave em Configurações.',
+          );
+        }
+        continue;
+      }
+
+      const data = (await response.json()) as {
+        candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+      };
+      const rawText = (data.candidates?.[0]?.content?.parts ?? [])
+        .map((p) => p.text ?? '')
+        .join('')
+        .trim();
+
+      if (!rawText) {
+        lastError = `O modelo ${model} retornou uma resposta vazia.`;
+        continue;
+      }
+
+      try {
+        const parsed = JSON.parse(extractJsonObject(rawText)) as {
+          reply?: string;
+          actions?: AssistantAction[];
+        };
+        const actions = Array.isArray(parsed.actions) ? parsed.actions : [];
+        // Normaliza disciplineId caso o modelo tenha enviado o nome da disciplina em vez do ID
+        for (const act of actions) {
+          if (act.params && typeof act.params.disciplineId === 'string') {
+            const rawDisc = act.params.disciplineId;
+            const exact = disciplines.find((d) => d.id === rawDisc);
+            if (!exact) {
+              const matched = matchDiscipline(rawDisc, disciplines);
+              if (matched) {
+                act.params.disciplineId = matched.id;
+              }
+            }
+          }
+        }
+        const reply = typeof parsed.reply === 'string' ? parsed.reply.trim() : '';
+        if (!reply && actions.length === 0) {
+          lastError = `O modelo ${model} retornou um JSON sem resposta e sem ações.`;
+          continue;
+        }
+        return { reply, actions };
+      } catch {
+        // Caso o modelo tenha retornado texto puro válido em vez de JSON
+        return {
+          reply: rawText,
+          actions: [],
+        };
+      }
+    } catch (err) {
+      if (
+        err instanceof Error &&
+        (err.message.includes('Chave de API do Google Gemini inválida') ||
+          err.message.includes('sem permissão'))
+      ) {
+        throw err;
+      }
+      lastError = err instanceof Error ? err.message : String(err);
+    } finally {
+      clearTimeout(timer);
+    }
   }
+
+  throw new Error(lastError);
 }
 
 /**
- * Processa a mensagem do usuário, executa todas as ações correspondentes na plataforma
- * e retorna a confirmação detalhada.
+ * Processa a mensagem do usuário utilizando EXCLUSIVAMENTE a API do Google Gemini
+ * com grounding completo nos dados reais do banco de dados da plataforma.
  */
 export async function processAssistantMessage(
   userMessage: string,
-  today: DateKey = todayKey(),
+  todayOrOptions: DateKey | ProcessAssistantOptions = todayKey(),
+  historyArg?: AssistantChatMessage[],
 ): Promise<AssistantResponse> {
-  const settings = await getSettings();
-  let plan: { actions: AssistantAction[]; directReply?: string } | null = null;
+  const options: ProcessAssistantOptions =
+    typeof todayOrOptions === 'string'
+      ? { today: todayOrOptions, history: historyArg }
+      : todayOrOptions;
 
-  if (settings.geminiApiKey?.trim()) {
-    plan = await tryGeminiAssistantIntent(userMessage, settings.geminiApiKey.trim(), today);
+  const today = options.today ?? todayKey();
+  const settings = await getSettings();
+  const envKey = (
+    (import.meta as unknown as { env?: Record<string, string | undefined> }).env
+      ?.VITE_GEMINI_API_KEY ?? ''
+  ).trim();
+  const apiKey = (options.apiKey ?? settings.geminiApiKey ?? envKey).trim();
+
+  if (!apiKey) {
+    throw new Error(
+      'Chave da API do Google Gemini não configurada. Informe sua chave Gemini abaixo ou em Configurações para usar o Assistente IA.',
+    );
   }
-  if (!plan) {
-    plan = await parseBuiltinAssistantIntent(userMessage, today);
-  }
+
+  const plan = await callGeminiAssistant({
+    userMessage,
+    apiKey,
+    today,
+    history: options.history,
+  });
 
   const executedActions: string[] = [];
   let navigateTo: string | undefined;
@@ -1152,9 +1434,10 @@ export async function processAssistantMessage(
     }
   }
 
-  const reply = plan.directReply
-    ? `${plan.directReply}\n\n${executedActions.join('\n')}`
-    : executedActions.join('\n\n');
+  const reply =
+    plan.reply && executedActions.length > 0
+      ? `${plan.reply}\n\n${executedActions.join('\n')}`
+      : plan.reply || executedActions.join('\n\n');
 
   return {
     reply,
