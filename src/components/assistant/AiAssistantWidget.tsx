@@ -28,14 +28,6 @@ interface ChatMessage {
   isError?: boolean;
 }
 
-const QUICK_SUGGESTIONS = [
-  'O que tenho para estudar e revisar hoje?',
-  'Qual disciplina estou com menor taxa de acerto?',
-  'Quanto XP falta para minha próxima patente?',
-  'Sincronizar revisões com caderno de erros',
-  'Adicionar sessão de Arquitetura 60 min hoje',
-];
-
 export function AiAssistantWidget() {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState('');
@@ -279,22 +271,6 @@ export function AiAssistantWidget() {
               </div>
             )}
             <div ref={endRef} />
-          </div>
-
-          <div className="border-t border-border bg-surface px-3 pt-2 pb-1">
-            <div className="flex gap-1.5 overflow-x-auto pb-1.5 no-scrollbar">
-              {QUICK_SUGGESTIONS.map((suggestion) => (
-                <button
-                  key={suggestion}
-                  type="button"
-                  onClick={() => void sendPrompt(suggestion)}
-                  disabled={loading}
-                  className="shrink-0 rounded-full border border-border bg-surface-muted/60 hover:bg-surface-muted px-2.5 py-1 text-[11px] text-fg-muted hover:text-fg transition-colors cursor-pointer"
-                >
-                  {suggestion}
-                </button>
-              ))}
-            </div>
           </div>
 
           <form
