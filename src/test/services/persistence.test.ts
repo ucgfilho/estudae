@@ -25,7 +25,7 @@ import {
   restoreBackup,
 } from '../../services/backup';
 import { generateSchedule, clearSchedule } from '../../services/schedule';
-import { saveErrorNote, saveQuestionLog } from '../../services/performance';
+import { completeReview, saveErrorNote, saveQuestionLog, scheduleTopicReviews } from '../../services/performance';
 import { createTopic, deleteAllTopics } from '../../services/topics';
 
 describe('services/persistence & workflows', () => {
@@ -365,9 +365,10 @@ describe('services/persistence & workflows', () => {
     expect(stored?.explanation).toBe('Confundi operadores lógicos em laço while.');
     expect(stored?.questionLogId).toBe(log.id);
 
-    // Verify reviews were created
+    // Verify only the first review in the interval (1d) is created initially
     const reviews = await db.reviews.where('errorNoteId').equals(note.id).toArray();
-    expect(reviews.length).toBe(3); // 1, 7, 30 days
+    expect(reviews.length).toBe(1);
+    expect(reviews[0].intervalDays).toBe(1);
 
     // Reopen and update existing note
     const updatedNote = await saveErrorNote(
@@ -393,7 +394,31 @@ describe('services/persistence & workflows', () => {
     const allNotes = await db.errorNotes.toArray();
     const allNotesForLog = allNotes.filter((n) => n.questionLogId === log.id);
     expect(allNotesForLog.length).toBe(1);
-    expect(allNotesForLog[0].explanation).toBe('Confundi operadores lógicos em laço while. Re-lido com atenção.');
+  });
+
+  it('releases the next review in the interval only when the current review is completed', async () => {
+    const count = await scheduleTopicReviews('logica-programacao', null, 'Estruturas de Dados', '2026-10-15');
+    expect(count).toBe(1);
+
+    let reviews = await db.reviews.where('disciplineId').equals('logica-programacao').toArray();
+    expect(reviews.map((r) => r.intervalDays)).toEqual([1]);
+
+    // Completing 1d unlocks 7d
+    await completeReview(reviews[0].id);
+    reviews = await db.reviews.where('disciplineId').equals('logica-programacao').toArray();
+    expect(reviews.map((r) => r.intervalDays).sort((a, b) => a - b)).toEqual([1, 7]);
+
+    // Completing 7d unlocks 30d
+    const review7d = reviews.find((r) => r.intervalDays === 7)!;
+    await completeReview(review7d.id);
+    reviews = await db.reviews.where('disciplineId').equals('logica-programacao').toArray();
+    expect(reviews.map((r) => r.intervalDays).sort((a, b) => a - b)).toEqual([1, 7, 30]);
+
+    // Completing 30d does not create any further review
+    const review30d = reviews.find((r) => r.intervalDays === 30)!;
+    await completeReview(review30d.id);
+    reviews = await db.reviews.where('disciplineId').equals('logica-programacao').toArray();
+    expect(reviews.length).toBe(3);
   });
 
   it('moves a session to another date freely via drag and drop and preserves history', async () => {

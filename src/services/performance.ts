@@ -1,7 +1,7 @@
 import { db } from '../db/db';
 import type { ErrorNote, ErrorStatus, ErrorType, QuestionLog, ReviewTask } from '../db/types';
 import { findDuplicateLog, type NormalizedQuestionValues } from '../domain/questions';
-import { buildReviewTasks, nextPendingDate, postponedDueDate } from '../domain/reviews';
+import { buildNextReviewTask, buildReviewTasks, nextPendingDate, postponedDueDate } from '../domain/reviews';
 import { isValidDateKey, todayKey, type DateKey } from '../lib/dates';
 import { createId, nowIso } from '../lib/utils';
 import { getSettings } from './settings';
@@ -254,11 +254,30 @@ async function syncErrorNoteReviewDate(errorNoteId: string | null, markReviewed:
 }
 
 export async function completeReview(id: string): Promise<void> {
-  await db.transaction('rw', db.reviews, db.errorNotes, async () => {
+  await db.transaction('rw', db.reviews, db.errorNotes, db.settings, async () => {
     const review = await db.reviews.get(id);
     if (!review) throw new ValidationError('Revisão não encontrada.');
     if (review.status === 'concluida') return;
     await db.reviews.put({ ...review, status: 'concluida', completedAt: nowIso() });
+
+    const settings = await getSettings();
+    const nextTask = buildNextReviewTask(review, settings.reviewIntervals, todayKey());
+    if (nextTask) {
+      const existing = await db.reviews
+        .where('disciplineId')
+        .equals(review.disciplineId)
+        .filter(
+          (r) =>
+            r.errorNoteId === review.errorNoteId &&
+            r.title === review.title &&
+            r.intervalDays === nextTask.intervalDays,
+        )
+        .first();
+      if (!existing) {
+        await db.reviews.add(nextTask);
+      }
+    }
+
     await syncErrorNoteReviewDate(review.errorNoteId, true);
   });
 }

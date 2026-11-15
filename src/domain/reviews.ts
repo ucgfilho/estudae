@@ -10,21 +10,56 @@ export interface ReviewTarget {
   title: string;
 }
 
+export function normalizeIntervals(intervals: readonly number[]): number[] {
+  return [...new Set(intervals)].filter((n) => Number.isInteger(n) && n > 0).sort((a, b) => a - b);
+}
+
+/** Cria apenas a primeira revisão do ciclo; as seguintes são liberadas ao concluir a anterior. */
 export function buildReviewTasks(target: ReviewTarget, baseDate: DateKey, intervals: readonly number[]): ReviewTask[] {
-  const createdAt = nowIso();
-  const unique = [...new Set(intervals)].filter((n) => Number.isInteger(n) && n > 0).sort((a, b) => a - b);
-  return unique.map((days) => ({
+  const unique = normalizeIntervals(intervals);
+  const first = unique[0];
+  if (first === undefined) return [];
+  return [{
     id: createId(),
     disciplineId: target.disciplineId,
     topicId: target.topicId,
     errorNoteId: target.errorNoteId,
     title: target.title,
-    dueDate: addDays(baseDate, days),
-    intervalDays: days,
+    dueDate: addDays(baseDate, first),
+    intervalDays: first,
     status: 'pendente',
     completedAt: null,
-    createdAt,
-  }));
+    createdAt: nowIso(),
+  }];
+}
+
+/** Retorna o próximo intervalo após `currentIntervalDays`, ou `null` se for o último. */
+export function nextIntervalAfter(currentIntervalDays: number, intervals: readonly number[]): number | null {
+  const unique = normalizeIntervals(intervals);
+  return unique.find((n) => n > currentIntervalDays) ?? null;
+}
+
+/** Cria a próxima revisão do intervalo após a conclusão da revisão atual. */
+export function buildNextReviewTask(
+  completedReview: ReviewTask,
+  intervals: readonly number[],
+  completedDate: DateKey,
+): ReviewTask | null {
+  const nextDays = nextIntervalAfter(completedReview.intervalDays, intervals);
+  if (nextDays === null) return null;
+  const deltaDays = Math.max(1, nextDays - completedReview.intervalDays);
+  return {
+    id: createId(),
+    disciplineId: completedReview.disciplineId,
+    topicId: completedReview.topicId,
+    errorNoteId: completedReview.errorNoteId,
+    title: completedReview.title,
+    dueDate: addDays(completedDate, deltaDays),
+    intervalDays: nextDays,
+    status: 'pendente',
+    completedAt: null,
+    createdAt: nowIso(),
+  };
 }
 
 export type IntervalParseResult = { ok: true; value: number[] } | { ok: false; error: string };
