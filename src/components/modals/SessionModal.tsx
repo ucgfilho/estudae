@@ -106,7 +106,7 @@ export function SessionModal({
     <Dialog
       open={open}
       onClose={onClose}
-      title={sessionToEdit ? 'Editar Sessão de Estudo' : 'Planejar Nova Sessão'}
+      title={sessionToEdit ? 'Editar sessão de estudo' : 'Planejar nova sessão'}
       size="md"
       footer={
         <>
@@ -114,7 +114,7 @@ export function SessionModal({
             Cancelar
           </Button>
           <Button variant="primary" type="submit" form="session-form" loading={loading}>
-            {sessionToEdit ? 'Salvar Alterações' : 'Criar Sessão'}
+            {sessionToEdit ? 'Salvar alterações' : 'Criar sessão'}
           </Button>
         </>
       }

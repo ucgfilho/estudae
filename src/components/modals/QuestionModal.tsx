@@ -109,7 +109,7 @@ export function QuestionModal({
     <Dialog
       open={open}
       onClose={onClose}
-      title={logToEdit ? 'Editar Lançamento de Questões' : 'Registrar Resolução de Questões'}
+      title={logToEdit ? 'Editar lançamento de questões' : 'Registrar resolução de questões'}
       size="md"
       footer={
         <>
@@ -117,7 +117,7 @@ export function QuestionModal({
             Cancelar
           </Button>
           <Button variant="primary" type="submit" form="question-form" loading={loading}>
-            {logToEdit ? 'Salvar Alterações' : 'Registrar Questões'}
+            {logToEdit ? 'Salvar alterações' : 'Registrar questões'}
           </Button>
         </>
       }

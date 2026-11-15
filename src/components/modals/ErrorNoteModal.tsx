@@ -228,11 +228,11 @@ export function ErrorNoteModal({
     <Dialog
       open={open}
       onClose={onClose}
-      title={effectiveNote ? 'Editar Anotação de Erro' : 'Adicionar ao Caderno de Erros'}
+      title={effectiveNote ? 'Editar anotação de erro' : 'Adicionar ao caderno de erros'}
       description={
         selectedExam
           ? `Vinculado à prova "${selectedExam.title}".`
-          : 'Cadastre o erro para gerar revisões espaçadas no cronograma.'
+          : 'Registre o erro para agendar revisões espaçadas no seu cronograma.'
       }
       size="md"
       footer={
@@ -241,7 +241,7 @@ export function ErrorNoteModal({
             Cancelar
           </Button>
           <Button variant="primary" type="submit" form="error-note-form" loading={loading}>
-            {effectiveNote ? 'Salvar Alterações' : 'Salvar no Caderno'}
+            {effectiveNote ? 'Salvar alterações' : 'Salvar no caderno'}
           </Button>
         </>
       }

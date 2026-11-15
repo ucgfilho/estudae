@@ -96,15 +96,15 @@ export function SettingsScreen() {
     const topicGoal = topicCompletionGoal.trim() ? parseInt(topicCompletionGoal, 10) : null;
 
     if (isNaN(daily) || daily < 1) {
-      setActionError('A meta diária de estudos deve ser um valor positivo em minutos.');
+      setActionError('Informe uma meta diária de pelo menos 1 minuto.');
       return;
     }
     if (isNaN(weekly) || weekly < 1) {
-      setActionError('A meta semanal de estudos deve ser um valor positivo em minutos.');
+      setActionError('Informe uma meta semanal de pelo menos 1 minuto.');
       return;
     }
     if (isNaN(accuracy) || accuracy < 1 || accuracy > 100) {
-      setActionError('A meta de acertos deve ser uma porcentagem entre 1 e 100.');
+      setActionError('Informe uma meta de acertos entre 1% e 100%.');
       return;
     }
 
@@ -225,8 +225,8 @@ export function SettingsScreen() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Configurações e Metas"
-        description="Ajuste suas metas de preparação, intervalos de revisão, tema da interface e gerenciamento de backup."
+        title="Configurações e metas"
+        description="Ajuste suas metas de estudo, intervalos de revisão, tema e cópias de segurança."
         actions={
           <Button
             variant="primary"
@@ -235,13 +235,13 @@ export function SettingsScreen() {
             onClick={handleSaveSettings}
             loading={loading}
           >
-            Salvar Alterações
+            Salvar alterações
           </Button>
         }
       />
 
       {actionError && (
-        <Alert tone="danger" title="Erro" onClose={() => setActionError(null)}>
+        <Alert tone="danger" title="Não foi possível salvar" onClose={() => setActionError(null)}>
           {actionError}
         </Alert>
       )}
@@ -555,9 +555,9 @@ export function SettingsScreen() {
       <ConfirmModal
         open={resetConfirmOpen}
         onClose={() => setResetConfirmOpen(false)}
-        title="Reiniciar o Sistema e Apagar Todos os Dados?"
-        message="Esta ação é permanente e irreversível. Todos os seus tópicos, sessões estudadas, baterias de questões e anotações de erros serão excluídos. O sistema será restaurado apenas com as disciplinas iniciais do concurso."
-        confirmLabel="Sim, Reiniciar Tudo"
+        title="Reiniciar o sistema e apagar os dados?"
+        message="Todos os seus tópicos, sessões, questões e anotações de erros serão excluídos permanentemente. Apenas as disciplinas iniciais do concurso serão mantidas."
+        confirmLabel="Reiniciar sistema"
         variant="danger"
         onConfirm={handleConfirmReset}
         loading={loading}
@@ -567,9 +567,9 @@ export function SettingsScreen() {
       <ConfirmModal
         open={deleteAccountConfirmOpen}
         onClose={() => setDeleteAccountConfirmOpen(false)}
-        title="Excluir Permanentemente Sua Conta e Dados Pessoais?"
-        message="Em conformidade com o Art. 18, VI da LGPD (Lei nº 13.709/2018), esta ação eliminará de forma definitiva e irreversível a sua conta de usuário e todos os seus dados de estudo vinculados no banco de dados."
-        confirmLabel="Sim, Excluir Minha Conta"
+        title="Excluir sua conta e dados pessoais?"
+        message="Sua conta e todos os seus registros de estudo serão excluídos permanentemente (LGPD, Art. 18, VI). Esta ação não pode ser desfeita."
+        confirmLabel="Excluir minha conta"
         variant="danger"
         onConfirm={handleConfirmDeleteAccount}
         loading={loading}

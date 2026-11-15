@@ -179,8 +179,8 @@ export function CalendarScreen() {
   return (
     <div className="space-y-5">
       <PageHeader
-        title="Calendário de Estudos"
-        description="Planeje, acompanhe e execute suas sessões diárias e semanais."
+        title="Calendário de estudos"
+        description="Planeje e acompanhe suas sessões por dia, semana ou mês."
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Segmented
@@ -199,14 +199,14 @@ export function CalendarScreen() {
               icon={<Plus className="size-4" />}
               onClick={() => openNewSession(currentDate)}
             >
-              Nova Sessão
+              Nova sessão
             </Button>
           </div>
         }
       />
 
       {actionError && (
-        <Alert tone="danger" title="Erro na operação" onClose={() => setActionError(null)}>
+        <Alert tone="danger" title="Não foi possível concluir a ação" onClose={() => setActionError(null)}>
           {actionError}
         </Alert>
       )}
@@ -723,9 +723,9 @@ export function CalendarScreen() {
       <ConfirmModal
         open={deleteConfirmOpen}
         onClose={() => setDeleteConfirmOpen(false)}
-        title="Excluir Sessão de Estudo"
-        message="Tem certeza que deseja excluir esta sessão? Se houver histórico de tempo estudado já vinculado, este será removido."
-        confirmLabel="Excluir"
+        title="Excluir sessão de estudo?"
+        message="Esta sessão e o tempo estudado vinculado a ela serão removidos."
+        confirmLabel="Excluir sessão"
         onConfirm={handleDelete}
       />
     </div>

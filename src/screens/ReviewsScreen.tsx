@@ -122,8 +122,8 @@ export function ReviewsScreen() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Revisões Espaçadas"
-        description="Fixação de conteúdo a longo prazo através de repetições espaçadas programadas."
+        title="Revisões espaçadas"
+        description="Revise no intervalo ideal para fixar o conteúdo na memória de longo prazo."
         actions={
           <Button
             variant={currentList.some((r) => r.status === 'pendente') ? 'secondary' : 'primary'}
@@ -131,13 +131,13 @@ export function ReviewsScreen() {
             icon={<Plus className="size-4" />}
             onClick={() => setCreateModalOpen(true)}
           >
-            Agendar Revisão
+            Agendar revisão
           </Button>
         }
       />
 
       {actionError && (
-        <Alert tone="danger" title="Erro na operação" onClose={() => setActionError(null)}>
+        <Alert tone="danger" title="Não foi possível concluir a ação" onClose={() => setActionError(null)}>
           {actionError}
         </Alert>
       )}
@@ -327,9 +327,9 @@ export function ReviewsScreen() {
       <ConfirmModal
         open={deleteConfirmOpen}
         onClose={() => setDeleteConfirmOpen(false)}
-        title="Excluir Tarefa de Revisão"
-        message="Tem certeza que deseja excluir esta revisão programada?"
-        confirmLabel="Excluir"
+        title="Excluir tarefa de revisão?"
+        message="Esta revisão programada será removida da sua lista."
+        confirmLabel="Excluir revisão"
         onConfirm={handleDelete}
       />
     </div>

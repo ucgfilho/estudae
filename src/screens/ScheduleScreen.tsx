@@ -963,7 +963,7 @@ export function ScheduleScreen() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Cronograma de Estudos"
+        title="Cronograma de estudos"
         description={
           settings?.contestName
             ? `Planejamento semanal adaptado ao edital de ${settings.contestName}${settings.contestRole ? ` (${settings.contestRole})` : ''}.`
@@ -988,7 +988,7 @@ export function ScheduleScreen() {
               icon={<Sliders className="size-4" />}
               onClick={openDistributionModal}
             >
-              Editar Distribuição
+              Editar distribuição
             </Button>
             <Button
               variant="ghost"
@@ -997,7 +997,7 @@ export function ScheduleScreen() {
               onClick={handleReapplyWeek}
               disabled={!currentPlan}
             >
-              Reaplicar na Semana
+              Reaplicar na semana
             </Button>
             <Button
               variant="ghost"
@@ -1007,7 +1007,7 @@ export function ScheduleScreen() {
               onClick={() => setClearConfirmOpen(true)}
               disabled={weeklyPlans.length === 0}
             >
-              Limpar Cronograma
+              Limpar cronograma
             </Button>
             <Button
               variant="primary"
@@ -1015,14 +1015,14 @@ export function ScheduleScreen() {
               icon={<Plus className="size-4" />}
               onClick={() => openNewSession()}
             >
-              Planejar Sessão
+              Planejar sessão
             </Button>
           </div>
         }
       />
 
       {actionError && (
-        <Alert tone="danger" title="Erro na operação" onClose={() => setActionError(null)}>
+        <Alert tone="danger" title="Não foi possível concluir a ação" onClose={() => setActionError(null)}>
           {actionError}
         </Alert>
       )}

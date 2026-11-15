@@ -255,12 +255,12 @@ export function StudyNowScreen() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Estudar Agora"
-        description="Foco total e cronômetro de precisão para suas sessões de estudo."
+        title="Estudar agora"
+        description="Inicie o cronômetro para registrar seu tempo de estudo com foco."
       />
 
       {error && (
-        <Alert tone="danger" title="Atenção" onClose={() => setError(null)}>
+        <Alert tone="danger" title="Não foi possível iniciar a sessão" onClose={() => setError(null)}>
           {error}
         </Alert>
       )}
@@ -741,9 +741,9 @@ export function StudyNowScreen() {
       <ConfirmModal
         open={discardConfirmOpen}
         onClose={() => setDiscardConfirmOpen(false)}
-        title="Descartar Sessão em Andamento?"
-        message="O tempo decorrido até o momento NÃO será registrado no seu histórico e a sessão será encerrada. Tem certeza que deseja descartar?"
-        confirmLabel="Descartar Sessão"
+        title="Descartar sessão em andamento?"
+        message="O tempo decorrido não será salvo no seu histórico."
+        confirmLabel="Descartar sessão"
         onConfirm={handleDiscard}
         loading={loading}
       />

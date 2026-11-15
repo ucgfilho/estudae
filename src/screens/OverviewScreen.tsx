@@ -137,11 +137,11 @@ export function OverviewScreen() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Visão Geral"
+        title="Visão geral"
         description={
           settings?.contestName
-            ? `Painel diário de execução para ${settings.contestName}${settings.contestRole ? ` (${settings.contestRole})` : ''}.`
-            : 'Painel diário de execução — identifique sua próxima tarefa e avance no cronograma.'
+            ? `Acompanhe sua rotina diária para ${settings.contestName}${settings.contestRole ? ` (${settings.contestRole})` : ''}.`
+            : 'Veja sua próxima tarefa, acompanhe a meta de hoje e avance no cronograma.'
         }
         actions={
           <div className="flex flex-wrap items-center gap-2">
@@ -151,7 +151,7 @@ export function OverviewScreen() {
               icon={<Plus className="size-4" aria-hidden="true" />}
               onClick={() => setSessionModalOpen(true)}
             >
-              Planejar Sessão
+              Planejar sessão
             </Button>
             <Button
               variant="secondary"
@@ -159,14 +159,14 @@ export function OverviewScreen() {
               icon={<CheckCircle className="size-4" aria-hidden="true" />}
               onClick={() => setQuestionModalOpen(true)}
             >
-              Lançar Questões
+              Lançar questões
             </Button>
           </div>
         }
       />
 
       {actionError && (
-        <Alert tone="danger" title="Erro na operação" onClose={() => setActionError(null)}>
+        <Alert tone="danger" title="Não foi possível concluir a ação" onClose={() => setActionError(null)}>
           {actionError}
         </Alert>
       )}
@@ -189,13 +189,13 @@ export function OverviewScreen() {
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         {/* Revisões realmente pendentes (vencidas + hoje) */}
         <Card
-          title="Revisões Pendentes"
+          title="Revisões pendentes"
           description={
             totalUrgentReviews > 0
               ? totalUrgentReviews === 1
-                ? 'Você tem 1 revisão pendente. Vamos colocá-la em dia?'
-                : `Você tem ${totalUrgentReviews} revisões pendentes. Vamos colocá-las em dia?`
-              : 'Ciclo de retenção em dia — nenhuma revisão vencida ou prevista para hoje'
+                ? '1 revisão pendente para manter o conteúdo em dia.'
+                : `${totalUrgentReviews} revisões pendentes para manter o conteúdo em dia.`
+              : 'Nenhuma revisão atrasada ou prevista para hoje.'
           }
           actions={
             <button
@@ -282,13 +282,13 @@ export function OverviewScreen() {
 
         {/* Pendências importantes do cronograma */}
         <Card
-          title="Pendências do Cronograma"
+          title="Pendências do cronograma"
           description={
             overdueSessionsInWeek.length > 0
               ? overdueSessionsInWeek.length === 1
-                ? '1 bloco de dias anteriores aguarda execução. Vamos retomar?'
-                : `${overdueSessionsInWeek.length} blocos de dias anteriores aguardam execução. Vamos retomar?`
-              : 'Cronograma da semana sem blocos atrasados'
+                ? '1 bloco de dias anteriores aguarda execução.'
+                : `${overdueSessionsInWeek.length} blocos de dias anteriores aguardam execução.`
+              : 'Nenhum bloco atrasado nesta semana.'
           }
           actions={
             <button

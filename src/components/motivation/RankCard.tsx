@@ -63,7 +63,7 @@ export function RankCard(input: RankInput) {
   return (
     <Card
       title="Patente"
-      description="Estudar e revisar soma XP e fortalece sua constância. Mantenha o ritmo para avançar de patente."
+      description="Ganhe XP ao estudar e revisar. Mantenha a constância para subir de patente."
       actions={
         anim && (
           <span
@@ -126,9 +126,9 @@ export function RankCard(input: RankInput) {
               <ShieldCheck className="size-3" aria-hidden />
               {state.shield ? 'Escudo de Patente ativo' : `Escudo: a cada ${XP.shieldEveryStudyDays} dias seguidos`}
             </span>
-            {state.recoveryDaysLeft !== null && (
+            {state.recoveryPending > 0 && (
               <span className="inline-flex items-center gap-1 rounded-full bg-warning-soft px-2 py-1 font-medium text-warning">
-                <HeartPulse className="size-3" aria-hidden /> Recuperação: +{formatInteger(state.recoveryPending)} XP em {state.recoveryDaysLeft} {state.recoveryDaysLeft === 1 ? 'dia' : 'dias'}
+                <HeartPulse className="size-3" aria-hidden /> Bônus de retorno: +{formatInteger(state.recoveryPending)} XP hoje
               </span>
             )}
           </div>
@@ -136,10 +136,10 @@ export function RankCard(input: RankInput) {
           {state.atRiskPenalty > 0 && (
             <p role="alert" className="flex items-center gap-2 rounded-lg bg-warning-soft px-3 py-2 text-sm text-warning">
               <Flame className="size-4 shrink-0" aria-hidden />
-              Complete {XP.validMinutes} min de estudo hoje para proteger sua patente ({state.atRiskPenalty} XP em risco).
+              Estude pelo menos {XP.validMinutes} min hoje para evitar perder {state.atRiskPenalty} XP.
             </p>
           )}
-          {state.todayValid && <p className="text-xs text-success">Dia válido: patente protegida hoje.</p>}
+          {state.todayValid && <p className="text-xs text-success">Dia válido concluído. Sua patente está protegida hoje.</p>}
         </div>
       </div>
 
@@ -193,11 +193,12 @@ export function RankCard(input: RankInput) {
             <Award className="size-3" aria-hidden /> Como funciona o XP
           </p>
           <ul className="grid gap-x-6 gap-y-0.5 sm:grid-cols-2">
-            <li><span className="font-semibold text-success">+{XP.studyDay} XP</span> por dia estudado (≥{XP.validMinutes} min ou meta batida)</li>
-            <li><span className="font-semibold text-success">+{XP.dailyGoal} XP</span> bônus por bater a meta do dia</li>
-            <li><span className="font-semibold text-success">+{XP.review} XP</span> por cada revisão feita</li>
+            <li><span className="font-semibold text-success">+{XP.studyDay} XP</span> por dia válido (≥{XP.validMinutes} min ou meta batida)</li>
+            <li><span className="font-semibold text-success">+{XP.dailyGoal} XP</span> ao bater a meta diária</li>
+            <li><span className="font-semibold text-success">+{XP.review} XP</span> por revisão concluída (até {XP.reviewsPerDayCap}/dia)</li>
+            <li><span className="font-semibold text-success">+{XP.returnBonus} XP</span> ao retomar após 2+ dias de ausência</li>
             <li><span className="font-semibold text-danger">−{XP.firstMiss} XP</span> na 1ª falta seguida</li>
-            <li><span className="font-semibold text-danger">−{XP.nextMisses} XP</span> em cada falta seguinte (até a 4ª)</li>
+            <li><span className="font-semibold text-danger">−{XP.nextMisses} XP</span> por dia a partir da 2ª falta seguida</li>
           </ul>
         </div>
       </details>

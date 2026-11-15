@@ -216,8 +216,8 @@ export function DisciplinesScreen() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Disciplinas e Conteúdos"
-        description="Organize os tópicos e acompanhe o que já foi estudado em cada disciplina do seu concurso."
+        title="Disciplinas e conteúdos"
+        description="Organize os tópicos do edital e marque o que você já estudou."
         actions={
           currentDiscipline && (
             <div className="flex flex-wrap items-center gap-2">
@@ -232,7 +232,7 @@ export function DisciplinesScreen() {
                 }}
                 disabled={topics.length === 0}
               >
-                Excluir Todos os Tópicos
+                Excluir tópicos
               </Button>
               <Button
                 variant="secondary"
@@ -240,7 +240,7 @@ export function DisciplinesScreen() {
                 icon={<Upload className="size-4" />}
                 onClick={() => setImportModalOpen(true)}
               >
-                Importar Checklist
+                Importar checklist
               </Button>
               <Button
                 variant="primary"
@@ -248,7 +248,7 @@ export function DisciplinesScreen() {
                 icon={<Plus className="size-4" />}
                 onClick={() => openAddTopic(null)}
               >
-                Novo Tópico
+                Novo tópico
               </Button>
             </div>
           )
@@ -256,7 +256,7 @@ export function DisciplinesScreen() {
       />
 
       {actionError && (
-        <Alert tone="danger" title="Erro na operação" onClose={() => setActionError(null)}>
+        <Alert tone="danger" title="Não foi possível concluir a ação" onClose={() => setActionError(null)}>
           {actionError}
         </Alert>
       )}

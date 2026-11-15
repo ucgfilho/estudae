@@ -162,8 +162,8 @@ export function QuestionsScreen() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Banco de Questões e Desempenho"
-        description="Registre seus simulados e baterias diárias de exercícios para apurar sua taxa de acerto por conteúdo."
+        title="Banco de questões e desempenho"
+        description="Registre suas listas de exercícios para acompanhar sua taxa de acerto por disciplina."
         actions={
           <Button
             variant="primary"
@@ -171,13 +171,13 @@ export function QuestionsScreen() {
             icon={<Plus className="size-4" />}
             onClick={openNewLog}
           >
-            Registrar Questões
+            Registrar questões
           </Button>
         }
       />
 
       {actionError && (
-        <Alert tone="danger" title="Erro na operação" onClose={() => setActionError(null)}>
+        <Alert tone="danger" title="Não foi possível concluir a ação" onClose={() => setActionError(null)}>
           {actionError}
         </Alert>
       )}
@@ -547,9 +547,9 @@ export function QuestionsScreen() {
       <ConfirmModal
         open={deleteConfirmOpen}
         onClose={() => setDeleteConfirmOpen(false)}
-        title="Excluir Lançamento de Questões"
-        message="Tem certeza que deseja excluir este registro de questões? O histórico de acertos e erros deste lançamento será removido."
-        confirmLabel="Excluir"
+        title="Excluir registro de questões?"
+        message="Os acertos e erros deste lançamento serão removidos do seu histórico."
+        confirmLabel="Excluir registro"
         onConfirm={handleDelete}
       />
     </div>

@@ -156,8 +156,8 @@ export function ReportsScreen() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Relatórios e Diagnóstico de Desempenho"
-        description="Análise aprofundada de horas estudadas, consistência e precisão em questões."
+        title="Relatórios e diagnóstico de desempenho"
+        description="Acompanhe suas horas estudadas, constância e taxa de acerto por matéria."
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Button
@@ -166,7 +166,7 @@ export function ReportsScreen() {
               icon={<FileSpreadsheet className="size-4" />}
               onClick={handleExportSessionsCsv}
             >
-              Exportar Sessões (CSV)
+              Exportar sessões (CSV)
             </Button>
             <Button
               variant="secondary"
@@ -174,7 +174,7 @@ export function ReportsScreen() {
               icon={<Download className="size-4" />}
               onClick={handleExportQuestionsCsv}
             >
-              Exportar Questões (CSV)
+              Exportar questões (CSV)
             </Button>
           </div>
         }

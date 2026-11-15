@@ -112,7 +112,7 @@ export function ExamErrorNotebooks({ exam, disciplines }: { exam: MockExam; disc
     try {
       await deleteErrorNote(noteToDelete.id);
       setNoteToDelete(null);
-      setSuccessMsg('Caderno de erro excluído com sucesso.');
+      setSuccessMsg('Caderno de erro excluído.');
     } catch (err) {
       setError(errorMessage(err));
     }

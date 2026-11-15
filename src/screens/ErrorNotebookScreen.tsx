@@ -154,8 +154,8 @@ export function ErrorNotebookScreen() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Caderno de Erros e Aprendizados"
-        description="Transforme suas dúvidas e erros em pontos fortes por meio de diagnósticos e revisões ativas."
+        title="Caderno de erros e aprendizados"
+        description="Registre questões que você errou para revisar no momento certo."
         actions={
           <Button
             variant="primary"
@@ -163,13 +163,13 @@ export function ErrorNotebookScreen() {
             icon={<Plus className="size-4" />}
             onClick={openNewNote}
           >
-            Adicionar Anotação de Erro
+            Adicionar erro
           </Button>
         }
       />
 
       {actionError && (
-        <Alert tone="danger" title="Erro na operação" onClose={() => setActionError(null)}>
+        <Alert tone="danger" title="Não foi possível concluir a ação" onClose={() => setActionError(null)}>
           {actionError}
         </Alert>
       )}
@@ -518,9 +518,9 @@ export function ErrorNotebookScreen() {
       <ConfirmModal
         open={deleteConfirmOpen}
         onClose={() => setDeleteConfirmOpen(false)}
-        title="Excluir Anotação do Caderno de Erros"
-        message="Tem certeza que deseja excluir esta anotação? Todas as tarefas de revisão pendentes vinculadas a ela também serão removidas."
-        confirmLabel="Excluir"
+        title="Excluir anotação do caderno de erros?"
+        message="Esta anotação e as revisões pendentes vinculadas a ela serão removidas."
+        confirmLabel="Excluir anotação"
         onConfirm={handleDelete}
       />
     </div>
