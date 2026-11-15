@@ -1404,15 +1404,11 @@ export async function processAssistantMessage(
 
   const today = options.today ?? todayKey();
   const settings = await getSettings();
-  const envKey = (
-    (import.meta as unknown as { env?: Record<string, string | undefined> }).env
-      ?.VITE_GEMINI_API_KEY ?? ''
-  ).trim();
-  const apiKey = (options.apiKey ?? settings.geminiApiKey ?? envKey).trim();
+  const apiKey = (options.apiKey ?? settings.geminiApiKey ?? '').trim();
 
   if (!apiKey) {
     throw new Error(
-      'Chave da API do Google Gemini não configurada. Informe sua chave Gemini abaixo ou em Configurações para usar o Assistente IA.',
+      'Chave da API do Google Gemini não configurada. Informe sua chave Gemini em Configurações para usar o Assistente IA.',
     );
   }
 

@@ -45,11 +45,7 @@ export function AiAssistantWidget() {
   const [savingKey, setSavingKey] = useState(false);
 
   const settings = useSettings();
-  const envKey = (
-    (import.meta as unknown as { env?: Record<string, string | undefined> }).env
-      ?.VITE_GEMINI_API_KEY ?? ''
-  ).trim();
-  const hasApiKey = Boolean(settings?.geminiApiKey?.trim() || envKey);
+  const hasApiKey = Boolean(settings?.geminiApiKey?.trim());
 
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
