@@ -170,22 +170,22 @@ export function ContestSearchSelect({
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="Pesquisar concurso, órgão, cargo ou banca (ex: BB, PF, Receita, BNB)..."
                   data-testid="contest-search-input"
-                  className="input-base h-9 pl-9 pr-9 text-xs"
+                  className="input-base h-9 max-lg:h-11 pl-9 pr-9 text-xs"
                 />
                 {query && (
                   <button
                     type="button"
                     onClick={() => setQuery('')}
-                    className="absolute inset-y-0 right-0 flex w-9 items-center justify-center text-fg-subtle hover:text-fg"
+                    className="absolute inset-y-0 right-0 flex w-9 max-lg:w-11 items-center justify-center text-fg-subtle hover:text-fg"
                     aria-label="Limpar busca"
                   >
-                    <X className="size-3.5" />
+                    <X className="size-3.5 max-lg:size-4" />
                   </button>
                 )}
               </div>
             </div>
 
-            <div className="max-h-64 overflow-y-auto p-1.5 space-y-2">
+            <div className="max-h-64 overflow-y-auto overscroll-contain p-1.5 space-y-2">
               {groupedContests.length === 0 ? (
                 <div className="p-3 text-center space-y-2">
                   <p className="text-xs text-fg-muted">
@@ -201,7 +201,7 @@ export function ContestSearchSelect({
                       }
                       setOpen(false);
                     }}
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-fg hover:bg-primary-hover"
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 max-lg:py-2.5 max-lg:min-h-10 text-xs font-medium text-primary-fg hover:bg-primary-hover"
                   >
                     <Sparkles className="size-3.5" />
                     Usar &ldquo;{query.trim()}&rdquo; como Concurso Personalizado
@@ -227,7 +227,7 @@ export function ContestSearchSelect({
                             setOpen(false);
                           }}
                           className={cn(
-                            'w-full flex items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-left text-xs transition',
+                            'w-full flex items-center justify-between gap-2 rounded-lg px-2.5 py-2 max-lg:py-2.5 max-lg:min-h-11 text-left text-xs transition',
                             isSelected
                               ? 'bg-primary-soft text-primary font-semibold'
                               : 'text-fg hover:bg-surface-muted',
@@ -270,7 +270,7 @@ export function ContestSearchSelect({
               value={customName}
               onChange={(e) => onCustomNameChange?.(e.target.value)}
               placeholder="Ex: Petrobras, Sefaz-CE, MP-SP..."
-              className="w-full h-9 rounded-lg border border-border-strong bg-surface px-3 text-xs text-fg focus:border-primary focus:outline-none"
+              className="w-full h-9 max-lg:h-11 rounded-lg border border-border-strong bg-surface px-3 text-xs text-fg focus:border-primary focus:outline-none"
             />
           </div>
           <div>
@@ -282,7 +282,7 @@ export function ContestSearchSelect({
               value={customRole}
               onChange={(e) => onCustomRoleChange?.(e.target.value)}
               placeholder="Ex: Analista de Sistemas, Auditor..."
-              className="w-full h-9 rounded-lg border border-border-strong bg-surface px-3 text-xs text-fg focus:border-primary focus:outline-none"
+              className="w-full h-9 max-lg:h-11 rounded-lg border border-border-strong bg-surface px-3 text-xs text-fg focus:border-primary focus:outline-none"
             />
           </div>
         </div>

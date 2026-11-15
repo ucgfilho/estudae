@@ -205,7 +205,7 @@ export function RichTextEditor({ value, onChange, className, rows = 6, ...rest }
             // evita que o textarea perca a seleção ao clicar no botão
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => apply(t)}
-            className="rounded p-1.5 text-fg-muted hover:bg-surface-muted hover:text-fg"
+            className="inline-flex items-center justify-center rounded p-1.5 max-lg:p-2 max-lg:size-9 text-fg-muted hover:bg-surface-muted hover:text-fg"
           >
             <t.icon className="size-4" aria-hidden />
           </button>

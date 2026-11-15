@@ -59,12 +59,15 @@ export function Dialog({ open, onClose, title, description, children, footer, si
         'm-auto w-[calc(100%-1.5rem)] rounded-xl border border-border bg-surface p-0 text-fg shadow-lg',
         'max-h-[calc(100dvh-2rem)]',
         sizes[size],
+        // Smartphones: folha inferior (bottom sheet) ocupando toda a largura.
+        'max-sm:mb-0 max-sm:w-full max-sm:max-w-none max-sm:rounded-b-none max-sm:border-x-0 max-sm:border-b-0 max-sm:max-h-[92dvh]',
       )}
     >
       {render && (
-        <div className="flex max-h-[calc(100dvh-2rem)] flex-col">
-          <div className="relative flex items-start justify-between gap-4 border-b border-border px-5 py-4 pr-12">
-            <div>
+        <div className="flex max-h-[calc(100dvh-2rem)] max-sm:max-h-[92dvh] flex-col">
+          <span aria-hidden className="mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-border-strong sm:hidden" />
+          <div className="relative flex items-start justify-between gap-4 border-b border-border px-5 py-4 pr-12 max-sm:px-4 max-sm:pt-2 max-sm:pr-14">
+            <div className="min-w-0">
               <h2 id={titleId} className="text-base font-semibold">
                 {title}
               </h2>
@@ -79,11 +82,15 @@ export function Dialog({ open, onClose, title, description, children, footer, si
               icon={<X className="size-4" />}
               onClick={onClose}
               size="sm"
-              className="absolute top-3.5 right-3.5"
+              className="absolute top-3.5 right-3.5 max-sm:top-1 max-sm:right-2"
             />
           </div>
-          <div className="overflow-y-auto px-5 py-4">{children}</div>
-          {footer && <div className="flex flex-wrap justify-end gap-2 border-t border-border px-5 py-3">{footer}</div>}
+          <div className="overflow-y-auto overscroll-contain px-5 py-4 max-sm:px-4">{children}</div>
+          {footer && (
+            <div className="flex flex-wrap justify-end gap-2 border-t border-border px-5 py-3 max-sm:px-4 max-sm:pb-[calc(0.75rem+env(safe-area-inset-bottom))] max-sm:[&>*]:flex-1">
+              {footer}
+            </div>
+          )}
         </div>
       )}
     </dialog>

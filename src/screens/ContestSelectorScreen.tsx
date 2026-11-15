@@ -104,7 +104,7 @@ export function ContestSelectorScreen({ onSelectContest }: ContestSelectorScreen
               data-testid="selector-profile-button"
               onClick={() => setProfileOpen(true)}
               title="Editar perfil"
-              className="inline-flex h-9 items-center gap-2 rounded-lg border border-border-strong bg-surface px-2.5 text-xs font-medium text-fg hover:border-primary/40 transition cursor-pointer"
+              className="inline-flex h-9 max-lg:h-10 items-center gap-2 rounded-lg border border-border-strong bg-surface px-2.5 text-xs font-medium text-fg hover:border-primary/40 transition cursor-pointer"
             >
               <Avatar name={authUser.name || authUser.email} src={authUser.avatarUrl} size="sm" />
               <span className="hidden sm:inline-block max-w-36 truncate font-semibold text-fg">
@@ -116,7 +116,7 @@ export function ContestSelectorScreen({ onSelectContest }: ContestSelectorScreen
           <button
             type="button"
             onClick={() => setAuthSession(null)}
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border-strong bg-surface px-3 text-xs font-medium text-fg-muted hover:text-danger hover:border-danger/40 transition cursor-pointer"
+            className="inline-flex h-9 max-lg:h-10 items-center gap-1.5 rounded-lg border border-border-strong bg-surface px-3 text-xs font-medium text-fg-muted hover:text-danger hover:border-danger/40 transition cursor-pointer"
           >
             <LogOut className="size-3.5" />
             <span>Sair</span>
@@ -143,7 +143,7 @@ export function ContestSelectorScreen({ onSelectContest }: ContestSelectorScreen
         )}
 
         {/* Grade de Perfis de Concursos (Estilo Netflix) */}
-        <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 sm:gap-6 w-full max-w-4xl justify-items-center">
+        <div className="grid grid-cols-1 min-[440px]:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 sm:gap-6 w-full max-w-4xl justify-items-center">
           {contests.map((contest) => {
             const isLoading = loadingId === contest.id;
             const isCurrent = contest.id === activeScopeId;
@@ -161,7 +161,7 @@ export function ContestSelectorScreen({ onSelectContest }: ContestSelectorScreen
                   }
                 }}
                 className={cn(
-                  'group relative w-full max-w-[240px] rounded-xl border bg-surface p-5 flex flex-col items-center text-center transition-colors duration-150 cursor-pointer select-none',
+                  'group relative w-full max-w-[260px] min-[440px]:max-w-[240px] rounded-xl border bg-surface p-5 flex flex-col items-center text-center transition-colors duration-150 cursor-pointer select-none',
                   'hover:border-primary hover:bg-surface-muted/20',
                   isCurrent
                     ? 'border-primary ring-2 ring-primary/20'
@@ -174,9 +174,9 @@ export function ContestSelectorScreen({ onSelectContest }: ContestSelectorScreen
                     type="button"
                     onClick={(e) => handleDelete(e, contest)}
                     title="Excluir concurso"
-                    className="absolute top-2.5 right-2.5 size-7 rounded-full bg-danger/10 text-danger hover:bg-danger hover:text-white flex items-center justify-center transition"
+                    className="absolute top-2.5 right-2.5 size-7 max-lg:size-9 rounded-full bg-danger/10 text-danger hover:bg-danger hover:text-white flex items-center justify-center transition"
                   >
-                    <Trash2 className="size-3.5" />
+                    <Trash2 className="size-3.5 max-lg:size-4" />
                   </button>
                 )}
 
@@ -227,7 +227,7 @@ export function ContestSelectorScreen({ onSelectContest }: ContestSelectorScreen
             type="button"
             data-testid="new-contest-card-button"
             onClick={() => setShowNewModal(true)}
-            className="group w-full max-w-[240px] rounded-xl border border-dashed border-border-strong hover:border-primary bg-surface/50 hover:bg-primary-soft/15 p-5 flex flex-col items-center justify-center text-center transition-colors duration-150 cursor-pointer min-h-[210px]"
+            className="group w-full max-w-[260px] min-[440px]:max-w-[240px] rounded-xl border border-dashed border-border-strong hover:border-primary bg-surface/50 hover:bg-primary-soft/15 p-5 flex flex-col items-center justify-center text-center transition-colors duration-150 cursor-pointer min-h-[210px]"
           >
             <div className="size-20 sm:size-24 rounded-xl bg-surface-muted group-hover:bg-primary/15 text-fg-muted group-hover:text-primary flex items-center justify-center mb-3.5 transition-colors duration-150">
               <Plus className="size-9 stroke-[2]" />
@@ -246,7 +246,7 @@ export function ContestSelectorScreen({ onSelectContest }: ContestSelectorScreen
             <button
               type="button"
               onClick={() => setManageMode((prev) => !prev)}
-              className="rounded-lg border border-border-strong bg-surface px-4 py-2 text-xs font-semibold text-fg-muted hover:text-fg hover:border-primary/40 transition"
+              className="rounded-lg border border-border-strong bg-surface px-4 py-2 max-lg:py-2.5 max-lg:min-h-10 text-xs font-semibold text-fg-muted hover:text-fg hover:border-primary/40 transition"
             >
               {manageMode ? 'Concluir gerenciamento' : 'Gerenciar concursos'}
             </button>

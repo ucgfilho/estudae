@@ -108,7 +108,7 @@ export function RankCard(input: RankInput) {
             >
               <div className="h-full rounded-full bg-primary transition-[width] duration-700 ease-out" style={{ width: `${pct}%` }} />
             </div>
-            <div className="mt-1 flex justify-between text-xs text-fg-muted">
+            <div className="mt-1 flex flex-wrap justify-between gap-1 text-xs text-fg-muted">
               <span>{rank.name} · {formatInteger(rank.minXp)}</span>
               <span>{nextRank ? `${nextRank.name} · ${formatInteger(nextRank.minXp)} (faltam ${formatInteger(state.xpToNext)} XP)` : 'Patente máxima alcançada'}</span>
             </div>
@@ -182,7 +182,7 @@ export function RankCard(input: RankInput) {
               })}
             </ul>
             {state.events.length > 4 && (
-              <button type="button" onClick={() => setShowAll((v) => !v)} className="mt-1 text-xs font-medium text-primary hover:underline">
+              <button type="button" onClick={() => setShowAll((v) => !v)} className="mt-1 inline-flex items-center text-xs font-medium text-primary hover:underline max-lg:min-h-9 max-lg:px-2">
                 {showAll ? 'Ver menos' : 'Ver mais'}
               </button>
             )}

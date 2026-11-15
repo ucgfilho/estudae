@@ -198,12 +198,12 @@ export function AiAssistantWidget() {
   };
 
   return (
-    <div className="fixed bottom-16 right-4 lg:bottom-6 lg:right-6 z-40 flex flex-col items-end">
+    <div className="fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom))] right-3 sm:right-4 lg:bottom-6 lg:right-6 z-40 flex flex-col items-end">
       {open && (
         <section
           aria-label="Assistente IA estudaê"
           data-testid="ai-assistant-panel"
-          className="mb-3 flex h-[500px] max-h-[78dvh] w-[calc(100vw-2rem)] sm:w-96 flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl"
+          className="mb-3 flex h-[500px] max-h-[78dvh] w-[calc(100vw-1.5rem)] max-sm:h-[calc(100dvh-11rem-env(safe-area-inset-bottom))] max-sm:max-h-none sm:w-96 flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl"
         >
           <div className="flex items-center justify-between border-b border-border bg-surface-muted/70 px-4 py-3">
             <div className="flex items-center gap-2.5">
@@ -227,7 +227,7 @@ export function AiAssistantWidget() {
                 aria-label="Configurar chave da API do Gemini"
                 title="Configurar chave da API do Google Gemini"
                 className={cn(
-                  'rounded-lg p-1.5 transition-colors cursor-pointer',
+                  'rounded-lg p-1.5 max-lg:p-2.5 transition-colors cursor-pointer',
                   hasApiKey
                     ? 'text-fg-muted hover:bg-surface hover:text-fg'
                     : 'text-warning bg-warning-soft/60 hover:bg-warning-soft',
@@ -239,7 +239,7 @@ export function AiAssistantWidget() {
                 type="button"
                 onClick={() => setOpen(false)}
                 aria-label="Fechar assistente IA"
-                className="rounded-lg p-1.5 text-fg-muted hover:bg-surface hover:text-fg transition-colors cursor-pointer"
+                className="rounded-lg p-1.5 max-lg:p-2.5 text-fg-muted hover:bg-surface hover:text-fg transition-colors cursor-pointer"
               >
                 <X className="size-4" />
               </button>
@@ -273,12 +273,12 @@ export function AiAssistantWidget() {
                   onChange={(e) => setApiKeyDraft(e.target.value)}
                   placeholder="Cole sua chave AIzaSy..."
                   aria-label="Chave de API do Google Gemini"
-                  className="flex-1 rounded-lg border border-border bg-surface px-2.5 py-1.5 text-xs text-fg placeholder:text-fg-subtle focus:border-primary focus:outline-hidden"
+                  className="flex-1 rounded-lg border border-border bg-surface px-2.5 py-1.5 max-lg:py-2.5 text-xs text-fg placeholder:text-fg-subtle focus:border-primary focus:outline-hidden"
                 />
                 <button
                   type="submit"
                   disabled={!apiKeyDraft.trim() || savingKey}
-                  className="rounded-lg bg-primary px-2.5 py-1.5 text-xs font-semibold text-primary-fg disabled:opacity-40 hover:brightness-95 transition-all cursor-pointer"
+                  className="rounded-lg bg-primary px-2.5 py-1.5 max-lg:px-3.5 max-lg:py-2.5 text-xs font-semibold text-primary-fg disabled:opacity-40 hover:brightness-95 transition-all cursor-pointer"
                 >
                   {savingKey ? 'Salvando...' : 'Salvar'}
                 </button>
@@ -286,7 +286,7 @@ export function AiAssistantWidget() {
             </form>
           )}
 
-          <div className="flex-1 overflow-y-auto p-3.5 space-y-3 text-xs">
+          <div className="flex-1 overflow-y-auto overscroll-contain p-3.5 space-y-3 text-xs max-lg:text-sm">
             {messages.map((msg) => (
               <div
                 key={msg.id}
@@ -324,7 +324,7 @@ export function AiAssistantWidget() {
                     onClick={() => {
                       navigate(msg.navigateTo!);
                     }}
-                    className="mt-1 inline-flex items-center gap-1 self-start rounded-md bg-primary-soft px-2 py-1 text-[11px] font-semibold text-primary hover:brightness-95 transition-all cursor-pointer"
+                    className="mt-1 inline-flex items-center gap-1 self-start rounded-md bg-primary-soft px-2 py-1 max-lg:px-3 max-lg:py-2 text-[11px] font-semibold text-primary hover:brightness-95 transition-all cursor-pointer"
                   >
                     Abrir seção <ArrowRight className="size-3" aria-hidden="true" />
                   </button>
@@ -350,13 +350,13 @@ export function AiAssistantWidget() {
               onChange={(e) => setInput(e.target.value)}
               placeholder="Pergunte sobre seus estudos, edital ou peça uma ação..."
               aria-label="Mensagem para o assistente IA"
-              className="flex-1 rounded-lg border border-border bg-surface-muted/50 px-3 py-2 text-xs text-fg placeholder:text-fg-subtle focus:border-primary focus:outline-hidden"
+              className="flex-1 min-w-0 rounded-lg border border-border bg-surface-muted/50 px-3 py-2 max-lg:py-2.5 text-xs text-fg placeholder:text-fg-subtle focus:border-primary focus:outline-hidden"
             />
             <button
               type="submit"
               disabled={!input.trim() || loading}
               aria-label="Enviar comando para o assistente"
-              className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-fg disabled:opacity-40 hover:brightness-95 transition-all cursor-pointer"
+              className="inline-flex size-8 max-lg:size-11 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-fg disabled:opacity-40 hover:brightness-95 transition-all cursor-pointer"
             >
               <Send className="size-3.5" aria-hidden="true" />
             </button>

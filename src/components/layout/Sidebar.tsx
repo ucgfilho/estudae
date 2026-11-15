@@ -70,7 +70,7 @@ export function Sidebar({
       {/* Mobile backdrop */}
       {mobileOpen && (
         <div
-          className="fixed inset-0 z-30 bg-black/40 lg:hidden"
+          className="fixed inset-0 z-30 bg-black/40 lg:hidden animate-fade-in"
           onClick={onCloseMobile}
           aria-hidden="true"
         />
@@ -79,7 +79,7 @@ export function Sidebar({
       {/* Sidebar container */}
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-40 flex w-60 flex-col border-r border-border bg-surface transition-transform duration-200 ease-in-out lg:static lg:translate-x-0',
+          'fixed inset-y-0 left-0 z-40 flex w-60 max-lg:w-72 max-lg:max-w-[85vw] max-lg:shadow-2xl max-lg:pb-[env(safe-area-inset-bottom)] flex-col border-r border-border bg-surface transition-transform duration-200 ease-in-out lg:static lg:translate-x-0',
           mobileOpen ? 'translate-x-0' : '-translate-x-full',
         )}
         aria-label="Navegação principal"
@@ -132,7 +132,7 @@ export function Sidebar({
                   end={item.to === '/'}
                   className={({ isActive }) =>
                     cn(
-                      'group flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium transition-colors',
+                      'group flex items-center gap-2.5 rounded-lg px-2.5 py-2 max-lg:min-h-11 max-lg:gap-3 text-sm font-medium transition-colors',
                       isActive
                         ? 'bg-primary-soft text-primary font-semibold'
                         : 'text-fg-muted hover:bg-surface-muted hover:text-fg',

@@ -97,7 +97,7 @@ export function ExamResult({ exam, disciplines, accuracyGoal }: ExamResultProps)
           <figure className="h-64" aria-label="Gráfico de acertos, erros e questões em branco">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie data={pieData} dataKey="value" nameKey="name" innerRadius={50} outerRadius={85} paddingAngle={2} label={({ name, value }) => `${name}: ${value}`}>
+                <Pie data={pieData} dataKey="value" nameKey="name" innerRadius={45} outerRadius={72} paddingAngle={2} label={({ name, value }) => `${name}: ${value}`}>
                   {pieData.map((d) => (
                     <Cell key={d.name} fill={d.color} />
                   ))}
@@ -109,10 +109,10 @@ export function ExamResult({ exam, disciplines, accuracyGoal }: ExamResultProps)
           </figure>
           <figure className="h-64" aria-label={groups.length > 0 ? 'Desempenho por disciplina' : 'Desempenho por trecho da prova'}>
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={barData}>
+              <BarChart data={barData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis allowDecimals={false} />
+                <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                <YAxis allowDecimals={false} width={36} tick={{ fontSize: 11 }} />
                 <Tooltip />
                 <Legend />
                 <Bar dataKey="Acertos" stackId="a" fill={COLORS.correct} />

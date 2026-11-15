@@ -201,7 +201,7 @@ export function OverviewScreen() {
             <button
               type="button"
               onClick={() => navigate('/revisoes')}
-              className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+              className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline max-lg:min-h-9 max-lg:px-2"
             >
               Ver todas <ArrowRight className="size-3" aria-hidden="true" />
             </button>
@@ -215,9 +215,9 @@ export function OverviewScreen() {
                 const displayTitle = resolveReviewDisplayTitle(rev, linkedNote);
                 const isOverdue = rev.dueDate < today;
                 return (
-                  <li key={rev.id} className="flex items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0">
+                  <li key={rev.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 py-2.5 first:pt-0 last:pb-0">
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 text-xs">
+                      <div className="flex flex-wrap items-center gap-2 text-xs">
                         {disc && <DisciplineDot color={disc.color} />}
                         <span className="font-medium text-fg-muted truncate">{disc?.name ?? 'Disciplina'}</span>
                         <Badge tone={isOverdue ? 'danger' : 'warning'}>
@@ -243,7 +243,7 @@ export function OverviewScreen() {
                               );
                             }
                           }}
-                          className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                          className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline max-lg:min-h-9 max-lg:px-2"
                         >
                           Ver revisão
                         </button>
@@ -253,7 +253,7 @@ export function OverviewScreen() {
                     <Button
                       variant="secondary"
                       size="sm"
-                      className="shrink-0"
+                      className="shrink-0 max-sm:self-end"
                       icon={<Check className="size-3.5 text-success" aria-hidden="true" />}
                       onClick={() => void handleCompleteUrgentReview(rev.id)}
                     >
@@ -264,7 +264,7 @@ export function OverviewScreen() {
               })}
             </ul>
           ) : (
-            <div className="flex items-center justify-between rounded-lg bg-surface-muted/50 px-3.5 py-3 text-sm">
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-surface-muted/50 px-3.5 py-3 text-sm">
               <span className="flex items-center gap-2 text-fg-muted">
                 <CheckCircle className="size-4 text-success shrink-0" aria-hidden="true" />
                 Nenhuma revisão pendente para hoje.
@@ -294,7 +294,7 @@ export function OverviewScreen() {
             <button
               type="button"
               onClick={() => navigate('/cronograma')}
-              className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+              className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline max-lg:min-h-9 max-lg:px-2"
             >
               Abrir cronograma <ArrowRight className="size-3" aria-hidden="true" />
             </button>
@@ -305,9 +305,9 @@ export function OverviewScreen() {
               {overdueSessionsInWeek.slice(0, 3).map((s) => {
                 const disc = discMap.get(s.disciplineId);
                 return (
-                  <li key={s.id} className="flex items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0">
+                  <li key={s.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 py-2.5 first:pt-0 last:pb-0">
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 text-xs">
+                      <div className="flex flex-wrap items-center gap-2 text-xs">
                         {disc && <DisciplineDot color={disc.color} />}
                         <span className="font-semibold text-fg truncate">
                           {disc?.name ?? (s.disciplineId === 'simulado' ? 'Simulado Geral BNB' : 'Sessão')}
@@ -323,6 +323,7 @@ export function OverviewScreen() {
                     <Button
                       variant="secondary"
                       size="sm"
+                      className="max-sm:self-end"
                       onClick={() => void handleStartBlock(s.id)}
                     >
                       Iniciar
@@ -332,7 +333,7 @@ export function OverviewScreen() {
               })}
             </ul>
           ) : (
-            <div className="flex items-center justify-between rounded-lg bg-surface-muted/50 px-3.5 py-3 text-sm">
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-surface-muted/50 px-3.5 py-3 text-sm">
               <span className="flex items-center gap-2 text-fg-muted">
                 <Calendar className="size-4 text-primary shrink-0" aria-hidden="true" />
                 {currentWeekMetrics.totalSessions > 0
@@ -342,7 +343,7 @@ export function OverviewScreen() {
               <button
                 type="button"
                 onClick={() => navigate('/calendario')}
-                className="text-xs font-medium text-fg-muted hover:text-fg"
+                className="text-xs font-medium text-fg-muted hover:text-fg shrink-0 max-lg:min-h-9 max-lg:px-2"
               >
                 Ver agenda
               </button>
@@ -379,7 +380,7 @@ export function OverviewScreen() {
             <button
               type="button"
               onClick={() => navigate('/relatorios')}
-              className="font-medium text-primary hover:underline inline-flex items-center gap-1"
+              className="font-medium text-primary hover:underline inline-flex items-center gap-1 max-lg:min-h-9 max-lg:px-2"
             >
               <BarChart3 className="size-3" aria-hidden="true" />
               Ver gráficos

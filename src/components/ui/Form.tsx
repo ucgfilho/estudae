@@ -60,7 +60,7 @@ export function Field({ label, hint, error, required, className, children }: Fie
 }
 
 export function Input({ className, ...rest }: InputHTMLAttributes<HTMLInputElement>) {
-  return <input className={cn('input-base h-9', className)} {...rest} />;
+  return <input className={cn('input-base h-9 max-lg:h-11', className)} {...rest} />;
 }
 
 interface InputWithIconProps extends InputHTMLAttributes<HTMLInputElement> {
@@ -80,7 +80,7 @@ export const InputWithIcon = forwardRef<HTMLInputElement, InputWithIconProps>(fu
       >
         {icon}
       </span>
-      <input ref={ref} className={cn('input-base input-with-icon h-10', className)} {...rest} />
+      <input ref={ref} className={cn('input-base input-with-icon h-10 max-lg:h-11', className)} {...rest} />
     </div>
   );
 });
@@ -99,7 +99,7 @@ export function Checkbox({ label, description, className, id: customId, ...rest 
   const generatedId = useId();
   const id = customId || generatedId;
   return (
-    <label htmlFor={id} className={cn('group flex items-start gap-2.5 cursor-pointer select-none', className)}>
+    <label htmlFor={id} className={cn('group flex items-start gap-2.5 cursor-pointer select-none max-lg:py-1.5', className)}>
       <input
         id={id}
         type="checkbox"
@@ -108,7 +108,7 @@ export function Checkbox({ label, description, className, id: customId, ...rest 
       />
       <div
         className={cn(
-          'mt-0.5 size-4 shrink-0 rounded border border-border-strong bg-surface transition-all flex items-center justify-center',
+          'mt-0.5 size-4 max-lg:size-5 shrink-0 rounded border border-border-strong bg-surface transition-all flex items-center justify-center',
           'group-hover:border-primary/70',
           'peer-focus-visible:ring-2 peer-focus-visible:ring-primary/40 peer-focus-visible:ring-offset-1 peer-focus-visible:ring-offset-surface',
           'peer-checked:bg-primary peer-checked:border-primary peer-checked:text-primary-fg',
@@ -136,7 +136,7 @@ export function Radio({ label, description, className, id: customId, ...rest }: 
   const generatedId = useId();
   const id = customId || generatedId;
   return (
-    <label htmlFor={id} className={cn('group flex items-start gap-2.5 cursor-pointer select-none', className)}>
+    <label htmlFor={id} className={cn('group flex items-start gap-2.5 cursor-pointer select-none max-lg:py-1.5', className)}>
       <input
         id={id}
         type="radio"
@@ -145,7 +145,7 @@ export function Radio({ label, description, className, id: customId, ...rest }: 
       />
       <div
         className={cn(
-          'mt-0.5 size-4 shrink-0 rounded-full border border-border-strong bg-surface transition-all flex items-center justify-center',
+          'mt-0.5 size-4 max-lg:size-5 shrink-0 rounded-full border border-border-strong bg-surface transition-all flex items-center justify-center',
           'group-hover:border-primary/70',
           'peer-focus-visible:ring-2 peer-focus-visible:ring-primary/40 peer-focus-visible:ring-offset-1 peer-focus-visible:ring-offset-surface',
           'peer-checked:border-primary peer-checked:bg-primary/10',

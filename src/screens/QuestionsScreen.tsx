@@ -247,7 +247,7 @@ export function QuestionsScreen() {
                 key={p.id}
                 type="button"
                 onClick={() => applyDatePreset(p.id as 'all' | 'today' | '7d' | '30d')}
-                className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
+                className={`rounded-full px-2.5 py-1 max-lg:px-3.5 max-lg:py-2 max-lg:min-h-10 text-xs font-medium transition-colors ${
                   activeDatePreset === p.id
                     ? 'bg-primary text-white shadow-sm'
                     : 'bg-surface-muted text-fg-muted hover:bg-surface-muted/80 hover:text-fg'
@@ -382,8 +382,122 @@ export function QuestionsScreen() {
         description="Histórico detalhado de baterias cadastradas"
       >
         {filteredLogs.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
+          <>
+            {/* Mobile Card List (< md) */}
+            <div className="md:hidden space-y-2.5">
+              {filteredLogs.map((log) => {
+                const d = discMap.get(log.disciplineId);
+                const t = log.topicId ? topicMap.get(log.topicId) : null;
+                const graded = log.correct + log.incorrect;
+                const acc = graded > 0 ? (log.correct / graded) * 100 : null;
+
+                return (
+                  <div
+                    key={log.id}
+                    className="rounded-xl border border-border bg-surface p-3.5 space-y-2.5 text-xs"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 font-semibold text-sm text-fg">
+                          {d && <DisciplineDot color={d.color} />}
+                          <span className="truncate">{d?.name ?? '—'}</span>
+                        </div>
+                        {t && <div className="mt-0.5 text-xs text-fg-subtle line-clamp-1">{t.title}</div>}
+                      </div>
+                      <div className="flex flex-col items-end gap-1 shrink-0">
+                        <span className="text-[11px] font-medium text-fg-subtle tabular-nums">
+                          {formatDate(log.date)}
+                        </span>
+                        {acc !== null && (
+                          <span
+                            className={`font-bold text-sm tabular-nums ${
+                              acc >= (settings?.accuracyGoal ?? 80)
+                                ? 'text-success'
+                                : acc < 60
+                                ? 'text-danger'
+                                : 'text-warning'
+                            }`}
+                          >
+                            {formatPercent(acc)}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2 rounded-lg bg-surface-muted/40 px-2.5 py-2 tabular-nums">
+                      <span>
+                        Total: <strong className="text-fg">{log.total}</strong>
+                      </span>
+                      <span className="text-fg-subtle">·</span>
+                      <span className="text-success font-medium">
+                        Acertos: <strong>{log.correct}</strong>
+                      </span>
+                      <span className="text-fg-subtle">·</span>
+                      <span className="text-danger font-medium">
+                        Erros: <strong>{log.incorrect}</strong>
+                      </span>
+                      {(log.blank ?? 0) > 0 && (
+                        <>
+                          <span className="text-fg-subtle">·</span>
+                          <span className="text-fg-muted">Branco: {log.blank}</span>
+                        </>
+                      )}
+                      {notesByLogId.has(log.id) && (
+                        <span className="ml-auto inline-flex items-center text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-medium">
+                          No Caderno
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center justify-between gap-2 pt-1 border-t border-border/50">
+                      <span className="text-fg-muted truncate">
+                        {log.source ? `Fonte: ${log.source}` : 'Sem banca/fonte'}
+                      </span>
+                      <div className="inline-flex shrink-0 items-center justify-end gap-1">
+                        {log.incorrect > 0 && (
+                          <IconButton
+                            label={
+                              notesByLogId.has(log.id)
+                                ? 'Ver/Editar anotação no Caderno de Erros'
+                                : 'Registrar aprendizado no Caderno de Erros'
+                            }
+                            icon={
+                              notesByLogId.has(log.id) ? (
+                                <BookOpen className="size-4 text-primary" />
+                              ) : (
+                                <AlertOctagon className="size-4 text-warning" />
+                              )
+                            }
+                            size="sm"
+                            onClick={() => openAddErrorForLog(log)}
+                          />
+                        )}
+                        <IconButton
+                          label="Editar lançamento"
+                          icon={<Edit2 className="size-4" />}
+                          size="sm"
+                          onClick={() => openEditLog(log)}
+                        />
+                        <IconButton
+                          label="Excluir lançamento"
+                          icon={<Trash2 className="size-4" />}
+                          className="text-fg-muted hover:text-danger hover:bg-danger-soft/20"
+                          size="sm"
+                          onClick={() => {
+                            setLogToDelete(log);
+                            setDeleteConfirmOpen(true);
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Desktop Table (md+) */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left text-sm">
               <thead className="border-b border-border bg-surface-muted/40 text-xs font-semibold text-fg-muted">
                 <tr>
                   <th className="py-2.5 px-3">Data</th>
@@ -502,6 +616,7 @@ export function QuestionsScreen() {
               </tbody>
             </table>
           </div>
+          </>
         ) : (
           <EmptyState
             icon={<CheckSquare className="size-8" />}

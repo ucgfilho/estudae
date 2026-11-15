@@ -1064,7 +1064,7 @@ export function ScheduleScreen() {
       {/* Week Selector Ribbon */}
       {weeklyPlans.length > 0 ? (
         <div className="space-y-2">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-1.5">
               <Button
                 variant="ghost"
@@ -1110,7 +1110,7 @@ export function ScheduleScreen() {
                     onClick={() => setSelectedWeekIndex(wp.weekIndex)}
                     data-week-index={isSelected ? undefined : wp.weekIndex}
                     className={cn(
-                      'flex flex-col items-center justify-center rounded-lg px-3 py-1.5 text-xs font-medium transition-[transform,background-color,color,box-shadow] duration-150 shrink-0',
+                      'flex flex-col items-center justify-center rounded-lg px-3 py-1.5 max-lg:min-h-11 max-lg:px-3.5 text-xs font-medium transition-[transform,background-color,color,box-shadow] duration-150 shrink-0',
                       isWeekDropTarget &&
                         'ring-2 ring-primary bg-primary-soft/60 text-primary scale-105 border-dashed border-primary shadow-sm',
                       isSelected
@@ -1336,7 +1336,7 @@ export function ScheduleScreen() {
             </span>
           </div>
 
-          <div ref={boardRef} className="grid grid-cols-1 gap-3 md:grid-cols-7">
+          <div ref={boardRef} className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-7">
             {Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)).map((dayKey) => {
               const daySessions = weekSessions.filter((s) => s.date === dayKey);
               const isToday = dayKey === today;
@@ -1361,7 +1361,7 @@ export function ScheduleScreen() {
                   data-testid={`day-column-${dayKey}`}
                   data-day-column={dayKey}
                   className={cn(
-                    'rounded-xl border p-3 flex flex-col justify-between min-h-[220px] transition-colors duration-150',
+                    'min-w-0 rounded-xl border p-3 flex flex-col justify-between lg:min-h-[220px] transition-colors duration-150',
                     isActiveDropColumn
                       ? 'border-primary ring-2 ring-primary/70 bg-primary-soft/15 shadow-md'
                       : isToday
@@ -1380,9 +1380,9 @@ export function ScheduleScreen() {
                         </span>
                         <IconButton
                           label={`Planejar sessão para ${formatWeekdayShort(dayKey)}`}
-                          icon={<Plus className="size-3" />}
+                          icon={<Plus className="size-3 max-lg:size-4" />}
                           size="sm"
-                          className="!size-5 text-fg-subtle hover:text-primary"
+                          className="lg:!size-5 max-lg:size-9 text-fg-subtle hover:text-primary"
                           onClick={() => openNewSession(dayKey)}
                         />
                       </div>
@@ -1499,13 +1499,13 @@ export function ScheduleScreen() {
                               <span
                                 data-drag-handle
                                 style={{ touchAction: 'none' }}
-                                className="-ml-1 inline-flex size-4 shrink-0 items-center justify-center rounded text-fg-subtle/50 group-hover:text-fg-muted transition-colors"
+                                className="-ml-1 inline-flex size-4 max-lg:size-7 shrink-0 items-center justify-center rounded text-fg-subtle/50 group-hover:text-fg-muted transition-colors"
                               >
-                                <GripVertical className="size-3" aria-hidden />
+                                <GripVertical className="size-3 max-lg:size-4" aria-hidden />
                               </span>
                               <span
                                 className={cn(
-                                  'inline-flex items-center gap-1 rounded px-1.5 py-0.5 font-mono text-[10px] font-semibold tabular-nums leading-none shrink-0',
+                                  'inline-flex items-center gap-1 rounded px-1.5 py-0.5 font-mono text-[10px] max-lg:text-xs font-semibold tabular-nums leading-none shrink-0',
                                   s.status === 'concluida'
                                     ? 'bg-success-soft/60 text-success'
                                     : isOverdue
@@ -1536,7 +1536,7 @@ export function ScheduleScreen() {
                             {/* Corpo: Nome completo da disciplina ocupando 100% da largura do card */}
                             <p
                               className={cn(
-                                'pl-1 text-[11.5px] font-semibold leading-snug tracking-tight line-clamp-2 break-words',
+                                'pl-1 text-[11.5px] max-lg:text-sm font-semibold leading-snug tracking-tight line-clamp-2 break-words',
                                 s.status === 'concluida' ? 'text-fg-muted' : 'text-fg'
                               )}
                             >
@@ -1545,49 +1545,49 @@ export function ScheduleScreen() {
 
                             {/* Rodapé: Ações essenciais alinhadas com respiração e lixeira isolada à direita */}
                             <div className="flex items-center justify-between pl-1 pt-1.5 border-t border-border/40">
-                              <div className="flex items-center gap-1">
+                              <div className="flex items-center gap-1 max-lg:gap-1.5">
                                 {isSimulado && (
                                   <IconButton
                                     label="Ir para tela de Simulados"
-                                    icon={<ClipboardList className="size-3 text-primary" />}
+                                    icon={<ClipboardList className="size-3 max-lg:size-4 text-primary" />}
                                     size="sm"
-                                    className="!size-5"
+                                    className="lg:!size-5 max-lg:size-9"
                                     onClick={() => navigate('/simulados')}
                                   />
                                 )}
                                 {s.status === 'planejada' && !isOverdue && (
                                   <IconButton
                                     label="Iniciar cronômetro para esta sessão"
-                                    icon={<Play className="size-3 text-primary" />}
+                                    icon={<Play className="size-3 max-lg:size-4 text-primary" />}
                                     size="sm"
-                                    className="!size-5 hover:bg-primary-soft/40"
+                                    className="lg:!size-5 max-lg:size-9 hover:bg-primary-soft/40"
                                     onClick={() => handleStartTimer(s)}
                                   />
                                 )}
                                 {canRecover && (
                                   <IconButton
                                     label={isLost ? 'Recuperar sessão perdida' : 'Recuperar sessão atrasada'}
-                                    icon={<RotateCcw className="size-3 text-warning" />}
+                                    icon={<RotateCcw className="size-3 max-lg:size-4 text-warning" />}
                                     size="sm"
-                                    className="!size-5 hover:bg-warning-soft/40"
+                                    className="lg:!size-5 max-lg:size-9 hover:bg-warning-soft/40"
                                     onClick={() => openRecoverModal(s)}
                                   />
                                 )}
                                 {s.status === 'planejada' && (
                                   <IconButton
                                     label="Concluir sessão (caso já tenha estudado sem cronômetro)"
-                                    icon={<Check className="size-3 text-success" />}
+                                    icon={<Check className="size-3 max-lg:size-4 text-success" />}
                                     size="sm"
-                                    className="!size-5 hover:bg-success-soft"
+                                    className="lg:!size-5 max-lg:size-9 hover:bg-success-soft"
                                     onClick={() => void handleCompleteDirectly(s)}
                                   />
                                 )}
                                 {(s.status === 'planejada' || s.status === 'concluida') && (
                                   <IconButton
                                     label="Editar sessão"
-                                    icon={<Edit className="size-3 text-fg-subtle hover:text-fg" />}
+                                    icon={<Edit className="size-3 max-lg:size-4 text-fg-subtle hover:text-fg" />}
                                     size="sm"
-                                    className="!size-5"
+                                    className="lg:!size-5 max-lg:size-9"
                                     onClick={() => {
                                       setSessionToEdit(s);
                                       setSessionModalDate(s.date);
@@ -1605,9 +1605,9 @@ export function ScheduleScreen() {
                                       ? 'Excluir sessão atrasada'
                                       : 'Excluir sessão'
                                   }
-                                  icon={<Trash2 className="size-3 text-fg-subtle hover:text-danger" />}
+                                  icon={<Trash2 className="size-3 max-lg:size-4 text-fg-subtle hover:text-danger" />}
                                   size="sm"
-                                  className="!size-5 hover:bg-danger-soft/40"
+                                  className="lg:!size-5 max-lg:size-9 hover:bg-danger-soft/40"
                                   onClick={() => {
                                     setSessionToDelete(s);
                                     setDeleteConfirmOpen(true);

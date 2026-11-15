@@ -5,6 +5,7 @@ import {
   Calendar,
   CalendarClock,
   LayoutDashboard,
+  Menu,
   Timer,
 } from 'lucide-react';
 import { Sidebar } from './Sidebar';
@@ -133,7 +134,7 @@ export function AppLayout({ onSwitchContestScreen }: AppLayoutProps) {
         />
         <main
           id="main-content"
-          className="flex-1 overflow-y-auto px-3 py-4 sm:px-6 sm:py-6 pb-24 lg:pb-8 focus:outline-hidden"
+          className="flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain px-3 py-4 sm:px-6 sm:py-6 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:pb-[calc(6rem+env(safe-area-inset-bottom))] lg:pb-8 focus:outline-hidden"
           tabIndex={-1}
         >
           <div className="mx-auto max-w-6xl">
@@ -144,7 +145,7 @@ export function AppLayout({ onSwitchContestScreen }: AppLayoutProps) {
         {/* Barra inferior de acesso rápido em dispositivos Mobile */}
         <nav
           aria-label="Acesso rápido mobile"
-          className="lg:hidden fixed bottom-0 inset-x-0 z-20 flex items-center justify-around border-t border-border bg-surface px-1 py-1"
+          className="lg:hidden fixed bottom-0 inset-x-0 z-20 flex items-stretch justify-around border-t border-border bg-surface/95 backdrop-blur supports-[backdrop-filter]:bg-surface/85 px-1 pt-1 pb-[calc(0.25rem+env(safe-area-inset-bottom))]"
         >
           {mobileQuickLinks.map((item) => {
             const Icon = item.icon;
@@ -155,16 +156,26 @@ export function AppLayout({ onSwitchContestScreen }: AppLayoutProps) {
                 end={item.to === '/'}
                 className={({ isActive }) =>
                   cn(
-                    'flex min-h-11 min-w-[60px] flex-col items-center justify-center gap-0.5 rounded-lg px-2 py-1 text-[11px] font-medium transition-colors',
+                    'flex min-h-12 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-lg px-1 py-1 text-[11px] font-medium transition-colors',
                     isActive ? 'text-primary font-semibold bg-primary-soft/50' : 'text-fg-muted hover:text-fg',
                   )
                 }
               >
-                <Icon className="size-4" aria-hidden="true" />
-                <span className="truncate">{item.label}</span>
+                <Icon className="size-5" aria-hidden="true" />
+                <span className="max-w-full truncate">{item.label}</span>
               </NavLink>
             );
           })}
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen(true)}
+            aria-label="Abrir menu completo"
+            aria-expanded={mobileMenuOpen}
+            className="flex min-h-12 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-lg px-1 py-1 text-[11px] font-medium text-fg-muted transition-colors hover:text-fg"
+          >
+            <Menu className="size-5" aria-hidden="true" />
+            <span className="max-w-full truncate">Mais</span>
+          </button>
         </nav>
       </div>
       <CelebrationLayer />

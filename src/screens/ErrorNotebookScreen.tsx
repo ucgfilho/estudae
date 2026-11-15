@@ -378,9 +378,13 @@ export function ErrorNotebookScreen() {
                   <div className="flex flex-wrap items-center gap-2">
                     {d && <DisciplineDot color={d.color} />}
                     <span className="font-semibold text-fg">{d?.name}</span>
-                    {t && <Badge tone="neutral">{t.title}</Badge>}
+                    {t && (
+                      <Badge tone="neutral" className="max-w-full truncate">
+                        <span className="truncate">{t.title}</span>
+                      </Badge>
+                    )}
                     {note.mockExamTitle && (
-                      <Badge tone="primary" icon={<FileText className="size-3" aria-hidden />} className="max-w-64">
+                      <Badge tone="primary" icon={<FileText className="size-3" aria-hidden />} className="max-w-64 max-sm:max-w-full">
                         <span className="truncate">Prova: {note.mockExamTitle}</span>
                       </Badge>
                     )}
@@ -390,7 +394,7 @@ export function ErrorNotebookScreen() {
                   </div>
                 }
                 actions={
-                  <div className="flex shrink-0 items-center gap-1.5">
+                  <div className="flex flex-wrap shrink-0 items-center gap-1.5">
                     {note.status !== 'dominado' && (
                       <Button
                         variant="secondary"
@@ -453,7 +457,7 @@ export function ErrorNotebookScreen() {
                   </div>
 
                   <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-fg-subtle pt-1 border-t border-border">
-                    <div className="flex items-center gap-4">
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
                       <span>Data do erro: <strong>{formatDate(note.errorDate)}</strong></span>
                       {note.nextReviewDate && (
                         <span className="flex items-center gap-1 text-primary">

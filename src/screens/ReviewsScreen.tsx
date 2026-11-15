@@ -185,7 +185,11 @@ export function ReviewsScreen() {
                   <div className="flex flex-wrap items-center gap-2">
                     {d && <DisciplineDot color={d.color} />}
                     <span className="font-semibold text-fg">{d?.name}</span>
-                    {t && <Badge tone="neutral">{t.title}</Badge>}
+                    {t && (
+                      <Badge tone="neutral" className="max-w-full truncate">
+                        <span className="truncate">{t.title}</span>
+                      </Badge>
+                    )}
                     <Badge tone="neutral" className="text-xs">
                       Ciclo de {review.intervalDays}d
                     </Badge>
@@ -198,7 +202,7 @@ export function ReviewsScreen() {
 
                   <p className="font-medium text-sm text-fg">{displayTitle}</p>
 
-                  <div className="text-xs text-fg-subtle flex items-center gap-3">
+                  <div className="text-xs text-fg-subtle flex flex-wrap items-center gap-x-3 gap-y-1">
                     <span className="flex items-center gap-1">
                       <CalendarDays className="size-3.5" />
                       Prevista para: <strong>{formatDate(review.dueDate)}</strong>
@@ -212,7 +216,7 @@ export function ReviewsScreen() {
 
                   {linkedErrorNote && (
                     <details className="mt-2 text-xs">
-                      <summary className="cursor-pointer text-warning hover:underline font-medium select-none">
+                      <summary className="cursor-pointer text-warning hover:underline font-medium select-none max-lg:py-1.5 inline-block">
                         Ver diagnóstico do erro vinculado
                       </summary>
                       <div className="mt-1.5 p-3 rounded-lg bg-surface-muted/60 border border-border text-xs text-fg space-y-1.5">
@@ -229,7 +233,7 @@ export function ReviewsScreen() {
                   )}
                 </div>
 
-                <div className="flex shrink-0 items-center gap-2 self-end sm:self-start">
+                <div className="flex flex-wrap shrink-0 items-center gap-2 self-end sm:self-start">
                   {review.status === 'pendente' ? (
                     <>
                       <Button

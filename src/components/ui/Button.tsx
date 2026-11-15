@@ -12,10 +12,12 @@ const variants: Record<Variant, string> = {
   subtle: 'bg-primary-soft text-primary hover:brightness-95 active:brightness-90 border border-transparent dark:hover:brightness-115',
 };
 
+// Em telas < lg (smartphones/tablets) os alvos de toque crescem para ≥ 40–44px;
+// no desktop as dimensões originais são preservadas.
 const sizes: Record<Size, string> = {
-  sm: 'h-8 px-3 text-xs gap-1.5',
-  md: 'h-9 px-3.5 text-sm gap-2',
-  lg: 'h-11 px-5 text-sm gap-2',
+  sm: 'h-8 px-3 text-xs gap-1.5 max-lg:h-10 max-lg:px-3.5',
+  md: 'h-9 px-3.5 text-sm gap-2 max-lg:h-11 max-lg:px-4',
+  lg: 'h-11 px-5 text-sm gap-2 max-lg:h-12',
 };
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -66,8 +68,8 @@ export interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement>
 }
 
 const iconSizes: Record<Size, string> = {
-  sm: 'size-8',
-  md: 'size-9',
+  sm: 'size-8 max-lg:size-10',
+  md: 'size-9 max-lg:size-10',
   lg: 'size-11',
 };
 

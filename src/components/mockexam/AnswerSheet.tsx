@@ -28,12 +28,12 @@ function QuestionRow({
   return (
     <div
       className={cn(
-        'flex items-center gap-3 rounded-lg border px-3 py-2 transition-colors',
+        'flex items-center gap-2 sm:gap-3 rounded-lg border px-2.5 sm:px-3 py-2 transition-colors',
         current ? 'border-primary/30 bg-primary-soft/40' : 'border-border bg-surface',
       )}
     >
-      <span className="w-8 text-right text-sm font-semibold tabular-nums text-fg">{number}</span>
-      <div role="radiogroup" aria-label={`Questão ${number}`} className="flex flex-wrap gap-2">
+      <span className="w-6 sm:w-8 shrink-0 text-right text-sm font-semibold tabular-nums text-fg">{number}</span>
+      <div role="radiogroup" aria-label={`Questão ${number}`} className="flex flex-1 flex-wrap gap-1.5 sm:gap-2">
         {letters.map((letter) => {
           const labelText = optionLabel(letter, exam.optionCount);
           const ariaLabel = trueFalse

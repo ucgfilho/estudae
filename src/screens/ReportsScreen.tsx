@@ -209,7 +209,7 @@ export function ReportsScreen() {
 
       {/* Granularity & Time Filter Bar */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs font-medium text-fg-muted">Agrupamento:</span>
           <Segmented
             label="Agrupamento do relatório"
@@ -226,7 +226,7 @@ export function ReportsScreen() {
           />
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs font-medium text-fg-muted">Janela:</span>
           <Segmented
             label="Período do relatório"
@@ -256,8 +256,8 @@ export function ReportsScreen() {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={studyData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="label" tickLine={false} />
-                <YAxis tickLine={false} width={44} />
+                <XAxis dataKey="label" tickLine={false} tick={{ fontSize: 11 }} />
+                <YAxis tickLine={false} width={44} tick={{ fontSize: 11 }} />
                 <Tooltip formatter={(value) => [`${value} min`, '']} />
                 <Legend />
                 <Bar
@@ -294,8 +294,8 @@ export function ReportsScreen() {
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={accuracyData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="label" tickLine={false} />
-                <YAxis domain={[0, 100]} unit="%" tickLine={false} width={48} />
+                <XAxis dataKey="label" tickLine={false} tick={{ fontSize: 11 }} />
+                <YAxis domain={[0, 100]} unit="%" tickLine={false} width={52} tick={{ fontSize: 11 }} />
                 <Tooltip formatter={(value) => [formatPercent(Number(value)), 'Acerto']} />
                 <Line
                   type="monotone"
@@ -335,7 +335,7 @@ export function ReportsScreen() {
               return (
                 <div
                   key={d.disciplineId}
-                  className="flex items-center justify-between p-2.5 rounded-lg border border-border bg-surface transition-colors hover:border-border-strong hover:bg-surface-elevated/40"
+                  className="flex items-center justify-between gap-2 p-2.5 rounded-lg border border-border bg-surface transition-colors hover:border-border-strong hover:bg-surface-elevated/40"
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
                     <span

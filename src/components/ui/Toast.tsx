@@ -49,7 +49,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     <ToastContext.Provider value={api}>
       {children}
       <div
-        className="pointer-events-none fixed bottom-4 right-4 z-[100] flex w-[min(24rem,calc(100vw-2rem))] flex-col-reverse gap-2"
+        className="pointer-events-none fixed bottom-4 right-4 max-lg:bottom-[calc(4.75rem+env(safe-area-inset-bottom))] max-lg:right-3 z-[100] flex w-[min(24rem,calc(100vw-2rem))] flex-col-reverse gap-2"
         aria-live="polite"
       >
         {toasts.map((t) => (
@@ -72,7 +72,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               type="button"
               onClick={() => dismiss(t.id)}
               aria-label="Fechar notificação"
-              className="rounded p-0.5 text-fg-subtle hover:bg-surface-muted hover:text-fg"
+              className="rounded p-0.5 max-lg:p-2 max-lg:-m-1.5 text-fg-subtle hover:bg-surface-muted hover:text-fg"
             >
               <X className="size-4" />
             </button>

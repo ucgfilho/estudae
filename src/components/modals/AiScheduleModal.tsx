@@ -236,19 +236,19 @@ export function AiScheduleModal({
 
             {provider === 'gemini' && (
               <div className="rounded-xl border border-border bg-surface-muted/20 p-3.5 space-y-3 animate-fade-in">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-1.5 text-xs font-semibold text-fg">
-                    <Key className="size-3.5 text-primary" />
+                    <Key className="size-3.5 text-primary shrink-0" />
                     <span>Configuração da Google Gemini API</span>
                   </div>
                   <a
                     href="https://aistudio.google.com/app/apikey"
                     target="_blank"
                     rel="noreferrer"
-                    className="text-[11px] text-primary hover:underline inline-flex items-center gap-1 font-medium"
+                    className="text-[11px] text-primary hover:underline inline-flex items-center gap-1 font-medium max-lg:py-1"
                   >
                     Obter chave gratuita no Google AI Studio
-                    <ExternalLink className="size-3" />
+                    <ExternalLink className="size-3 shrink-0" />
                   </a>
                 </div>
 

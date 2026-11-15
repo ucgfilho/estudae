@@ -86,7 +86,7 @@ export function FileDropzone({ label, hint, accept, file, required, onFile }: Fi
               if (inputRef.current) inputRef.current.value = '';
               onFile(null);
             }}
-            className="absolute top-2 right-2 inline-flex size-8 items-center justify-center rounded-md text-fg-muted hover:bg-surface-muted hover:text-fg focus-visible:ring-2 focus-visible:ring-primary"
+            className="absolute top-2 right-2 inline-flex size-8 max-lg:size-10 items-center justify-center rounded-md text-fg-muted hover:bg-surface-muted hover:text-fg focus-visible:ring-2 focus-visible:ring-primary"
           >
             <X className="size-4" aria-hidden />
           </button>

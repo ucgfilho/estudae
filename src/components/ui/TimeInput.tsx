@@ -48,7 +48,7 @@ export function TimeInput({ className, value, onChange, onBlur, ...rest }: TimeI
           if (text !== '' && !isValidTime(text)) setText(value ?? '');
           onBlur?.(e);
         }}
-        className={cn('input-base h-9 pr-9', className)}
+        className={cn('input-base h-9 pr-9 max-lg:h-11', className)}
         {...rest}
       />
       <Clock className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-fg-subtle" aria-hidden />

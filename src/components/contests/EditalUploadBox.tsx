@@ -147,12 +147,12 @@ export function EditalUploadBox({
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5">
+        <div className="flex flex-wrap items-center gap-1.5">
           <button
             type="button"
             disabled={disabled || readingFile}
             onClick={() => setShowTextEditor((prev) => !prev)}
-            className="rounded-md border border-border-strong bg-surface px-2.5 py-1 text-[11px] font-medium text-fg hover:bg-surface-muted transition"
+            className="rounded-md border border-border-strong bg-surface px-2.5 py-1 max-lg:px-3 max-lg:py-2 max-lg:min-h-9 text-[11px] font-medium text-fg hover:bg-surface-muted transition"
           >
             {showTextEditor ? 'Ocultar editor' : 'Colar texto do edital'}
           </button>
@@ -161,7 +161,7 @@ export function EditalUploadBox({
               type="button"
               disabled={disabled || readingFile}
               onClick={handleLoadTemplateText}
-              className="inline-flex items-center gap-1 rounded-md bg-primary/15 px-2.5 py-1 text-[11px] font-semibold text-primary hover:bg-primary/25 transition"
+              className="inline-flex items-center gap-1 rounded-md bg-primary/15 px-2.5 py-1 max-lg:px-3 max-lg:py-2 max-lg:min-h-9 text-[11px] font-semibold text-primary hover:bg-primary/25 transition"
             >
               <Wand2 className="size-3" />
               Usar edital base
@@ -198,7 +198,7 @@ export function EditalUploadBox({
               onEditalTextChange('');
               onEditalFileNameChange(null);
             }}
-            className="p-1 rounded-md text-fg-muted hover:text-danger hover:bg-surface transition"
+            className="p-1 max-lg:p-2 max-lg:size-9 inline-flex items-center justify-center rounded-md text-fg-muted hover:text-danger hover:bg-surface transition shrink-0"
             aria-label="Remover arquivo de edital"
           >
             <X className="size-4" />

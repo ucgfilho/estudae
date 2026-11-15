@@ -328,7 +328,7 @@ export function StudyNowScreen() {
 
               {/* Big Digital Clock Display */}
               <div className="py-2">
-                <div className="text-6xl sm:text-7xl font-mono font-bold tracking-tight text-fg tabular-nums">
+                <div className="text-5xl min-[380px]:text-6xl sm:text-7xl font-mono font-bold tracking-tight text-fg tabular-nums">
                   {formatClock(elapsed)}
                 </div>
                 <div className="mt-2 text-xs text-fg-subtle">
@@ -406,7 +406,7 @@ export function StudyNowScreen() {
                 </Button>
               </div>
 
-              <div className="text-[11px] text-fg-subtle">
+              <div className="hidden lg:block text-[11px] text-fg-subtle">
                 Atalho: pressione <kbd className="rounded border border-border bg-surface-muted px-1.5 py-0.5 font-mono text-[10px]">Espaço</kbd> para pausar ou retomar
               </div>
             </div>
@@ -617,12 +617,12 @@ export function StudyNowScreen() {
                 </Field>
 
                 <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-wrap items-center justify-between gap-1">
                     <label className="text-sm font-medium text-fg">Tópico ou Conteúdo</label>
                     <button
                       type="button"
                       onClick={() => setTopicModalOpen(true)}
-                      className="text-xs font-semibold text-primary hover:underline flex items-center gap-1"
+                      className="text-xs font-semibold text-primary hover:underline inline-flex items-center gap-1 max-lg:min-h-9 max-lg:px-2"
                     >
                       <Plus className="size-3" /> Criar Tópico Rápido
                     </button>
@@ -645,7 +645,7 @@ export function StudyNowScreen() {
                       <button
                         type="button"
                         onClick={() => setTopicModalOpen(true)}
-                        className="text-primary hover:underline"
+                        className="text-primary hover:underline max-lg:py-1.5 inline-block"
                       >
                         Clique aqui para adicionar um tópico.
                       </button>
@@ -672,7 +672,7 @@ export function StudyNowScreen() {
                           type="button"
                           onClick={() => setAdHocPlannedMinutes(String(mins))}
                           className={cn(
-                            'rounded-md px-2 py-0.5 text-xs font-medium transition-colors',
+                            'rounded-md px-2 py-0.5 max-lg:px-3.5 max-lg:py-2 max-lg:min-h-9 text-xs font-medium transition-colors',
                             adHocPlannedMinutes === String(mins)
                               ? 'bg-primary text-primary-fg font-semibold'
                               : 'bg-surface-muted text-fg-muted hover:bg-surface-muted/80 hover:text-fg'

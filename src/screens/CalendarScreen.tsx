@@ -214,23 +214,25 @@ export function CalendarScreen() {
 
       {/* Navigation bar */}
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-surface p-3">
-        <div className="flex items-center gap-2">
-          <IconButton
-            label="Período anterior"
-            icon={<ChevronLeft className="size-4" />}
-            onClick={handlePrev}
-            size="sm"
-          />
-          <Button variant="secondary" size="sm" onClick={handleToday}>
-            Hoje
-          </Button>
-          <IconButton
-            label="Próximo período"
-            icon={<ChevronRight className="size-4" />}
-            onClick={handleNext}
-            size="sm"
-          />
-          <h2 className="ml-2 text-base font-semibold capitalize text-fg">{periodLabel}</h2>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-1.5">
+            <IconButton
+              label="Período anterior"
+              icon={<ChevronLeft className="size-4" />}
+              onClick={handlePrev}
+              size="sm"
+            />
+            <Button variant="secondary" size="sm" onClick={handleToday}>
+              Hoje
+            </Button>
+            <IconButton
+              label="Próximo período"
+              icon={<ChevronRight className="size-4" />}
+              onClick={handleNext}
+              size="sm"
+            />
+          </div>
+          <h2 className="ml-1 sm:ml-2 text-sm sm:text-base font-semibold capitalize text-fg">{periodLabel}</h2>
         </div>
 
         {examDate && (
@@ -243,100 +245,201 @@ export function CalendarScreen() {
 
       {/* Main Calendar Views */}
       {view === 'monthly' && (
-        <div className="overflow-hidden rounded-xl border border-border bg-surface">
-          {/* Weekday headers */}
-          <div className="grid grid-cols-7 border-b border-border bg-surface-muted/50 text-center text-xs font-semibold uppercase tracking-wider text-fg-subtle">
-            {WEEKDAY_LABELS.map((w) => (
-              <div key={w} className="py-2.5">
-                {w}
-              </div>
-            ))}
-          </div>
+        <div className="space-y-4">
+          <div className="overflow-hidden rounded-xl border border-border bg-surface">
+            {/* Weekday headers */}
+            <div className="grid grid-cols-7 border-b border-border bg-surface-muted/50 text-center text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-fg-subtle">
+              {WEEKDAY_LABELS.map((w) => (
+                <div key={w} className="py-2 sm:py-2.5">
+                  <span className="sm:hidden">{w.slice(0, 1)}</span>
+                  <span className="hidden sm:inline">{w}</span>
+                </div>
+              ))}
+            </div>
 
-          {/* Days Grid */}
-          <div className="grid grid-cols-7 auto-rows-fr divide-x divide-y divide-border">
-            {visibleDays.map((dayKey) => {
-              const daySessions = sessionsByDate.get(dayKey) ?? [];
-              const studiedSec = secondsByDate.get(dayKey) ?? 0;
-              const studiedMin = Math.round(studiedSec / 60);
-              const isToday = dayKey === today;
-              const isCurMonth = dayKey.slice(0, 7) === currentDate.slice(0, 7);
-              const isExamDay = dayKey === examDate;
+            {/* Days Grid */}
+            <div className="grid grid-cols-7 auto-rows-fr divide-x divide-y divide-border">
+              {visibleDays.map((dayKey) => {
+                const daySessions = sessionsByDate.get(dayKey) ?? [];
+                const studiedSec = secondsByDate.get(dayKey) ?? 0;
+                const studiedMin = Math.round(studiedSec / 60);
+                const isToday = dayKey === today;
+                const isSelectedDay = dayKey === currentDate;
+                const isCurMonth = dayKey.slice(0, 7) === currentDate.slice(0, 7);
+                const isExamDay = dayKey === examDate;
 
-              return (
-                <div
-                  key={dayKey}
-                  className={cn(
-                    'min-h-[105px] p-1.5 transition-colors flex flex-col justify-between group',
-                    !isCurMonth && 'bg-surface-muted/20 text-fg-subtle opacity-70',
-                    isToday && 'bg-primary-soft/30'
-                  )}
-                >
-                  <div className="flex items-center justify-between text-xs mb-1">
-                    <span
-                      className={cn(
-                        'flex size-6 items-center justify-center rounded-full font-medium',
-                        isToday && 'bg-primary text-primary-fg font-bold',
-                        isExamDay && !isToday && 'bg-danger text-white'
-                      )}
-                      title={isExamDay ? 'Dia da prova' : undefined}
-                    >
-                      {dayKey.slice(8)}
-                    </span>
-
-                    {studiedMin > 0 && (
+                return (
+                  <div
+                    key={dayKey}
+                    onClick={() => setCurrentDate(dayKey)}
+                    className={cn(
+                      'min-h-14 md:min-h-[105px] p-1 md:p-1.5 transition-colors flex flex-col justify-between group max-md:cursor-pointer',
+                      !isCurMonth && 'bg-surface-muted/20 text-fg-subtle opacity-70',
+                      isToday && 'bg-primary-soft/30',
+                      isSelectedDay && 'max-md:ring-2 max-md:ring-inset max-md:ring-primary max-md:bg-primary-soft/20'
+                    )}
+                  >
+                    <div className="flex items-center justify-center md:justify-between text-xs mb-0.5 md:mb-1">
                       <span
                         className={cn(
-                          'text-[10px] font-semibold tabular-nums px-1 rounded',
-                          studiedMin >= dailyGoal ? 'text-success bg-success-soft' : 'text-fg-subtle'
+                          'flex size-6 items-center justify-center rounded-full font-medium',
+                          isToday && 'bg-primary text-primary-fg font-bold',
+                          isExamDay && !isToday && 'bg-danger text-white'
                         )}
-                        title={`Estudado: ${formatMinutes(studiedMin)} / Meta: ${formatMinutes(dailyGoal)}`}
+                        title={isExamDay ? 'Dia da prova' : undefined}
                       >
-                        {formatMinutes(studiedMin)}
+                        {dayKey.slice(8)}
                       </span>
-                    )}
 
-                    <IconButton
-                      label={`Adicionar sessão em ${formatDate(dayKey)}`}
-                      icon={<Plus className="size-3" />}
-                      size="sm"
-                      className="opacity-0 group-hover:opacity-100 transition-opacity !size-5"
-                      onClick={() => openNewSession(dayKey)}
-                    />
-                  </div>
-
-                  {/* Day session chips */}
-                  <div className="space-y-1 overflow-y-auto max-h-24 pr-0.5">
-                    {daySessions.slice(0, 3).map((s) => {
-                      const d = discMap.get(s.disciplineId);
-                      return (
-                        <button
-                          key={s.id}
-                          type="button"
-                          onClick={() => setSelectedSessionDetail(s)}
+                      {studiedMin > 0 && (
+                        <span
                           className={cn(
-                            'w-full text-left rounded px-1.5 py-0.5 text-[11px] truncate block transition-all',
-                            s.status === 'concluida'
-                              ? 'bg-success-soft text-success line-through opacity-80'
-                              : s.status === 'perdida'
-                              ? 'bg-danger-soft text-danger'
-                              : 'bg-surface-muted hover:bg-surface-muted/80 text-fg'
+                            'hidden md:inline-block text-[10px] font-semibold tabular-nums px-1 rounded',
+                            studiedMin >= dailyGoal ? 'text-success bg-success-soft' : 'text-fg-subtle'
                           )}
+                          title={`Estudado: ${formatMinutes(studiedMin)} / Meta: ${formatMinutes(dailyGoal)}`}
                         >
-                          <span className="font-semibold mr-1">{s.plannedMinutes}m</span>
-                          <span>{d?.name ?? (s.disciplineId === 'simulado' ? 'Simulado Geral BNB' : 'Sessão')}</span>
-                        </button>
-                      );
-                    })}
-                    {daySessions.length > 3 && (
-                      <div className="text-[10px] text-fg-subtle text-center">
-                        +{daySessions.length - 3} mais
+                          {formatMinutes(studiedMin)}
+                        </span>
+                      )}
+
+                      <IconButton
+                        label={`Adicionar sessão em ${formatDate(dayKey)}`}
+                        icon={<Plus className="size-3" />}
+                        size="sm"
+                        className="hidden md:inline-flex opacity-0 group-hover:opacity-100 transition-opacity !size-5"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openNewSession(dayKey);
+                        }}
+                      />
+                    </div>
+
+                    {/* Mobile compact indicators (< md) */}
+                    {daySessions.length > 0 && (
+                      <div className="flex md:hidden items-center justify-center gap-0.5 py-0.5 flex-wrap">
+                        {daySessions.slice(0, 3).map((s) => {
+                          const d = discMap.get(s.disciplineId);
+                          const dotColor =
+                            s.status === 'concluida'
+                              ? 'var(--success)'
+                              : s.status === 'perdida'
+                              ? 'var(--danger)'
+                              : d?.color ?? '#A6193C';
+                          return (
+                            <span
+                              key={s.id}
+                              className="size-1.5 rounded-full shrink-0"
+                              style={{ backgroundColor: dotColor }}
+                            />
+                          );
+                        })}
+                        {daySessions.length > 3 && (
+                          <span className="text-[9px] font-bold text-fg-muted leading-none">
+                            +{daySessions.length - 3}
+                          </span>
+                        )}
                       </div>
                     )}
+
+                    {/* Desktop day session chips (md+) */}
+                    <div className="hidden md:block space-y-1 overflow-y-auto max-h-24 pr-0.5">
+                      {daySessions.slice(0, 3).map((s) => {
+                        const d = discMap.get(s.disciplineId);
+                        return (
+                          <button
+                            key={s.id}
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedSessionDetail(s);
+                            }}
+                            className={cn(
+                              'w-full text-left rounded px-1.5 py-0.5 text-[11px] truncate block transition-all',
+                              s.status === 'concluida'
+                                ? 'bg-success-soft text-success line-through opacity-80'
+                                : s.status === 'perdida'
+                                ? 'bg-danger-soft text-danger'
+                                : 'bg-surface-muted hover:bg-surface-muted/80 text-fg'
+                            )}
+                          >
+                            <span className="font-semibold mr-1">{s.plannedMinutes}m</span>
+                            <span>{d?.name ?? (s.disciplineId === 'simulado' ? 'Simulado Geral BNB' : 'Sessão')}</span>
+                          </button>
+                        );
+                      })}
+                      {daySessions.length > 3 && (
+                        <div className="text-[10px] text-fg-subtle text-center">
+                          +{daySessions.length - 3} mais
+                        </div>
+                      )}
+                    </div>
                   </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Mobile Selected Day Agenda (< md) */}
+          <div className="md:hidden">
+            <Card
+              title={`Dia selecionado: ${formatDate(currentDate)}`}
+              description={`${(sessionsByDate.get(currentDate) ?? []).length} sessão(ões) · Estudado: ${formatMinutes(Math.round((secondsByDate.get(currentDate) ?? 0) / 60))}`}
+              actions={
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  icon={<Plus className="size-4" />}
+                  onClick={() => openNewSession(currentDate)}
+                >
+                  Adicionar
+                </Button>
+              }
+            >
+              {(sessionsByDate.get(currentDate) ?? []).length > 0 ? (
+                <div className="space-y-2">
+                  {(sessionsByDate.get(currentDate) ?? []).map((s) => {
+                    const d = discMap.get(s.disciplineId);
+                    return (
+                      <div
+                        key={s.id}
+                        onClick={() => setSelectedSessionDetail(s)}
+                        className="flex items-center justify-between gap-3 rounded-xl border border-border bg-surface p-3 text-xs cursor-pointer active:bg-surface-muted/60"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5 font-semibold text-fg">
+                            <DisciplineDot color={d?.color ?? '#A6193C'} />
+                            <span className="truncate">
+                              {d?.name ?? (s.disciplineId === 'simulado' ? 'Simulado Geral BNB' : 'Sessão')}
+                            </span>
+                          </div>
+                          {s.objective && (
+                            <p className="mt-0.5 text-fg-muted truncate">{s.objective}</p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <Badge
+                            tone={
+                              s.status === 'concluida'
+                                ? 'success'
+                                : s.status === 'perdida'
+                                ? 'danger'
+                                : 'neutral'
+                            }
+                          >
+                            {s.plannedMinutes}m
+                          </Badge>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-              );
-            })}
+              ) : (
+                <p className="py-3 text-center text-xs text-fg-subtle">
+                  Nenhuma sessão neste dia. Toque em "Adicionar" para agendar.
+                </p>
+              )}
+            </Card>
           </div>
         </div>
       )}

@@ -391,13 +391,13 @@ export function SettingsScreen() {
           <Field
             label="Chave de API do Google Gemini (API Key)"
             hint={
-              <span className="inline-flex items-center gap-1">
+              <span className="inline-flex flex-wrap items-center gap-1">
                 <span>Opcional se usar IA Integrada.</span>
                 <a
                   href="https://aistudio.google.com/app/apikey"
                   target="_blank"
                   rel="noreferrer"
-                  className="text-primary hover:underline inline-flex items-center gap-0.5"
+                  className="text-primary hover:underline inline-flex items-center gap-0.5 max-lg:min-h-9 max-lg:px-1"
                 >
                   Obter chave gratuita
                   <ExternalLink className="size-2.5" />

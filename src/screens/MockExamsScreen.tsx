@@ -81,8 +81,8 @@ export function MockExamsScreen() {
                 {[...exams]
                   .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
                   .map((e) => (
-                    <li key={e.id} className="flex items-center justify-between gap-3 py-2.5">
-                      <button type="button" className="min-w-0 flex-1 text-left" onClick={() => setSelectedId(e.id)}>
+                    <li key={e.id} className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-3 py-2.5">
+                      <button type="button" className="min-w-0 flex-1 text-left py-1" onClick={() => setSelectedId(e.id)}>
                         <span className="block truncate text-sm font-medium text-fg">{e.title}</span>
                         <span className="text-xs text-fg-subtle">
                           {e.questionCount} questões · {isTrueFalseExam(e.optionCount) ? 'Certo ou Errado' : `${e.optionCount} alternativas`}

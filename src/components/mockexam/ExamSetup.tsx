@@ -121,7 +121,7 @@ export function ExamSetup({ disciplines, onCreated }: ExamSetupProps) {
         {fileError && <Alert tone="danger" onClose={() => setFileError(null)}>{fileError}</Alert>}
 
         <details className="group rounded-lg border border-border px-3 py-2">
-          <summary className="cursor-pointer text-sm font-medium text-fg-muted select-none focus-visible:ring-2 focus-visible:ring-primary">
+          <summary className="cursor-pointer text-sm font-medium text-fg-muted select-none focus-visible:ring-2 focus-visible:ring-primary max-lg:py-1.5">
             Prefere colar ou corrigir o gabarito em texto?
           </summary>
           <div className="mt-3">
@@ -178,17 +178,17 @@ export function ExamSetup({ disciplines, onCreated }: ExamSetupProps) {
 
         {keyOk && parsed && (
           <details className="rounded-lg border border-border px-3 py-2">
-            <summary className="cursor-pointer text-sm font-medium text-fg-muted select-none focus-visible:ring-2 focus-visible:ring-primary">
+            <summary className="cursor-pointer text-sm font-medium text-fg-muted select-none focus-visible:ring-2 focus-visible:ring-primary max-lg:py-1.5">
               Opcional: informar as disciplinas por faixa de questões
             </summary>
             <div className="mt-3 flex flex-col gap-3">
               <p className="text-xs text-fg-subtle">Com isso, o resultado mostra seu desempenho em cada disciplina.</p>
               {ranges.map((r, i) => (
                 <div key={i} className="flex flex-wrap items-end gap-2">
-                  <Field label="Da questão" className="w-28">
+                  <Field label="Da questão" className="w-[calc(50%-0.25rem)] sm:w-28">
                     <Input type="number" min={1} value={r.from} onChange={(e) => updateRange(i, { from: Number(e.target.value) })} />
                   </Field>
-                  <Field label="Até a questão" className="w-28">
+                  <Field label="Até a questão" className="w-[calc(50%-0.25rem)] sm:w-28">
                     <Input type="number" min={1} value={r.to} onChange={(e) => updateRange(i, { to: Number(e.target.value) })} />
                   </Field>
                   <Field label="Disciplina" className="min-w-48 flex-1">

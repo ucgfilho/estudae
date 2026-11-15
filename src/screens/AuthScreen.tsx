@@ -88,9 +88,9 @@ export function AuthScreen({ onAuthenticated }: AuthScreenProps) {
   return (
     <div className="min-h-screen flex flex-col lg:flex-row bg-canvas text-fg">
       {/* Coluna Institucional / Identidade Visual estudaê */}
-      <div className="lg:w-5/12 xl:w-1/2 p-6 sm:p-10 lg:p-12 flex flex-col justify-between text-white bg-[#8E1532] border-b lg:border-b-0 lg:border-r border-white/10">
+      <div className="lg:w-5/12 xl:w-1/2 p-5 sm:p-10 lg:p-12 flex flex-col justify-between text-white bg-[#8E1532] border-b lg:border-b-0 lg:border-r border-white/10">
         <div className="flex items-center gap-3.5">
-          <BnbLogo className="size-11 rounded-xl shadow-md" />
+          <BnbLogo className="size-10 sm:size-11 rounded-xl shadow-md" />
           <div>
             <div className="text-lg sm:text-xl font-bold tracking-tight">estudaê</div>
             <div className="text-xs text-white/80">
@@ -99,13 +99,13 @@ export function AuthScreen({ onAuthenticated }: AuthScreenProps) {
           </div>
         </div>
 
-        <div className="my-8 lg:my-0 space-y-5 max-w-lg relative z-10">
+        <div className="my-4 sm:my-8 lg:my-0 space-y-3 sm:space-y-5 max-w-lg relative z-10">
           <div className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3.5 py-1 text-xs font-medium backdrop-blur-xs">
-            <ShieldCheck className="size-4 text-[#f68b1f]" />
+            <ShieldCheck className="size-4 text-[#f68b1f] shrink-0" />
             <span>Cronograma de 24 semanas feito a partir do seu edital</span>
           </div>
 
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold leading-tight">
+          <h1 className="text-xl sm:text-3xl lg:text-4xl font-bold leading-tight">
             Envie seu edital verticalizado e monte seu plano de estudo.
           </h1>
 
@@ -115,7 +115,7 @@ export function AuthScreen({ onAuthenticated }: AuthScreenProps) {
             com o seu painel.
           </p>
 
-          <ul className="space-y-2.5 text-xs sm:text-sm text-white/90 pt-1">
+          <ul className="hidden sm:block space-y-2.5 text-xs sm:text-sm text-white/90 pt-1">
             <li className="flex items-center gap-2.5">
               <CheckCircle2 className="size-4 text-[#f68b1f] shrink-0" />
               <span>
@@ -143,7 +143,7 @@ export function AuthScreen({ onAuthenticated }: AuthScreenProps) {
       </div>
 
       {/* Coluna do Formulário de Login / Cadastro */}
-      <div className="flex-1 flex items-center justify-center p-4 sm:p-8 lg:p-12 overflow-y-auto">
+      <div className="flex-1 flex items-center justify-center p-4 sm:p-8 lg:p-12 overflow-y-auto pb-[max(1.5rem,env(safe-area-inset-bottom))]">
         <div
           className="w-full max-w-xl space-y-5 my-auto"
         >
@@ -168,7 +168,7 @@ export function AuthScreen({ onAuthenticated }: AuthScreenProps) {
                 setMode('login');
                 setError(null);
               }}
-              className={`flex items-center justify-center gap-2 rounded-lg py-2 text-xs font-semibold transition ${
+              className={`flex items-center justify-center gap-2 rounded-lg py-2 max-lg:py-2.5 max-lg:min-h-10 text-xs max-lg:text-sm font-semibold transition ${
                 mode === 'login'
                   ? 'bg-surface text-primary shadow-xs'
                   : 'text-fg-muted hover:text-fg'
@@ -185,7 +185,7 @@ export function AuthScreen({ onAuthenticated }: AuthScreenProps) {
                 setMode('register');
                 setError(null);
               }}
-              className={`flex items-center justify-center gap-2 rounded-lg py-2 text-xs font-semibold transition ${
+              className={`flex items-center justify-center gap-2 rounded-lg py-2 max-lg:py-2.5 max-lg:min-h-10 text-xs max-lg:text-sm font-semibold transition ${
                 mode === 'register'
                   ? 'bg-surface text-primary shadow-xs'
                   : 'text-fg-muted hover:text-fg'

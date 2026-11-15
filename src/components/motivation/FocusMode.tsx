@@ -63,7 +63,7 @@ export function FocusMode({ timer, elapsed, disciplineName, disciplineColor, top
       role="dialog"
       aria-modal="true"
       aria-label="Modo foco"
-      className="fixed inset-0 z-40 flex flex-col items-center justify-center gap-6 overflow-y-auto bg-canvas p-6 text-center animate-fade-in"
+      className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 overflow-y-auto bg-canvas p-6 pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))] text-center animate-fade-in"
     >
       <div className="space-y-1">
         <div className="flex items-center justify-center gap-2 text-base font-semibold text-fg">
@@ -82,7 +82,7 @@ export function FocusMode({ timer, elapsed, disciplineName, disciplineColor, top
         stroke={14}
       >
         <div>
-          <div className="font-mono text-5xl font-bold tracking-tight text-fg tabular-nums sm:text-6xl">{formatClock(elapsed)}</div>
+          <div className="font-mono text-4xl min-[380px]:text-5xl font-bold tracking-tight text-fg tabular-nums sm:text-6xl">{formatClock(elapsed)}</div>
           <div className="mt-1 text-xs text-fg-subtle">
             {running ? 'Em foco' : 'Pausado'} · meta {formatMinutes(Math.round(planned / 60))}
           </div>
@@ -117,7 +117,7 @@ export function FocusMode({ timer, elapsed, disciplineName, disciplineColor, top
         </Button>
       </div>
 
-      <p className="text-[11px] text-fg-subtle">
+      <p className="hidden lg:block text-[11px] text-fg-subtle">
         <kbd className="rounded border border-border bg-surface-muted px-1.5 py-0.5 font-mono text-[10px]">Espaço</kbd> pausa/retoma ·{' '}
         <kbd className="rounded border border-border bg-surface-muted px-1.5 py-0.5 font-mono text-[10px]">Esc</kbd> sai do modo foco
       </p>

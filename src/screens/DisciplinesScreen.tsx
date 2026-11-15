@@ -273,7 +273,7 @@ export function DisciplinesScreen() {
                 type="button"
                 onClick={() => setSelectedDisciplineId(d.id)}
                 className={cn(
-                  'flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium transition-all shrink-0',
+                  'flex items-center gap-2 rounded-lg px-3 py-2 max-lg:min-h-11 text-xs font-medium transition-all shrink-0',
                   isSelected
                     ? 'bg-primary text-primary-fg shadow-xs font-semibold'
                     : 'text-fg-muted hover:bg-surface-muted hover:text-fg'
@@ -292,7 +292,7 @@ export function DisciplinesScreen() {
           {/* Header of selected discipline with Progress */}
           <Card
             title={
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <DisciplineDot color={currentDiscipline.color} className="size-3" />
                 <span>{currentDiscipline.name}</span>
                 <Badge tone={currentDiscipline.kind === 'technical' ? 'primary' : 'neutral'}>
@@ -303,7 +303,7 @@ export function DisciplinesScreen() {
             description="Reorganize com as setas ou arrastando; marque o progresso à medida que avança na matéria."
           >
             <div className="space-y-2">
-              <div className="flex items-baseline justify-between text-xs">
+              <div className="flex flex-wrap items-baseline justify-between gap-1 text-xs">
                 <span className="font-semibold text-fg">Progresso dos Tópicos Ativos</span>
                 <span className="text-fg-subtle">
                   {discMetrics.completed} de {discMetrics.total} concluídos ({formatPercent(discMetrics.percent)})
@@ -378,7 +378,7 @@ export function DisciplinesScreen() {
                           <button
                             type="button"
                             onClick={() => toggleExpand(topic.id)}
-                            className="p-1 rounded hover:bg-surface-muted text-fg-subtle"
+                            className="p-1 max-lg:size-9 inline-flex items-center justify-center rounded hover:bg-surface-muted text-fg-subtle shrink-0"
                             title={isExpanded ? 'Recolher subtópicos' : 'Expandir subtópicos'}
                           >
                             {isExpanded ? (
@@ -388,7 +388,7 @@ export function DisciplinesScreen() {
                             )}
                           </button>
                         ) : (
-                          <span className="size-6 shrink-0" />
+                          <span className="size-6 max-sm:hidden shrink-0" />
                         )}
 
                         <div className="min-w-0 flex-1">
@@ -415,8 +415,8 @@ export function DisciplinesScreen() {
                       </div>
 
                       {/* Topic Actions */}
-                      <div className="flex items-center gap-1 shrink-0 self-end sm:self-center">
-                        <div className="w-32">
+                      <div className="flex flex-wrap items-center justify-between gap-2 w-full sm:w-auto sm:flex-nowrap sm:justify-end sm:gap-1 shrink-0 self-stretch sm:self-center pt-2 sm:pt-0 border-t border-border/50 sm:border-t-0">
+                        <div className="w-full sm:w-32">
                           <Select
                             size="sm"
                             value={topic.status}
@@ -431,69 +431,71 @@ export function DisciplinesScreen() {
                           </Select>
                         </div>
 
-                        <IconButton
-                          label="Adicionar subtópico"
-                          icon={<Plus className="size-3.5" />}
-                          size="sm"
-                          onClick={() => openAddTopic(topic.id)}
-                        />
+                        <div className="flex items-center justify-end gap-1 max-sm:w-full">
+                          <IconButton
+                            label="Adicionar subtópico"
+                            icon={<Plus className="size-3.5" />}
+                            size="sm"
+                            onClick={() => openAddTopic(topic.id)}
+                          />
 
-                        <IconButton
-                          label={topic.active ? 'Desativar tópico' : 'Ativar tópico'}
-                          icon={topic.active ? <Eye className="size-3.5" /> : <EyeOff className="size-3.5 text-danger" />}
-                          size="sm"
-                          onClick={() => handleActiveToggle(topic)}
-                        />
+                          <IconButton
+                            label={topic.active ? 'Desativar tópico' : 'Ativar tópico'}
+                            icon={topic.active ? <Eye className="size-3.5" /> : <EyeOff className="size-3.5 text-danger" />}
+                            size="sm"
+                            onClick={() => handleActiveToggle(topic)}
+                          />
 
-                        <IconButton
-                          label="Mover para cima"
-                          icon={<ArrowUp className="size-3.5" />}
-                          size="sm"
-                          disabled={index === 0}
-                          onClick={() => handleMove(topic.id, -1)}
-                        />
+                          <IconButton
+                            label="Mover para cima"
+                            icon={<ArrowUp className="size-3.5" />}
+                            size="sm"
+                            disabled={index === 0}
+                            onClick={() => handleMove(topic.id, -1)}
+                          />
 
-                        <IconButton
-                          label="Mover para baixo"
-                          icon={<ArrowDown className="size-3.5" />}
-                          size="sm"
-                          disabled={index === disciplineTopics.length - 1}
-                          onClick={() => handleMove(topic.id, 1)}
-                        />
+                          <IconButton
+                            label="Mover para baixo"
+                            icon={<ArrowDown className="size-3.5" />}
+                            size="sm"
+                            disabled={index === disciplineTopics.length - 1}
+                            onClick={() => handleMove(topic.id, 1)}
+                          />
 
-                        <IconButton
-                          label="Editar tópico"
-                          icon={<Edit2 className="size-3.5" />}
-                          size="sm"
-                          onClick={() => openEditTopic(topic)}
-                        />
+                          <IconButton
+                            label="Editar tópico"
+                            icon={<Edit2 className="size-3.5" />}
+                            size="sm"
+                            onClick={() => openEditTopic(topic)}
+                          />
 
-                        <IconButton
-                          label="Excluir tópico"
-                          icon={<Trash2 className="size-3.5" />}
-                          className="text-fg-muted hover:text-danger hover:bg-danger-soft/20"
-                          size="sm"
-                          onClick={() => {
-                            setTopicToDelete(topic);
-                            setDeleteConfirmOpen(true);
-                          }}
-                        />
+                          <IconButton
+                            label="Excluir tópico"
+                            icon={<Trash2 className="size-3.5" />}
+                            className="text-fg-muted hover:text-danger hover:bg-danger-soft/20"
+                            size="sm"
+                            onClick={() => {
+                              setTopicToDelete(topic);
+                              setDeleteConfirmOpen(true);
+                            }}
+                          />
+                        </div>
                       </div>
                     </div>
 
                     {/* Subtopics List (nested) */}
                     {isExpanded && subtopics.length > 0 && (
-                      <div className="border-t border-border bg-surface-muted/30 px-6 py-2 space-y-1.5" data-sort-group={`sub-${topic.id}`}>
+                      <div className="border-t border-border bg-surface-muted/30 px-3 sm:px-6 py-2 space-y-1.5" data-sort-group={`sub-${topic.id}`}>
                         {subtopics.map((sub, sIdx) => (
                           <div
                             key={sub.id}
                             data-sort-id={sub.id}
                             onPointerDown={(e) => handleSortPointerDown(e, sub.id, `sub-${topic.id}`)}
-                            className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-lg bg-surface p-2 border border-border/70 text-xs"
+                            className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-lg bg-surface p-2.5 sm:p-2 border border-border/70 text-xs"
                           >
-                            <div className="flex items-center gap-2 min-w-0">
+                            <div className="flex flex-wrap items-center gap-2 min-w-0">
                               <span className="touch-none" data-drag-handle><GripVertical className="size-3 text-fg-subtle cursor-grab shrink-0" /></span>
-                              <span className="font-medium text-fg truncate">{sub.title}</span>
+                              <span className="font-medium text-fg break-words sm:truncate">{sub.title}</span>
                               <Badge
                                 tone={
                                   sub.status === 'concluido' || sub.status === 'dominado'
@@ -508,8 +510,8 @@ export function DisciplinesScreen() {
                               </Badge>
                             </div>
 
-                            <div className="flex items-center gap-1 shrink-0 self-end sm:self-center">
-                              <div className="w-28">
+                            <div className="flex flex-wrap items-center justify-between gap-2 w-full sm:w-auto sm:flex-nowrap sm:justify-end sm:gap-1 shrink-0 self-stretch sm:self-center pt-1.5 sm:pt-0 border-t border-border/40 sm:border-t-0">
+                              <div className="w-full sm:w-28">
                                 <Select
                                   size="sm"
                                   value={sub.status}
@@ -524,36 +526,38 @@ export function DisciplinesScreen() {
                                 </Select>
                               </div>
 
-                              <IconButton
-                                label="Mover para cima"
-                                icon={<ArrowUp className="size-3" />}
-                                size="sm"
-                                disabled={sIdx === 0}
-                                onClick={() => handleMove(sub.id, -1)}
-                              />
-                              <IconButton
-                                label="Mover para baixo"
-                                icon={<ArrowDown className="size-3" />}
-                                size="sm"
-                                disabled={sIdx === subtopics.length - 1}
-                                onClick={() => handleMove(sub.id, 1)}
-                              />
-                              <IconButton
-                                label="Editar subtópico"
-                                icon={<Edit2 className="size-3" />}
-                                size="sm"
-                                onClick={() => openEditTopic(sub)}
-                              />
-                              <IconButton
-                                label="Excluir subtópico"
-                                icon={<Trash2 className="size-3" />}
-                                className="text-fg-muted hover:text-danger hover:bg-danger-soft/20"
-                                size="sm"
-                                onClick={() => {
-                                  setTopicToDelete(sub);
-                                  setDeleteConfirmOpen(true);
-                                }}
-                              />
+                              <div className="flex items-center justify-end gap-1 max-sm:w-full">
+                                <IconButton
+                                  label="Mover para cima"
+                                  icon={<ArrowUp className="size-3" />}
+                                  size="sm"
+                                  disabled={sIdx === 0}
+                                  onClick={() => handleMove(sub.id, -1)}
+                                />
+                                <IconButton
+                                  label="Mover para baixo"
+                                  icon={<ArrowDown className="size-3" />}
+                                  size="sm"
+                                  disabled={sIdx === subtopics.length - 1}
+                                  onClick={() => handleMove(sub.id, 1)}
+                                />
+                                <IconButton
+                                  label="Editar subtópico"
+                                  icon={<Edit2 className="size-3" />}
+                                  size="sm"
+                                  onClick={() => openEditTopic(sub)}
+                                />
+                                <IconButton
+                                  label="Excluir subtópico"
+                                  icon={<Trash2 className="size-3" />}
+                                  className="text-fg-muted hover:text-danger hover:bg-danger-soft/20"
+                                  size="sm"
+                                  onClick={() => {
+                                    setTopicToDelete(sub);
+                                    setDeleteConfirmOpen(true);
+                                  }}
+                                />
+                              </div>
                             </div>
                           </div>
                         ))}

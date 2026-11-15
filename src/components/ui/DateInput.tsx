@@ -145,7 +145,7 @@ export function DateInput({ className, disabled, min, max, value, onChange, onBl
           if (text !== '' && parseDisplay(text) === null) setText(toDisplay(value ?? ''));
           onBlur?.(e);
         }}
-        className={cn('input-base h-9 pr-9', className)}
+        className={cn('input-base h-9 pr-9 max-lg:h-11 max-lg:pr-11', className)}
         {...rest}
       />
       <button
@@ -155,7 +155,7 @@ export function DateInput({ className, disabled, min, max, value, onChange, onBl
         aria-label="Abrir calendário"
         aria-haspopup="dialog"
         aria-expanded={open}
-        className="absolute inset-y-0 right-0 flex w-9 items-center justify-center rounded-r-md text-fg-subtle hover:text-primary disabled:opacity-50"
+        className="absolute inset-y-0 right-0 flex w-9 max-lg:w-11 items-center justify-center rounded-r-md text-fg-subtle hover:text-primary disabled:opacity-50"
       >
         <CalendarDays className="size-4" aria-hidden />
       </button>
@@ -178,7 +178,7 @@ export function DateInput({ className, disabled, min, max, value, onChange, onBl
                 type="button"
                 aria-label="Mês anterior"
                 onClick={() => setView((v) => addMonths(v, -1))}
-                className="rounded p-1.5 text-fg-muted hover:bg-surface-muted"
+                className="rounded p-1.5 max-lg:p-2.5 text-fg-muted hover:bg-surface-muted"
               >
                 <ChevronLeft className="size-4" />
               </button>
@@ -187,7 +187,7 @@ export function DateInput({ className, disabled, min, max, value, onChange, onBl
                 type="button"
                 aria-label="Próximo mês"
                 onClick={() => setView((v) => addMonths(v, 1))}
-                className="rounded p-1.5 text-fg-muted hover:bg-surface-muted"
+                className="rounded p-1.5 max-lg:p-2.5 text-fg-muted hover:bg-surface-muted"
               >
                 <ChevronRight className="size-4" />
               </button>
@@ -209,7 +209,7 @@ export function DateInput({ className, disabled, min, max, value, onChange, onBl
                     aria-label={k}
                     aria-pressed={isSel}
                     className={cn(
-                      'h-8 rounded-md text-xs transition-colors disabled:opacity-30',
+                      'h-8 max-lg:h-9 max-lg:text-sm rounded-md text-xs transition-colors disabled:opacity-30',
                       isSel
                         ? 'bg-primary font-semibold text-primary-fg'
                         : isSameMonth(k, view)
@@ -224,10 +224,10 @@ export function DateInput({ className, disabled, min, max, value, onChange, onBl
               })}
             </div>
             <div className="mt-2 flex justify-between border-t border-border pt-2 text-xs">
-              <button type="button" onClick={() => pick(today)} className="font-medium text-primary hover:underline">
+              <button type="button" onClick={() => pick(today)} className="font-medium text-primary hover:underline max-lg:px-2 max-lg:py-2 max-lg:text-sm">
                 Hoje
               </button>
-              <button type="button" onClick={() => setOpen(false)} className="text-fg-muted hover:underline">
+              <button type="button" onClick={() => setOpen(false)} className="text-fg-muted hover:underline max-lg:px-2 max-lg:py-2 max-lg:text-sm">
                 Fechar
               </button>
             </div>

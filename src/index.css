@@ -309,6 +309,26 @@ input[type='number']::-webkit-outer-spin-button {
   margin: 0;
 }
 
+/*
+ * Smartphones e tablets (< lg). Nada aqui afeta o layout desktop.
+ * - Campos com fonte ≥ 16px evitam o zoom automático do iOS ao focar.
+ * - `touch-action: manipulation` remove o atraso de toque duplo nos controles.
+ */
+@media (width < 64rem) {
+  input:not([type='checkbox']):not([type='radio']):not([type='range']),
+  textarea,
+  select {
+    font-size: max(16px, 1em);
+  }
+  button,
+  a,
+  [role='button'],
+  label {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
 /* Tooltips do Recharts seguem o tema (claro/escuro) em todos os gráficos. */
 .recharts-default-tooltip {
   background-color: var(--surface-elevated) !important;

@@ -48,7 +48,7 @@ export function Card({
         <header
           className={cn(
             'relative flex flex-wrap items-start justify-between gap-2 border-b border-border px-4 py-3',
-            onClose && 'pr-11',
+            onClose && 'pr-11 max-lg:pr-12',
           )}
         >
           <div className="min-w-0">
@@ -60,7 +60,7 @@ export function Card({
             <button
               type="button"
               onClick={onClose}
-              className="absolute top-2.5 right-2.5 inline-flex size-7 shrink-0 items-center justify-center rounded-md text-fg-muted hover:text-fg hover:bg-surface-muted transition-colors focus:outline-none focus:ring-2 focus:ring-ring cursor-pointer"
+              className="absolute top-2.5 right-2.5 max-lg:top-1.5 max-lg:right-1.5 inline-flex size-7 max-lg:size-10 shrink-0 items-center justify-center rounded-md text-fg-muted hover:text-fg hover:bg-surface-muted transition-colors focus:outline-none focus:ring-2 focus:ring-ring cursor-pointer"
               aria-label="Fechar"
               title="Fechar"
             >
@@ -211,7 +211,7 @@ export function Alert({
   return (
     <div
       className={cn(
-        'relative flex items-start gap-2.5 rounded-lg px-3.5 py-2.5 pr-9 text-sm',
+        'relative flex items-start gap-2.5 rounded-lg px-3.5 py-2.5 pr-9 max-lg:pr-11 text-sm max-sm:flex-wrap',
         toneClasses[tone],
         className,
       )}
@@ -222,11 +222,11 @@ export function Alert({
         {title && <p className="font-semibold">{title}</p>}
         {children && <div className={cn(title ? 'mt-0.5 opacity-90' : 'font-medium')}>{children}</div>}
       </div>
-      {action && <div className="shrink-0">{action}</div>}
+      {action && <div className="shrink-0 max-sm:basis-full max-sm:pl-6.5">{action}</div>}
       <button
         type="button"
         onClick={handleClose}
-        className="absolute top-2 right-2 inline-flex size-6 shrink-0 items-center justify-center rounded-md text-current/80 hover:text-current hover:bg-black/10 dark:hover:bg-white/15 transition-all focus:outline-none focus:ring-2 focus:ring-current cursor-pointer"
+        className="absolute top-2 right-2 max-lg:top-1 max-lg:right-1 inline-flex size-6 max-lg:size-10 shrink-0 items-center justify-center rounded-md text-current/80 hover:text-current hover:bg-black/10 dark:hover:bg-white/15 transition-all focus:outline-none focus:ring-2 focus:ring-current cursor-pointer"
         aria-label="Fechar mensagem"
         title="Fechar mensagem"
       >
@@ -238,12 +238,14 @@ export function Alert({
 
 export function PageHeader({ title, description, actions }: { title: string; description?: ReactNode; actions?: ReactNode }) {
   return (
-    <div className="mb-5 flex flex-wrap items-start justify-between gap-4 border-b border-border/80 pb-4">
+    <div className="mb-5 flex flex-wrap items-start justify-between gap-4 max-sm:gap-3 max-sm:mb-4 border-b border-border/80 pb-4">
       <div className="min-w-0 space-y-1">
         <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-fg leading-tight">{title}</h1>
         {description && <p className="max-w-2xl text-sm text-fg-muted leading-relaxed">{description}</p>}
       </div>
-      {actions && <div className="flex flex-wrap items-center gap-2 shrink-0">{actions}</div>}
+      {actions && (
+        <div className="flex max-w-full flex-wrap items-center gap-2 shrink-0 max-sm:w-full max-sm:[&>*]:max-w-full">{actions}</div>
+      )}
     </div>
   );
 }
@@ -262,7 +264,7 @@ export function StatCard({
   children?: ReactNode;
 }) {
   return (
-    <div className="flex flex-col justify-between gap-2 rounded-xl border border-border bg-surface p-4">
+    <div className="flex min-w-0 flex-col justify-between gap-2 rounded-xl border border-border bg-surface p-4 max-sm:p-3.5">
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs font-medium text-fg-muted">{label}</p>
         {icon && <span className="text-fg-subtle" aria-hidden="true">{icon}</span>}
@@ -282,7 +284,7 @@ interface SegmentedOption<T extends string> {
 /** Grupo de opções exclusivas (botões com aria-pressed). */
 export function Segmented<T extends string>({ value, onChange, options, label }: { value: T; onChange: (v: T) => void; options: SegmentedOption<T>[]; label: string }) {
   return (
-    <div role="group" aria-label={label} className="inline-flex rounded-lg border border-border bg-surface-muted p-0.5">
+    <div role="group" aria-label={label} className="inline-flex max-w-full overflow-x-auto rounded-lg border border-border bg-surface-muted p-0.5">
       {options.map((o) => (
         <button
           key={o.value}
@@ -290,7 +292,7 @@ export function Segmented<T extends string>({ value, onChange, options, label }:
           aria-pressed={value === o.value}
           onClick={() => onChange(o.value)}
           className={cn(
-            'rounded-md px-3 py-1 text-xs font-medium transition-colors',
+            'rounded-md px-3 py-1 max-lg:py-2.5 max-lg:px-3.5 max-lg:text-sm whitespace-nowrap text-xs font-medium transition-colors',
             value === o.value ? 'bg-surface text-fg shadow-sm' : 'text-fg-muted hover:text-fg',
           )}
         >

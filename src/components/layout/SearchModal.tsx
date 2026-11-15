@@ -69,7 +69,7 @@ export function SearchModal({ open, onClose }: SearchModalProps) {
           </p>
         )}
 
-        <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
+        <div className="space-y-4 max-h-[60vh] overflow-y-auto overscroll-contain pr-1">
           {results.topics.length > 0 && (
             <div>
               <div className="text-xs font-semibold uppercase tracking-wider text-fg-subtle flex items-center gap-1.5 mb-2">
@@ -86,13 +86,13 @@ export function SearchModal({ open, onClose }: SearchModalProps) {
                         onClose();
                         navigate('/disciplinas');
                       }}
-                      className="w-full text-left p-2 rounded-lg hover:bg-surface-muted flex items-center justify-between text-sm group"
+                      className="w-full text-left p-2 max-lg:p-3 max-lg:min-h-11 rounded-lg hover:bg-surface-muted flex items-center justify-between gap-2 text-sm group"
                     >
-                      <div>
-                        <div className="font-medium text-fg">{t.title}</div>
-                        <div className="text-xs text-fg-muted">{d?.name}</div>
+                      <div className="min-w-0">
+                        <div className="font-medium text-fg truncate">{t.title}</div>
+                        <div className="text-xs text-fg-muted truncate">{d?.name}</div>
                       </div>
-                      <ArrowRight className="size-4 text-fg-subtle opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <ArrowRight className="size-4 text-fg-subtle shrink-0 opacity-0 max-lg:opacity-60 group-hover:opacity-100 transition-opacity" />
                     </button>
                   );
                 })}
@@ -116,15 +116,15 @@ export function SearchModal({ open, onClose }: SearchModalProps) {
                         onClose();
                         navigate('/calendario');
                       }}
-                      className="w-full text-left p-2 rounded-lg hover:bg-surface-muted flex items-center justify-between text-sm group"
+                      className="w-full text-left p-2 max-lg:p-3 max-lg:min-h-11 rounded-lg hover:bg-surface-muted flex items-center justify-between gap-2 text-sm group"
                     >
-                      <div>
-                        <div className="font-medium text-fg">{s.objective || 'Sessão de estudo'}</div>
-                        <div className="text-xs text-fg-muted">
+                      <div className="min-w-0">
+                        <div className="font-medium text-fg truncate">{s.objective || 'Sessão de estudo'}</div>
+                        <div className="text-xs text-fg-muted truncate">
                           {formatDate(s.date)} • {d?.name} ({s.plannedMinutes} min)
                         </div>
                       </div>
-                      <ArrowRight className="size-4 text-fg-subtle opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <ArrowRight className="size-4 text-fg-subtle shrink-0 opacity-0 max-lg:opacity-60 group-hover:opacity-100 transition-opacity" />
                     </button>
                   );
                 })}
@@ -148,15 +148,15 @@ export function SearchModal({ open, onClose }: SearchModalProps) {
                         onClose();
                         navigate('/erros');
                       }}
-                      className="w-full text-left p-2 rounded-lg hover:bg-surface-muted flex items-center justify-between text-sm group"
+                      className="w-full text-left p-2 max-lg:p-3 max-lg:min-h-11 rounded-lg hover:bg-surface-muted flex items-center justify-between gap-2 text-sm group"
                     >
-                      <div>
-                        <div className="font-medium text-fg truncate max-w-sm">
+                      <div className="min-w-0">
+                        <div className="font-medium text-fg truncate">
                           {e.sourceReference || e.explanation.slice(0, 60)}
                         </div>
-                        <div className="text-xs text-fg-muted">{d?.name}</div>
+                        <div className="text-xs text-fg-muted truncate">{d?.name}</div>
                       </div>
-                      <ArrowRight className="size-4 text-fg-subtle opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <ArrowRight className="size-4 text-fg-subtle shrink-0 opacity-0 max-lg:opacity-60 group-hover:opacity-100 transition-opacity" />
                     </button>
                   );
                 })}

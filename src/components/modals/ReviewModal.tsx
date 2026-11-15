@@ -313,7 +313,7 @@ export function PostponeReviewModal({
                   type="button"
                   onClick={() => handlePresetClick(p.days)}
                   className={cn(
-                    'rounded-lg px-2.5 py-1 text-xs font-medium border transition-all cursor-pointer',
+                    'rounded-lg px-2.5 py-1 max-lg:px-3 max-lg:py-2 max-lg:min-h-9 text-xs font-medium border transition-all cursor-pointer',
                     isActive
                       ? 'border-primary bg-primary text-primary-fg font-semibold shadow-xs'
                       : 'border-border bg-surface hover:bg-surface-muted text-fg hover:border-border-strong'
@@ -329,24 +329,24 @@ export function PostponeReviewModal({
         {/* Calendar Picker Card */}
         <div className="rounded-xl border border-border bg-surface p-3.5 shadow-xs">
           {/* Calendar Month Navigation Header */}
-          <div className="flex items-center justify-between pb-3 border-b border-border mb-2.5">
+          <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-border mb-2.5">
             <div className="flex items-center gap-1">
               <button
                 type="button"
                 onClick={handlePrevMonth}
-                className="inline-flex size-7 items-center justify-center rounded-md hover:bg-surface-muted text-fg transition-colors cursor-pointer"
+                className="inline-flex size-7 max-lg:size-9 items-center justify-center rounded-md hover:bg-surface-muted text-fg transition-colors cursor-pointer"
                 aria-label="Mês anterior"
                 title="Mês anterior"
               >
                 <ChevronLeft className="size-4" />
               </button>
-              <span className="text-sm font-semibold capitalize text-fg min-w-[130px] text-center">
+              <span className="text-sm font-semibold capitalize text-fg min-w-[120px] sm:min-w-[130px] text-center">
                 {formatMonthYear(viewMonth)}
               </span>
               <button
                 type="button"
                 onClick={handleNextMonth}
-                className="inline-flex size-7 items-center justify-center rounded-md hover:bg-surface-muted text-fg transition-colors cursor-pointer"
+                className="inline-flex size-7 max-lg:size-9 items-center justify-center rounded-md hover:bg-surface-muted text-fg transition-colors cursor-pointer"
                 aria-label="Próximo mês"
                 title="Próximo mês"
               >
@@ -357,7 +357,7 @@ export function PostponeReviewModal({
             <button
               type="button"
               onClick={() => setViewMonth(startOfMonth(today))}
-              className="text-xs font-medium text-primary hover:underline cursor-pointer flex items-center gap-1"
+              className="text-xs font-medium text-primary hover:underline cursor-pointer flex items-center gap-1 max-lg:px-2 max-lg:py-1.5"
             >
               <RotateCcw className="size-3" /> Mês atual
             </button>
@@ -412,10 +412,10 @@ export function PostponeReviewModal({
         </div>
 
         {/* Selected Date Callout */}
-        <div className="rounded-lg bg-primary-soft/30 border border-primary/20 p-3 text-xs flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
+        <div className="rounded-lg bg-primary-soft/30 border border-primary/20 p-3 text-xs flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
             <CalendarIcon className="size-4 text-primary shrink-0" />
-            <div>
+            <div className="min-w-0">
               <span className="text-fg-muted">Novo prazo selecionado: </span>
               <strong className="text-fg">
                 {formatDate(selectedDate, { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' })}

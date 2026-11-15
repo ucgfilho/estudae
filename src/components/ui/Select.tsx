@@ -321,8 +321,8 @@ export function Select({
   const isPlaceholderSelected = !selectedOption || selectedOption.value === '';
 
   const sizeClasses = {
-    sm: 'h-7 px-2 py-1 text-xs rounded',
-    md: 'h-9 px-3 py-2 text-sm rounded-md',
+    sm: 'h-7 px-2 py-1 text-xs rounded max-lg:h-10 max-lg:px-3 max-lg:text-sm',
+    md: 'h-9 px-3 py-2 text-sm rounded-md max-lg:h-11',
   };
 
   return (
@@ -410,7 +410,7 @@ export function Select({
               width: `${coords.width}px`,
             }}
             className={cn(
-              'z-50 max-h-60 overflow-y-auto rounded-lg border border-border-strong bg-surface p-1 shadow-xl shadow-black/30',
+              'z-50 max-h-60 max-lg:max-h-[min(20rem,50dvh)] overflow-y-auto overscroll-contain rounded-lg border border-border-strong bg-surface p-1 shadow-xl shadow-black/30',
               popover.state === 'open' ? 'animate-popover-in' : 'animate-popover-out pointer-events-none'
             )}
           >
@@ -439,6 +439,7 @@ export function Select({
                     className={cn(
                       'group flex items-center justify-between rounded-md cursor-pointer select-none transition-colors',
                       size === 'sm' ? 'px-2 py-1 text-xs' : 'px-2.5 py-1.5 text-sm',
+                      'max-lg:min-h-11 max-lg:px-3 max-lg:text-sm',
                       isSelected
                         ? 'bg-primary/15 text-primary font-medium'
                         : isHighlighted

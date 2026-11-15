@@ -146,7 +146,7 @@ export function NewContestModal({ open, onClose, onCreated }: NewContestModalPro
             value={examDate}
             onChange={(e) => setExamDate(e.target.value)}
             disabled={loading || !contestId}
-            className="h-9 w-full sm:w-56 rounded-lg border border-border-strong bg-surface px-3 text-xs text-fg focus:border-primary focus:outline-none disabled:opacity-50"
+            className="h-9 max-lg:h-11 w-full sm:w-56 rounded-lg border border-border-strong bg-surface px-3 text-xs text-fg focus:border-primary focus:outline-none disabled:opacity-50"
           />
         </div>
       </form>

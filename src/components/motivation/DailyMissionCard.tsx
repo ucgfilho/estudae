@@ -195,7 +195,7 @@ export function DailyMissionCard({
                           <button
                             type="button"
                             onClick={() => onStartBlock(s.id)}
-                            className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-fg-muted hover:text-primary transition-colors tabular-nums"
+                            className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-fg-muted hover:text-primary transition-colors tabular-nums max-lg:min-h-9 max-lg:px-2"
                             title="Iniciar este bloco"
                           >
                             <span>{s.plannedMinutes} min</span>
@@ -241,7 +241,7 @@ export function DailyMissionCard({
                   showOverflow
                 />
               ) : (
-                <button type="button" onClick={onOpenSettings} className="text-xs font-medium text-primary hover:underline">
+                <button type="button" onClick={onOpenSettings} className="text-xs font-medium text-primary hover:underline max-lg:min-h-9 max-lg:py-2">
                   Definir meta diária de questões
                 </button>
               )}

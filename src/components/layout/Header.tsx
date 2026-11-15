@@ -105,7 +105,7 @@ export function Header({
 
   return (
     <>
-      <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center justify-between gap-2 border-b border-border bg-surface px-3 sm:px-6">
+      <header className="sticky top-0 z-20 flex h-14 max-lg:h-[calc(3.5rem+env(safe-area-inset-top))] max-lg:pt-[env(safe-area-inset-top)] shrink-0 items-center justify-between gap-2 border-b border-border bg-surface px-3 sm:px-6">
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <IconButton
             label="Abrir menu de navegação"
@@ -137,12 +137,12 @@ export function Header({
           )}
         </div>
 
-        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           {timer && (
             <button
               type="button"
               onClick={() => navigate('/estudar-agora')}
-              className="inline-flex h-8 items-center gap-1.5 sm:gap-2 rounded-md border border-primary/30 bg-primary-soft px-2.5 text-xs font-semibold text-primary transition-colors hover:brightness-95"
+              className="inline-flex h-8 max-lg:h-10 items-center gap-1.5 sm:gap-2 rounded-md border border-primary/30 bg-primary-soft px-2.5 text-xs font-semibold text-primary transition-colors hover:brightness-95"
               title="Sessão de estudo em andamento — Clique para abrir o cronômetro"
             >
               <TimerIcon className="size-3.5" aria-hidden="true" />
@@ -159,7 +159,7 @@ export function Header({
               data-testid="header-profile-button"
               onClick={() => setProfileOpen(true)}
               title={`Editar perfil (${authUser.name} · Patente: ${rankState.rank.name} · ${rankState.xp} XP)`}
-              className="inline-flex h-9 items-center gap-2 rounded-md border border-border bg-surface hover:bg-surface-muted px-2.5 py-1.5 text-xs font-medium text-fg transition-colors cursor-pointer"
+              className="inline-flex h-9 max-lg:h-10 items-center gap-2 max-sm:gap-1.5 rounded-md border border-border bg-surface hover:bg-surface-muted px-2.5 max-sm:px-2 py-1.5 text-xs font-medium text-fg transition-colors cursor-pointer"
             >
               <span
                 data-testid="header-rank-icon"
@@ -185,7 +185,7 @@ export function Header({
             onClick={cycleTheme}
           />
 
-          <Link to="/configuracoes">
+          <Link to="/configuracoes" className="max-sm:hidden">
             <IconButton label="Configurações" icon={<SettingsIcon className="size-4" />} />
           </Link>
 

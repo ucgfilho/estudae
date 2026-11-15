@@ -151,12 +151,12 @@ export function ExamErrorNotebooks({ exam, disciplines }: { exam: MockExam; disc
         {/* 1. Cadernos de erros já criados / vinculados a este simulado */}
         {associatedNotes.length > 0 ? (
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <h4 className="text-xs font-semibold uppercase tracking-wider text-fg-subtle flex items-center gap-1.5">
                 <BookOpen className="size-3.5" />
                 <span>Cadernos vinculados a esta prova ({associatedNotes.length})</span>
               </h4>
-              <Link to="/erros" className="text-xs text-primary hover:underline font-medium">
+              <Link to="/erros" className="text-xs text-primary hover:underline font-medium max-lg:py-1">
                 Ver todos na seção Caderno de Erros →
               </Link>
             </div>
@@ -184,7 +184,11 @@ export function ExamErrorNotebooks({ exam, disciplines }: { exam: MockExam; disc
                       <div className="flex flex-wrap items-center gap-2">
                         {d && <DisciplineDot color={d.color} />}
                         <span className="font-semibold text-sm text-fg">{d?.name ?? 'Disciplina'}</span>
-                        {t && <Badge tone="neutral">{t.title}</Badge>}
+                        {t && (
+                          <Badge tone="neutral" className="max-w-full truncate">
+                            <span className="truncate">{t.title}</span>
+                          </Badge>
+                        )}
                         <Badge tone="neutral" className="text-xs">
                           {ERROR_TYPE_LABELS[note.errorType]}
                         </Badge>
@@ -201,7 +205,7 @@ export function ExamErrorNotebooks({ exam, disciplines }: { exam: MockExam; disc
                         </Badge>
                       </div>
 
-                      <div className="flex shrink-0 items-center gap-1.5">
+                      <div className="flex flex-wrap shrink-0 items-center gap-1.5">
                         {note.status !== 'dominado' && (
                           <Button
                             variant="secondary"
@@ -257,7 +261,7 @@ export function ExamErrorNotebooks({ exam, disciplines }: { exam: MockExam; disc
                     </div>
 
                     <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-fg-subtle pt-1 border-t border-border/60">
-                      <div className="flex items-center gap-3">
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                         <span>Data: <strong>{formatDate(note.errorDate)}</strong></span>
                         {note.nextReviewDate && (
                           <span className="flex items-center gap-1 text-primary">
