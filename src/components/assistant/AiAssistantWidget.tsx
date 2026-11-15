@@ -28,6 +28,69 @@ interface ChatMessage {
   isError?: boolean;
 }
 
+/** Renderiza texto com formatação limpa: negrito, marcadores e quebras de linha */
+function FormattedMessageText({ text }: { text: string }) {
+  const paragraphs = text.split(/\n{2,}/);
+
+  return (
+    <div className="space-y-2">
+      {paragraphs.map((para, pIdx) => {
+        const lines = para.split('\n');
+        return (
+          <div key={pIdx} className="space-y-1">
+            {lines.map((line, lIdx) => {
+              const trimmed = line.trim();
+              const isBullet = trimmed.startsWith('•') || trimmed.startsWith('- ') || trimmed.startsWith('* ');
+              const cleanLine = isBullet
+                ? trimmed.replace(/^[•\-*]\s*/, '')
+                : trimmed;
+
+              const isHeading = cleanLine.startsWith('### ') || cleanLine.startsWith('## ') || cleanLine.startsWith('# ');
+              const headingText = isHeading ? cleanLine.replace(/^#+\s*/, '') : cleanLine;
+
+              // Separa trechos em negrito (**texto**)
+              const parts = (isHeading ? headingText : cleanLine).split(/(\*\*.*?\*\*)/g);
+              const renderedParts = parts.map((part, i) => {
+                if (part.startsWith('**') && part.endsWith('**')) {
+                  return (
+                    <strong key={i} className="font-semibold text-fg">
+                      {part.slice(2, -2)}
+                    </strong>
+                  );
+                }
+                return part;
+              });
+
+              if (isHeading) {
+                return (
+                  <div key={lIdx} className="font-semibold text-xs text-primary pt-1">
+                    {renderedParts}
+                  </div>
+                );
+              }
+
+              if (isBullet) {
+                return (
+                  <div key={lIdx} className="flex items-start gap-1.5 pl-1 text-fg/90">
+                    <span className="text-primary font-bold">•</span>
+                    <span className="flex-1">{renderedParts}</span>
+                  </div>
+                );
+              }
+
+              return (
+                <div key={lIdx} className="text-fg/90">
+                  {renderedParts}
+                </div>
+              );
+            })}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export function AiAssistantWidget() {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState('');
@@ -250,7 +313,11 @@ export function AiAssistantWidget() {
                       <CheckCircle2 className="size-3.5" aria-hidden="true" /> Ação executada
                     </span>
                   )}
-                <div>{msg.content}</div>
+                {msg.role === 'assistant' ? (
+                  <FormattedMessageText text={msg.content} />
+                ) : (
+                  <div>{msg.content}</div>
+                )}
                 {msg.navigateTo && (
                   <button
                     type="button"

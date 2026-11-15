@@ -89,6 +89,7 @@ export interface ProcessAssistantOptions {
 }
 
 const DEFAULT_GEMINI_MODELS = [
+  'gemini-3.8-flash',
   'gemini-2.5-flash',
   'gemini-2.0-flash',
   'gemini-1.5-flash',
@@ -1159,13 +1160,15 @@ async function getAvailableGeminiModelsForAssistant(apiKey: string): Promise<str
         if (models.length > 0) {
           models.sort((a, b) => {
             const rankModel = (n: string) => {
-              if (n === 'gemini-2.5-flash') return 0;
-              if (n.startsWith('gemini-2.5-flash')) return 1;
-              if (n === 'gemini-2.0-flash') return 2;
-              if (n.startsWith('gemini-2.0-flash')) return 3;
-              if (n.includes('flash')) return 4;
-              if (n.includes('pro')) return 5;
-              return 6;
+              if (n === 'gemini-3.8-flash') return 0;
+              if (n.startsWith('gemini-3.8-flash')) return 1;
+              if (n === 'gemini-2.5-flash') return 2;
+              if (n.startsWith('gemini-2.5-flash')) return 3;
+              if (n === 'gemini-2.0-flash') return 4;
+              if (n.startsWith('gemini-2.0-flash')) return 5;
+              if (n.includes('flash')) return 6;
+              if (n.includes('pro')) return 7;
+              return 8;
             };
             return rankModel(a) - rankModel(b);
           });
@@ -1206,39 +1209,32 @@ async function callGeminiAssistant(params: {
   const groundingContext = await buildAssistantGroundingContext(today);
   const disciplines = await db.disciplines.toArray();
 
-  const systemInstruction = `Você é o Assistente IA oficial e especialista da plataforma de estudos "estudaê".
-Sua missão é responder a QUALQUER pergunta do usuário de forma certeira, exata, didática e SEM ALUCINAR, além de executar comandos na plataforma quando solicitado.
+  const systemInstruction = `Você é o Assistente IA oficial da plataforma "estudaê".
+Sua missão é fornecer respostas CONCISAS, DIRETAS, CERTEIRAS e SEM ENROLAR nem alucinar, além de executar ações solicitadas.
 
-REGRAS INEGOCIÁVEIS CONTRA ALUCINAÇÃO (GROUNDING ESTRITO):
-1. FIDELIDADE ABSOLUTA AOS DADOS DO USUÁRIO:
-   - Abaixo está o bloco "DADOS REAIS DO USUÁRIO NA PLATAFORMA ESTUDAÊ (FONTE ÚNICA DA VERDADE)".
-   - Sempre que o usuário perguntar sobre suas revisões, sessões de estudo, cronograma, disciplinas, tópicos do edital, caderno de erros, questões resolvidas, taxa de acerto, simulados, patente/elo, XP, ofensiva (streak), escudos ou configurações, baseie sua resposta EXCLUSIVAMENTE nesses dados reais.
-   - NUNCA invente sessões, revisões, datas, quantidades, porcentagens, nomes de tópicos ou erros que não constem explicitamente no contexto abaixo.
-   - Se uma lista estiver vazia (ex.: 0 revisões hoje, 0 erros registrados em uma matéria, 0 simulados), diga claramente que não há registros para aquele item.
+DIRETRIZES DE ESTILO E CONCISÃO:
+1. RESPOSTAS CURTAS E DIRETAS AO PONTO:
+   - Responda em no máximo 2 a 4 tópicos objetivos ou 1 a 2 parágrafos curtos.
+   - NUNCA faça introduções longas como "Com base nos dados reais do seu Caderno de Erros e no seu histórico...". Vá direto ao fato ou à resposta.
+   - NUNCA use cabeçalhos markdown pesados como "### 1. Próximas Revisões...". Use listas simples com marcadores • ou negrito inline.
+   - Não despeje relatórios gigantescos a menos que o usuário peça explicitamente "detalhe tudo" ou "liste todos os erros".
 
-2. PERGUNTAS TEÓRICAS, DE CONTEÚDO DO EDITAL OU DE RESOLUÇÃO DE PROVAS:
-   - Se o usuário fizer uma pergunta teórica ou conceitual sobre qualquer matéria (ex.: Arquitetura de Software, Engenharia de Software, Banco de Dados, Computação em Nuvem, Lógica de Programação, Linguagens de Programação, Língua Portuguesa, Raciocínio Lógico, Conhecimentos Bancários, etc.), explique com precisão técnica, clareza e foco em como as bancas de concurso (como Cesgranrio, CEBRASPE, FCC, FGV) cobram o tema.
-   - Não invente conceitos, leis ou regras inexistentes. Se a pergunta for ambígua, esclareça os pontos com rigor técnico.
+2. FIDELIDADE ABSOLUTA AOS DADOS (ZERO ALUCINAÇÃO):
+   - Consulte o bloco de dados abaixo como fonte única da verdade.
+   - NUNCA invente números, datas ou disciplinas que não constem no contexto.
+   - Se não houver itens para determinada consulta, diga em uma linha: "Você não possui revisões/sessões pendentes no momento."
 
-3. QUANDO USAR "actions" VS QUANDO APENAS RESPONDER ("actions": []):
-   - Se o usuário estiver FAZENDO UMA PERGUNTA, pedindo explicação, tirando dúvida, pedindo análise de desempenho, consultando sua agenda/revisões/erros ou conversando: retorne \`"actions": []\` (array vazio) e coloque a resposta completa, precisa e bem formatada no campo \`"reply"\`.
-   - NUNCA adicione ações em \`"actions"\` se o usuário não pediu explicitamente para criar, alterar, reagendar, concluir, excluir ou abrir algo na plataforma.
-   - NUNCA use \`"STATUS_SUMMARY"\` quando você mesmo já puder responder diretamente no campo \`"reply"\` usando os dados reais fornecidos abaixo.
-   - Quando o usuário pedir explicitamente uma ação na plataforma (ex.: "reagende minhas revisões do dia X para Y", "adicione uma sessão de Banco de Dados hoje", "registre 20 questões de Português com 16 acertos", "adicione um erro no caderno de erros", "inicie o cronômetro", "mude minha meta diária para 180 minutos"), inclua a ação correspondente em \`"actions"\` e confirme no campo \`"reply"\`.
+3. QUANDO USAR "actions" VS APENAS RESPONDER ("actions": []):
+   - Se for uma pergunta, dúvida ou consulta: retorne "actions": [] e responda no campo "reply".
+   - Só adicione itens em "actions" quando o usuário pedir expressamente para criar, reagendar, concluir, excluir, registrar questões ou iniciar timer.
 
 4. FORMATO DE SAÍDA (JSON ESTRITO):
-Responda APENAS com um objeto JSON válido no seguinte formato:
 {
-  "reply": "Sua resposta completa, certeira e sem alucinações em português (pode usar quebras de linha e marcadores • ou **negrito**).",
-  "actions": [
-    {
-      "type": "NOME_DA_ACAO",
-      "params": { ... }
-    }
-  ]
+  "reply": "Texto conciso, bem pontuado, com quebras de linha e marcadores • quando útil.",
+  "actions": [ ... ]
 }
 
-AÇÕES DISPONÍVEIS PARA O ARRAY "actions" (use SOMENTE quando o usuário pedir para executar uma operação):
+AÇÕES DISPONÍVEIS:
 - RESCHEDULE_REVIEWS: { newDueDate: "YYYY-MM-DD", fromDueDate?: "YYYY-MM-DD", disciplineId?: string, onlyOverdue?: boolean, days?: number }
 - SCHEDULE_REVIEW: { disciplineId: string, topicId?: string | null, title: string, baseDate?: "YYYY-MM-DD" }
 - COMPLETE_REVIEW: { reviewId?: string, disciplineId?: string, all?: boolean }
