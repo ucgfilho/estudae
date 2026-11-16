@@ -151,21 +151,30 @@ export function FlashcardDeck({ reviews, notes, disciplines, onComplete }: Props
       }, 700);
       return;
     }
+    // Moving to next review - keep animating state to preserve correct color during flip back
+    setAnimating(true);
     await onComplete(current, reviewStats);
     setDoneReviews((n) => n + 1);
     setCardIndex(0);
     setReviewStats({ hits: 0, misses: 0 });
     setPicked(null);
-    setAnimating(false);
+    // Wait for flip-back animation to complete before clearing animating
+    setTimeout(() => {
+      setAnimating(false);
+    }, 700);
   };
 
   const completeWithoutFlashcard = async () => {
+    setAnimating(true);
     await onComplete(current);
     setDoneReviews((n) => n + 1);
     setCardIndex(0);
     setReviewStats({ hits: 0, misses: 0 });
     setPicked(null);
-    setAnimating(false);
+    // Wait for flip-back animation to complete before clearing animating
+    setTimeout(() => {
+      setAnimating(false);
+    }, 700);
   };
 
   const face = 'absolute inset-0 flex flex-col rounded-2xl border p-6 sm:p-8 [backface-visibility:hidden]';
