@@ -24,6 +24,8 @@ export function FlashcardDeck({ reviews, notes, disciplines, onComplete }: Props
   const [totalHits, setTotalHits] = useState(0);
   const [totalCardsAnswered, setTotalCardsAnswered] = useState(0);
   const [picked, setPicked] = useState<'certo' | 'errado' | null>(null);
+  const [lastCorrect, setLastCorrect] = useState(false);
+  const [animating, setAnimating] = useState(false);
 
   const current = reviews[0];
   const note = current?.errorNoteId ? notes.get(current.errorNoteId) : undefined;
@@ -46,14 +48,16 @@ export function FlashcardDeck({ reviews, notes, disciplines, onComplete }: Props
 
   const d = disciplines.get(current.disciplineId);
   const displayTitle = resolveReviewDisplayTitle(current, note);
-  const correct = picked !== null && card ? picked === card.answer : false;
+  const correct = animating ? lastCorrect : (picked !== null && card ? picked === card.answer : false);
   const progress = totalReviews > 0 ? Math.round((doneReviews / totalReviews) * 100) : 0;
 
   const answer = (choice: 'certo' | 'errado') => {
     if (picked || !card) return;
+    const isCorrect = choice === card.answer;
     setPicked(choice);
+    setLastCorrect(isCorrect);
     setTotalCardsAnswered((n) => n + 1);
-    if (choice === card.answer) {
+    if (isCorrect) {
       setTotalHits((h) => h + 1);
       setStreak((s) => s + 1);
       setReviewStats((s) => ({ ...s, hits: s.hits + 1 }));
@@ -65,8 +69,13 @@ export function FlashcardDeck({ reviews, notes, disciplines, onComplete }: Props
 
   const next = async () => {
     if (cardIndex + 1 < cards.length) {
-      setCardIndex((i) => i + 1);
+      setAnimating(true);
       setPicked(null);
+      // Wait for flip animation to complete before changing card
+      setTimeout(() => {
+        setCardIndex((i) => i + 1);
+        setAnimating(false);
+      }, 700);
       return;
     }
     await onComplete(current, reviewStats);
@@ -74,6 +83,7 @@ export function FlashcardDeck({ reviews, notes, disciplines, onComplete }: Props
     setCardIndex(0);
     setReviewStats({ hits: 0, misses: 0 });
     setPicked(null);
+    setAnimating(false);
   };
 
   const completeWithoutFlashcard = async () => {
@@ -82,6 +92,7 @@ export function FlashcardDeck({ reviews, notes, disciplines, onComplete }: Props
     setCardIndex(0);
     setReviewStats({ hits: 0, misses: 0 });
     setPicked(null);
+    setAnimating(false);
   };
 
   const face = 'absolute inset-0 flex flex-col rounded-2xl border p-6 sm:p-8 [backface-visibility:hidden]';
