@@ -33,10 +33,11 @@ export function buildReviewTasks(target: ReviewTarget, baseDate: DateKey, interv
   }];
 }
 
-/** Retorna o próximo intervalo após `currentIntervalDays`, ou `null` se for o último. */
+/** Retorna o próximo intervalo após `currentIntervalDays`, ou o último intervalo configurado se já tiver chegado ao fim. */
 export function nextIntervalAfter(currentIntervalDays: number, intervals: readonly number[]): number | null {
   const unique = normalizeIntervals(intervals);
-  return unique.find((n) => n > currentIntervalDays) ?? null;
+  if (unique.length === 0) return null;
+  return unique.find((n) => n > currentIntervalDays) ?? unique[unique.length - 1];
 }
 
 /** Cria a próxima revisão do intervalo após a conclusão da revisão atual. */
@@ -47,7 +48,10 @@ export function buildNextReviewTask(
 ): ReviewTask | null {
   const nextDays = nextIntervalAfter(completedReview.intervalDays, intervals);
   if (nextDays === null) return null;
-  const deltaDays = Math.max(1, nextDays - completedReview.intervalDays);
+  const deltaDays =
+    nextDays > completedReview.intervalDays
+      ? nextDays - completedReview.intervalDays
+      : nextDays;
   return {
     id: createId(),
     disciplineId: completedReview.disciplineId,

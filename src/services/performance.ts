@@ -350,6 +350,7 @@ export async function completeReview(id: string, flashcardStats?: { hits: number
         .equals(review.disciplineId)
         .filter(
           (r) =>
+            r.status === 'pendente' &&
             r.errorNoteId === review.errorNoteId &&
             r.title === review.title &&
             r.intervalDays === nextTask.intervalDays,
