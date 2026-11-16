@@ -603,8 +603,7 @@ export interface FlashcardInput {
   explanation: string;
 }
 
-/** Adiciona um flashcard manual ao erro (é possível criar vários por erro). */
-export async function addFlashcard(noteId: string, input: FlashcardInput): Promise<ErrorFlashcard> {
+function validateFlashcardInput(input: FlashcardInput): { statement: string; answer: 'certo' | 'errado'; explanation: string } {
   const statement = input.statement.trim();
   if (!statement) throw new ValidationError('Escreva o enunciado do flashcard.');
   if (input.answer !== 'certo' && input.answer !== 'errado') {
@@ -612,13 +611,17 @@ export async function addFlashcard(noteId: string, input: FlashcardInput): Promi
   }
   const explanation = input.explanation.trim();
   if (!explanation) throw new ValidationError('Escreva a explicação do flashcard.');
+  return { statement, answer: input.answer, explanation };
+}
+
+/** Adiciona um flashcard manual ao erro (é possível criar vários por erro). */
+export async function addFlashcard(noteId: string, input: FlashcardInput): Promise<ErrorFlashcard> {
+  const valid = validateFlashcardInput(input);
   const note = await db.errorNotes.get(noteId);
   if (!note) throw new ValidationError('Erro não encontrado no caderno.');
   const card: ErrorFlashcard = {
     id: createId(),
-    statement,
-    answer: input.answer,
-    explanation,
+    ...valid,
     createdAt: nowIso(),
   };
   await db.errorNotes.put({
@@ -627,4 +630,27 @@ export async function addFlashcard(noteId: string, input: FlashcardInput): Promi
     updatedAt: nowIso(),
   });
   return card;
+}
+
+/** Atualiza um flashcard existente vinculado a um erro. */
+export async function updateFlashcard(noteId: string, cardId: string, input: FlashcardInput): Promise<ErrorFlashcard> {
+  const valid = validateFlashcardInput(input);
+  const note = await db.errorNotes.get(noteId);
+  if (!note) throw new ValidationError('Erro não encontrado no caderno.');
+  const cards = note.flashcards ?? [];
+  const idx = cards.findIndex((c) => c.id === cardId);
+  if (idx === -1) throw new ValidationError('Flashcard não encontrado.');
+  const updatedCard: ErrorFlashcard = { ...cards[idx], ...valid };
+  const nextCards = [...cards];
+  nextCards[idx] = updatedCard;
+  await db.errorNotes.put({ ...note, flashcards: nextCards, updatedAt: nowIso() });
+  return updatedCard;
+}
+
+/** Remove um flashcard vinculado a um erro. */
+export async function deleteFlashcard(noteId: string, cardId: string): Promise<void> {
+  const note = await db.errorNotes.get(noteId);
+  if (!note) return;
+  const nextCards = (note.flashcards ?? []).filter((c) => c.id !== cardId);
+  await db.errorNotes.put({ ...note, flashcards: nextCards, updatedAt: nowIso() });
 }

@@ -394,6 +394,15 @@ export function ErrorNotebookScreen() {
                     <Badge tone="neutral" className="text-xs">
                       {ERROR_TYPE_LABELS[note.errorType]}
                     </Badge>
+                    <Badge
+                      tone={(note.flashcards?.length ?? 0) > 0 ? 'primary' : 'neutral'}
+                      icon={<Layers className="size-3" aria-hidden />}
+                      className="text-xs"
+                    >
+                      {(note.flashcards?.length ?? 0) === 1
+                        ? '1 flashcard'
+                        : `${note.flashcards?.length ?? 0} flashcards`}
+                    </Badge>
                   </div>
                 }
                 actions={

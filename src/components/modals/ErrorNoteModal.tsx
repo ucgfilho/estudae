@@ -1,14 +1,16 @@
 import { useState, useEffect, useMemo, type FormEvent } from 'react';
+import { Edit2, Layers, Plus, Trash2 } from 'lucide-react';
 import { Dialog } from '../ui/Dialog';
-import { Button } from '../ui/Button';
-import { Alert } from '../ui/Display';
+import { Button, IconButton } from '../ui/Button';
+import { Alert, Badge } from '../ui/Display';
 import { Field, Input, Select, Checkbox } from '../ui/Form';
 import { RichTextEditor } from '../ui/RichText';
 import { useDisciplines, useTopics, useErrorNotes, useMockExams } from '../../hooks/useData';
-import { saveErrorNote, type ErrorNoteInput } from '../../services/performance';
+import { deleteFlashcard, saveErrorNote, type ErrorNoteInput } from '../../services/performance';
 import {
   ERROR_TYPE_LABELS,
   ERROR_STATUS_LABELS,
+  type ErrorFlashcard,
   type ErrorNote,
   type ErrorType,
   type ErrorStatus,
@@ -16,6 +18,7 @@ import {
 import { formatDate, todayKey } from '../../lib/dates';
 import { errorMessage } from '../../lib/utils';
 import { DateInput } from '../ui/DateInput';
+import { FlashcardModal } from './FlashcardModal';
 
 interface ErrorNoteModalProps {
   open: boolean;
@@ -47,7 +50,9 @@ export function ErrorNoteModal({
   const mockExams = useMockExams();
 
   const effectiveNote = useMemo(() => {
-    if (noteToEdit) return noteToEdit;
+    if (noteToEdit) {
+      return errorNotes.find((n) => n.id === noteToEdit.id) ?? noteToEdit;
+    }
     if (questionLogId) {
       return errorNotes.find((n) => n.questionLogId === questionLogId) ?? null;
     }
@@ -96,6 +101,8 @@ export function ErrorNoteModal({
   const [scheduleReviews, setScheduleReviews] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [flashcardModalOpen, setFlashcardModalOpen] = useState(false);
+  const [cardToEdit, setCardToEdit] = useState<ErrorFlashcard | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -371,6 +378,77 @@ export function ErrorNoteModal({
           </Field>
         </div>
 
+        {effectiveNote && (
+          <div className="rounded-lg border border-border bg-surface-muted/30 p-3 space-y-2.5">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2 text-sm font-medium text-fg">
+                <Layers className="size-4 text-primary" />
+                <span>Flashcards relacionados ({effectiveNote.flashcards?.length ?? 0})</span>
+              </div>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                icon={<Plus className="size-3.5" />}
+                onClick={() => {
+                  setCardToEdit(null);
+                  setFlashcardModalOpen(true);
+                }}
+              >
+                Novo flashcard
+              </Button>
+            </div>
+
+            {effectiveNote.flashcards && effectiveNote.flashcards.length > 0 ? (
+              <ul className="space-y-2">
+                {effectiveNote.flashcards.map((card, idx) => (
+                  <li
+                    key={card.id}
+                    className="flex items-center justify-between gap-2 rounded-lg border border-border bg-surface px-3 py-2 text-xs"
+                  >
+                    <div className="min-w-0 flex-1 space-y-0.5">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-semibold text-fg">Flashcard {idx + 1}</span>
+                        <Badge tone={card.answer === 'certo' ? 'success' : 'danger'}>
+                          {card.answer === 'certo' ? 'Certo' : 'Errado'}
+                        </Badge>
+                      </div>
+                      <p className="truncate text-fg-muted">{card.statement}</p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        icon={<Edit2 className="size-3.5" />}
+                        onClick={() => {
+                          setCardToEdit(card);
+                          setFlashcardModalOpen(true);
+                        }}
+                      >
+                        Editar
+                      </Button>
+                      <IconButton
+                        type="button"
+                        label={`Excluir flashcard ${idx + 1}`}
+                        variant="secondary"
+                        size="sm"
+                        icon={<Trash2 className="size-3.5" />}
+                        className="text-fg-muted hover:text-danger hover:border-danger/40"
+                        onClick={() => void deleteFlashcard(effectiveNote.id, card.id)}
+                      />
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-xs text-fg-subtle">
+                Nenhum flashcard criado para este erro ainda.
+              </p>
+            )}
+          </div>
+        )}
+
         {!noteToEdit && (
           <div className="rounded-lg border border-border bg-surface-muted/30 p-3">
             <Checkbox
@@ -382,6 +460,16 @@ export function ErrorNoteModal({
           </div>
         )}
       </form>
+
+      <FlashcardModal
+        open={flashcardModalOpen}
+        onClose={() => {
+          setFlashcardModalOpen(false);
+          setCardToEdit(null);
+        }}
+        note={effectiveNote}
+        cardToEdit={cardToEdit}
+      />
     </Dialog>
   );
 }

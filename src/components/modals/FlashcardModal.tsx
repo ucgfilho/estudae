@@ -4,7 +4,7 @@ import { Dialog } from '../ui/Dialog';
 import { Button } from '../ui/Button';
 import { Alert } from '../ui/Display';
 import { Field, Radio, Textarea } from '../ui/Form';
-import { addFlashcard } from '../../services/performance';
+import { addFlashcard, updateFlashcard } from '../../services/performance';
 import type { ErrorFlashcard, ErrorNote } from '../../db/types';
 import { errorMessage } from '../../lib/utils';
 
@@ -12,35 +12,34 @@ interface FlashcardModalProps {
   open: boolean;
   onClose: () => void;
   note: ErrorNote | null;
+  cardToEdit?: ErrorFlashcard | null;
   onSaved?: (card: ErrorFlashcard) => void;
 }
 
-export function FlashcardModal({ open, onClose, note, onSaved }: FlashcardModalProps) {
+export function FlashcardModal({ open, onClose, note, cardToEdit, onSaved }: FlashcardModalProps) {
   const [statement, setStatement] = useState('');
-  const [answer, setAnswer] = useState<'certo' | 'errado'>('certo');
+  const [answer, setAnswer] = useState<'certo' | 'errado' | null>(null);
   const [explanation, setExplanation] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!open) return;
-    setStatement('');
-    setAnswer('certo');
-    setExplanation('');
+    setStatement(cardToEdit?.statement ?? '');
+    setAnswer(cardToEdit?.answer ?? null);
+    setExplanation(cardToEdit?.explanation ?? '');
     setError(null);
-  }, [open, note?.id]);
+  }, [open, note?.id, cardToEdit]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!note) return;
+    if (!note || !answer) return;
     setError(null);
     setLoading(true);
     try {
-      const saved = await addFlashcard(note.id, {
-        statement,
-        answer,
-        explanation,
-      });
+      const saved = cardToEdit
+        ? await updateFlashcard(note.id, cardToEdit.id, { statement, answer, explanation })
+        : await addFlashcard(note.id, { statement, answer, explanation });
       onSaved?.(saved);
       onClose();
     } catch (err) {
@@ -54,7 +53,7 @@ export function FlashcardModal({ open, onClose, note, onSaved }: FlashcardModalP
     <Dialog
       open={open}
       onClose={onClose}
-      title="Criar flashcard"
+      title={cardToEdit ? 'Editar flashcard' : 'Criar flashcard'}
       description={
         note?.sourceReference
           ? `Vinculado ao erro "${note.sourceReference}". O flashcard aparecerá na tela de revisões no dia programado para revisar este erro.`
@@ -66,7 +65,7 @@ export function FlashcardModal({ open, onClose, note, onSaved }: FlashcardModalP
           <Button variant="secondary" onClick={onClose} disabled={loading}>
             Cancelar
           </Button>
-          <Button variant="primary" type="submit" form="flashcard-form" loading={loading}>
+          <Button variant="primary" type="submit" form="flashcard-form" loading={loading} disabled={!answer}>
             Salvar flashcard
           </Button>
         </>

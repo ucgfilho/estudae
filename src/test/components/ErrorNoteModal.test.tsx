@@ -184,8 +184,11 @@ describe('ErrorNoteModal - Dropdown de simulados', () => {
       <FlashcardModal open={true} onClose={() => {}} note={note} />,
     );
 
+    expect(screen.getByRole('button', { name: /Salvar flashcard/i })).toBeDisabled();
     await userEvent.type(screen.getByPlaceholderText(/Escreva a assertiva/i), 'Enunciado flashcard 1');
+    await userEvent.click(screen.getByLabelText(/Certo/i));
     await userEvent.type(screen.getByPlaceholderText(/Adicione a justificativa/i), 'Definição flashcard 1');
+    expect(screen.getByRole('button', { name: /Salvar flashcard/i })).toBeEnabled();
     await userEvent.click(screen.getByRole('button', { name: /Salvar flashcard/i }));
 
     await waitFor(async () => {
@@ -220,5 +223,52 @@ describe('ErrorNoteModal - Dropdown de simulados', () => {
     expect(screen.queryByText(/Concluídas/i)).not.toBeInTheDocument();
 
     expect(await screen.findByText('Enunciado flashcard 1')).toBeInTheDocument();
+  });
+
+  it('lists related flashcards inside ErrorNoteModal when editing and allows editing a flashcard', async () => {
+    const today = todayKey();
+    const disciplines = await db.disciplines.toArray();
+    const note = await saveErrorNote(
+      {
+        disciplineId: disciplines[0].id,
+        topicId: null,
+        questionLogId: null,
+        sourceReference: 'prova bnb 2022 · questão 22',
+        errorType: 'falta-conteudo',
+        explanation: 'Explicação base.',
+        errorDate: today,
+        status: 'revisar',
+        nextReviewDate: today,
+      },
+      { scheduleReviews: false },
+    );
+
+    const { addFlashcard } = await import('../../services/performance');
+    await addFlashcard(note.id, {
+      statement: 'Enunciado original',
+      answer: 'certo',
+      explanation: 'Explicação original',
+    });
+
+    const latestNote = (await db.errorNotes.get(note.id))!;
+
+    render(
+      <ErrorNoteModal open={true} onClose={() => {}} noteToEdit={latestNote} />,
+    );
+
+    expect(await screen.findByText('Flashcards relacionados (1)')).toBeInTheDocument();
+    expect(screen.getByText('Enunciado original')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Editar' }));
+
+    const statementInput = await screen.findByDisplayValue('Enunciado original');
+    await userEvent.clear(statementInput);
+    await userEvent.type(statementInput, 'Enunciado editado');
+    await userEvent.click(screen.getByRole('button', { name: /Salvar flashcard/i }));
+
+    await waitFor(async () => {
+      const updated = await db.errorNotes.get(note.id);
+      expect(updated?.flashcards?.[0].statement).toBe('Enunciado editado');
+    });
   });
 });
