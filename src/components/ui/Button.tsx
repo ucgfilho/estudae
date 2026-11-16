@@ -64,10 +64,11 @@ export interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement>
   label: string;
   icon: ReactNode;
   variant?: Variant;
-  size?: Size;
+  size?: 'xs' | Size;
 }
 
-const iconSizes: Record<Size, string> = {
+const iconSizes: Record<'xs' | Size, string> = {
+  xs: 'size-5 max-lg:size-9',
   sm: 'size-8 max-lg:size-10',
   md: 'size-9 max-lg:size-10',
   lg: 'size-11',

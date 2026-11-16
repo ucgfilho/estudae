@@ -79,7 +79,7 @@ export function Sidebar({
       {/* Sidebar container */}
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-40 flex w-60 max-lg:w-72 max-lg:max-w-[85vw] max-lg:shadow-2xl max-lg:pb-[env(safe-area-inset-bottom)] flex-col border-r border-border bg-surface transition-transform duration-200 ease-in-out lg:static lg:translate-x-0',
+          'fixed inset-y-0 left-0 z-40 flex w-60 xl:w-64 max-lg:w-72 max-lg:max-w-[85vw] max-lg:shadow-2xl max-lg:pb-[env(safe-area-inset-bottom)] flex-col border-r border-border bg-surface transition-transform duration-200 ease-in-out lg:static lg:translate-x-0',
           mobileOpen ? 'translate-x-0' : '-translate-x-full',
         )}
         aria-label="Navegação principal"

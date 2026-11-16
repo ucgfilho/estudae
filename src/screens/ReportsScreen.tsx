@@ -246,80 +246,83 @@ export function ReportsScreen() {
         </div>
       </div>
 
-      {/* Chart 1: Planned vs Done Time */}
-      <Card
-        title="Tempo Planejado versus Tempo Realizado"
-        description="Evolução da carga horária de estudos pelo agrupamento selecionado (minutos)"
-      >
-        {studyData.some((d) => d.studiedMinutes > 0 || d.plannedMinutes > 0) ? (
-          <div className="h-72 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={studyData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="label" tickLine={false} tick={{ fontSize: 11 }} />
-                <YAxis tickLine={false} width={44} tick={{ fontSize: 11 }} />
-                <Tooltip formatter={(value) => [`${value} min`, '']} />
-                <Legend />
-                <Bar
-                  dataKey="studiedMinutes"
-                  name="Tempo Realizado"
-                  fill="var(--primary)"
-                  radius={[4, 4, 0, 0]}
-                />
-                <Bar
-                  dataKey="plannedMinutes"
-                  name="Tempo Planejado"
-                  fill="var(--accent)"
-                  radius={[4, 4, 0, 0]}
-                />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        ) : (
-          <EmptyState
-            icon={<Clock className="size-8" />}
-            title="Sem dados de tempo para o período selecionado"
-            description="Os dados aparecerão à medida que você estudar com o cronômetro ou agendar sessões."
-          />
-        )}
-      </Card>
+      {/* Charts Grid: Stacked up to lg, side-by-side on wide desktop (xl+) */}
+      <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-2">
+        {/* Chart 1: Planned vs Done Time */}
+        <Card
+          title="Tempo Planejado versus Tempo Realizado"
+          description="Evolução da carga horária de estudos pelo agrupamento selecionado (minutos)"
+        >
+          {studyData.some((d) => d.studiedMinutes > 0 || d.plannedMinutes > 0) ? (
+            <div className="h-72 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={studyData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="label" tickLine={false} tick={{ fontSize: 11 }} />
+                  <YAxis tickLine={false} width={44} tick={{ fontSize: 11 }} />
+                  <Tooltip formatter={(value) => [`${value} min`, '']} />
+                  <Legend />
+                  <Bar
+                    dataKey="studiedMinutes"
+                    name="Tempo Realizado"
+                    fill="var(--primary)"
+                    radius={[4, 4, 0, 0]}
+                  />
+                  <Bar
+                    dataKey="plannedMinutes"
+                    name="Tempo Planejado"
+                    fill="var(--accent)"
+                    radius={[4, 4, 0, 0]}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <EmptyState
+              icon={<Clock className="size-8" />}
+              title="Sem dados de tempo para o período selecionado"
+              description="Os dados aparecerão à medida que você estudar com o cronômetro ou agendar sessões."
+            />
+          )}
+        </Card>
 
-      {/* Chart 2: Accuracy Evolution */}
-      <Card
-        title="Evolução da Taxa de Acerto (%)"
-        description="Percentual de acerto calculado em cada período com base em questões resolvidas"
-      >
-        {accuracyData.length > 0 ? (
-          <div className="h-72 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={accuracyData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="label" tickLine={false} tick={{ fontSize: 11 }} />
-                <YAxis domain={[0, 100]} unit="%" tickLine={false} width={52} tick={{ fontSize: 11 }} />
-                <Tooltip formatter={(value) => [formatPercent(Number(value)), 'Acerto']} />
-                <Line
-                  type="monotone"
-                  dataKey="accuracy"
-                  name="% Acerto"
-                  stroke="var(--primary)"
-                  strokeWidth={2}
-                  dot={{ r: 4 }}
-                  activeDot={{ r: 6 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        ) : (
-          <EmptyState
-            icon={<CheckCircle className="size-8" />}
-            title="Sem dados de acerto no período selecionado"
-            description="Cadastre questões respondidas para visualizar sua curva de evolução."
-          />
-        )}
-      </Card>
+        {/* Chart 2: Accuracy Evolution */}
+        <Card
+          title="Evolução da Taxa de Acerto (%)"
+          description="Percentual de acerto calculado em cada período com base em questões resolvidas"
+        >
+          {accuracyData.length > 0 ? (
+            <div className="h-72 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={accuracyData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="label" tickLine={false} tick={{ fontSize: 11 }} />
+                  <YAxis domain={[0, 100]} unit="%" tickLine={false} width={52} tick={{ fontSize: 11 }} />
+                  <Tooltip formatter={(value) => [formatPercent(Number(value)), 'Acerto']} />
+                  <Line
+                    type="monotone"
+                    dataKey="accuracy"
+                    name="% Acerto"
+                    stroke="var(--primary)"
+                    strokeWidth={2}
+                    dot={{ r: 4 }}
+                    activeDot={{ r: 6 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <EmptyState
+              icon={<CheckCircle className="size-8" />}
+              title="Sem dados de acerto no período selecionado"
+              description="Cadastre questões respondidas para visualizar sua curva de evolução."
+            />
+          )}
+        </Card>
+      </div>
 
       {/* Two columns: Accuracy by Discipline & Worst Performing Topics */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
         {/* Disciplines Accuracy */}
         <Card
           title="Ranking de Desempenho por Disciplina"

@@ -258,7 +258,7 @@ export function QuestionsScreen() {
             ))}
           </div>
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
             <div>
               <label className="text-xs font-medium text-fg-subtle block mb-1">Data Início</label>
               <DateInput
@@ -311,7 +311,7 @@ export function QuestionsScreen() {
               </Select>
             </div>
 
-            <div>
+            <div className="sm:col-span-2 lg:col-span-2 xl:col-span-1">
               <label className="text-xs font-medium text-fg-subtle block mb-1">Banca / Fonte</label>
               <div className="relative">
                 <Input
@@ -335,7 +335,7 @@ export function QuestionsScreen() {
         title="Desempenho por Disciplina"
         description="Fórmula: Acertos / (Acertos + Erros) * 100 • Clique em uma disciplina para filtrar a tabela"
       >
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {discAcc.map((d) => {
             const isSelected = filterDisciplineId === d.disciplineId;
             return (
@@ -353,12 +353,12 @@ export function QuestionsScreen() {
                 }`}
                 title={isSelected ? 'Clique para remover o filtro' : `Filtrar por ${d.name}`}
               >
-                <div className="flex items-center justify-between text-xs font-medium">
-                  <span className="flex items-center gap-1.5 truncate">
+                <div className="flex items-center justify-between gap-2 text-xs font-medium">
+                  <span className="flex items-center gap-1.5 min-w-0 flex-1">
                     <DisciplineDot color={d.color} />
                     <span className="truncate">{d.name}</span>
                   </span>
-                  <span className="font-bold tabular-nums">
+                  <span className="font-bold tabular-nums shrink-0">
                     {d.accuracy !== null ? formatPercent(d.accuracy) : EMPTY_VALUE}
                   </span>
                 </div>
@@ -500,15 +500,15 @@ export function QuestionsScreen() {
               <table className="w-full text-left text-sm">
               <thead className="border-b border-border bg-surface-muted/40 text-xs font-semibold text-fg-muted">
                 <tr>
-                  <th className="py-2.5 px-3">Data</th>
-                  <th className="py-2.5 px-3">Disciplina / Conteúdo</th>
-                  <th className="py-2.5 px-3">Banca/Fonte</th>
-                  <th className="py-2.5 px-3 text-center">Total</th>
-                  <th className="py-2.5 px-3 text-center">Acertos</th>
-                  <th className="py-2.5 px-3 text-center">Erros</th>
-                  <th className="py-2.5 px-3 text-center">Branco</th>
-                  <th className="py-2.5 px-3 text-center">% Acerto</th>
-                  <th className="py-2.5 px-3 text-right">Ações</th>
+                  <th className="py-2.5 px-1.5 xl:px-3">Data</th>
+                  <th className="py-2.5 px-1.5 xl:px-3">Disciplina / Conteúdo</th>
+                  <th className="py-2.5 px-1.5 xl:px-3">Banca/Fonte</th>
+                  <th className="py-2.5 px-1.5 xl:px-3 text-center">Total</th>
+                  <th className="py-2.5 px-1.5 xl:px-3 text-center">Acertos</th>
+                  <th className="py-2.5 px-1.5 xl:px-3 text-center">Erros</th>
+                  <th className="hidden xl:table-cell py-2.5 px-3 text-center">Branco</th>
+                  <th className="py-2.5 px-1.5 xl:px-3 text-center whitespace-nowrap">% Acerto</th>
+                  <th className="py-2.5 px-1.5 xl:px-3 text-right">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -520,42 +520,42 @@ export function QuestionsScreen() {
 
                   return (
                     <tr key={log.id} className="hover:bg-surface-muted/20 transition-colors">
-                      <td className="py-2.5 px-3 whitespace-nowrap font-medium text-xs">
+                      <td className="py-2.5 px-2 xl:px-3 whitespace-nowrap font-medium text-xs tabular-nums">
                         {formatDate(log.date)}
                       </td>
-                      <td className="py-2.5 px-3">
+                      <td className="py-2.5 px-2 xl:px-3 max-w-[165px] xl:max-w-[280px]">
                         <div className="flex items-center gap-1.5 font-medium text-fg">
                           {d && <DisciplineDot color={d.color} />}
-                          <span>{d?.name ?? '—'}</span>
+                          <span className="truncate">{d?.name ?? '—'}</span>
                         </div>
-                        {t && <div className="text-xs text-fg-subtle">{t.title}</div>}
+                        {t && <div className="text-xs text-fg-subtle line-clamp-1">{t.title}</div>}
                       </td>
-                      <td className="py-2.5 px-3 text-xs text-fg-muted">
-                        {log.source || '—'}
+                      <td className="py-2.5 px-2 xl:px-3 text-xs text-fg-muted max-w-[105px] xl:max-w-[220px]">
+                        <div className="truncate xl:line-clamp-2 xl:whitespace-normal">{log.source || '—'}</div>
                       </td>
-                      <td className="py-2.5 px-3 text-center font-semibold tabular-nums">
+                      <td className="py-2.5 px-1.5 xl:px-3 text-center font-semibold tabular-nums">
                         {log.total}
                       </td>
-                      <td className="py-2.5 px-3 text-center text-success font-semibold tabular-nums">
+                      <td className="py-2.5 px-1.5 xl:px-3 text-center text-success font-semibold tabular-nums">
                         {log.correct}
                       </td>
-                      <td className="py-2.5 px-3 text-center text-danger font-semibold tabular-nums">
-                        <div className="flex items-center justify-center gap-1.5">
+                      <td className="py-2.5 px-1.5 xl:px-3 text-center text-danger font-semibold tabular-nums">
+                        <div className="flex items-center justify-center gap-1">
                           <span>{log.incorrect}</span>
                           {notesByLogId.has(log.id) && (
                             <span
                               title="Anotação registrada no Caderno de Erros"
-                              className="inline-flex items-center text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-medium"
+                              className="hidden xl:inline-flex items-center text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-medium whitespace-nowrap"
                             >
                               No Caderno
                             </span>
                           )}
                         </div>
                       </td>
-                      <td className="py-2.5 px-3 text-center text-fg-subtle tabular-nums">
+                      <td className="hidden xl:table-cell py-2.5 px-3 text-center text-fg-subtle tabular-nums">
                         {log.blank || '0'}
                       </td>
-                      <td className="py-2.5 px-3 text-center font-bold tabular-nums">
+                      <td className="py-2.5 px-1.5 xl:px-3 text-center font-bold tabular-nums whitespace-nowrap">
                         {acc !== null ? (
                           <span
                             className={
@@ -572,8 +572,8 @@ export function QuestionsScreen() {
                           '—'
                         )}
                       </td>
-                      <td className="py-2.5 px-3 text-right whitespace-nowrap">
-                        <div className="inline-flex shrink-0 items-center justify-end gap-1.5">
+                      <td className="py-2.5 px-2 xl:px-3 text-right whitespace-nowrap">
+                        <div className="inline-flex shrink-0 items-center justify-end gap-0.5 xl:gap-1">
                           {log.incorrect > 0 && (
                             <IconButton
                               label={

@@ -516,7 +516,7 @@ export function StudyNowScreen() {
             </Card>
           )}
 
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
             {/* Option A: Start Planned Session (Prioritized when schedule exists — Decision Reduction) */}
             <Card
               title="Iniciar Sessão Planejada"
@@ -653,7 +653,7 @@ export function StudyNowScreen() {
                   )}
                 </div>
 
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
                   <div>
                     <Field label="Duração pretendida (min)" required>
                       <Input

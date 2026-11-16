@@ -264,7 +264,7 @@ export function DisciplinesScreen() {
 
       {/* Disciplines Selection Tabs */}
       <div className="overflow-x-auto pb-1">
-        <div className="inline-flex gap-1.5 p-1 rounded-xl border border-border bg-surface">
+        <div className="inline-flex lg:flex lg:flex-wrap gap-1.5 p-1 rounded-xl border border-border bg-surface">
           {disciplines.map((d) => {
             const isSelected = d.id === currentDiscipline?.id;
             return (

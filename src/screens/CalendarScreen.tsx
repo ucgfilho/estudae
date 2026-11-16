@@ -273,7 +273,7 @@ export function CalendarScreen() {
                     key={dayKey}
                     onClick={() => setCurrentDate(dayKey)}
                     className={cn(
-                      'min-h-14 md:min-h-[105px] p-1 md:p-1.5 transition-colors flex flex-col justify-between group max-md:cursor-pointer',
+                      'min-h-14 md:min-h-[105px] xl:min-h-[118px] p-1 md:p-1.5 xl:p-2 transition-colors flex flex-col justify-between group max-md:cursor-pointer',
                       !isCurMonth && 'bg-surface-muted/20 text-fg-subtle opacity-70',
                       isToday && 'bg-primary-soft/30',
                       isSelectedDay && 'max-md:ring-2 max-md:ring-inset max-md:ring-primary max-md:bg-primary-soft/20'
@@ -306,8 +306,8 @@ export function CalendarScreen() {
                       <IconButton
                         label={`Adicionar sessão em ${formatDate(dayKey)}`}
                         icon={<Plus className="size-3" />}
-                        size="sm"
-                        className="hidden md:inline-flex opacity-0 group-hover:opacity-100 transition-opacity !size-5"
+                        size="xs"
+                        className="hidden md:inline-flex opacity-0 group-hover:opacity-100 transition-opacity"
                         onClick={(e) => {
                           e.stopPropagation();
                           openNewSession(dayKey);
@@ -445,7 +445,7 @@ export function CalendarScreen() {
       )}
 
       {view === 'weekly' && (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-7">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
           {visibleDays.map((dayKey) => {
             const daySessions = sessionsByDate.get(dayKey) ?? [];
             const studiedSec = secondsByDate.get(dayKey) ?? 0;

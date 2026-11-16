@@ -1336,7 +1336,7 @@ export function ScheduleScreen() {
             </span>
           </div>
 
-          <div ref={boardRef} className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-7">
+          <div ref={boardRef} className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
             {Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)).map((dayKey) => {
               const daySessions = weekSessions.filter((s) => s.date === dayKey);
               const isToday = dayKey === today;
@@ -1361,7 +1361,7 @@ export function ScheduleScreen() {
                   data-testid={`day-column-${dayKey}`}
                   data-day-column={dayKey}
                   className={cn(
-                    'min-w-0 rounded-xl border p-3 flex flex-col justify-between lg:min-h-[220px] transition-colors duration-150',
+                    'min-w-0 rounded-xl border p-3 xl:p-2.5 2xl:p-3 flex flex-col justify-between lg:min-h-[220px] transition-colors duration-150',
                     isActiveDropColumn
                       ? 'border-primary ring-2 ring-primary/70 bg-primary-soft/15 shadow-md'
                       : isToday
@@ -1370,19 +1370,19 @@ export function ScheduleScreen() {
                   )}
                 >
                   <div>
-                    <div className="flex items-center justify-between border-b border-border pb-1.5">
+                    <div className="flex items-center justify-between gap-1 border-b border-border pb-1.5">
                       <span className="text-xs font-bold uppercase text-fg-subtle">
                         {formatWeekdayShort(dayKey)}
                       </span>
                       <div className="flex items-center gap-1">
-                        <span className={cn('text-xs font-semibold', isToday && 'text-primary')}>
+                        <span className={cn('text-xs font-semibold tabular-nums', isToday && 'text-primary')}>
                           {formatShortDate(dayKey)}
                         </span>
                         <IconButton
                           label={`Planejar sessão para ${formatWeekdayShort(dayKey)}`}
                           icon={<Plus className="size-3 max-lg:size-4" />}
-                          size="sm"
-                          className="lg:!size-5 max-lg:size-9 text-fg-subtle hover:text-primary"
+                          size="xs"
+                          className="text-fg-subtle hover:text-primary"
                           onClick={() => openNewSession(dayKey)}
                         />
                       </div>
@@ -1473,7 +1473,7 @@ export function ScheduleScreen() {
                                 : 'transform 220ms cubic-bezier(0.22, 1, 0.36, 1), opacity 150ms ease, border-color 150ms ease, box-shadow 150ms ease, background-color 150ms ease',
                             }}
                             className={cn(
-                              'group relative overflow-hidden rounded-xl border p-2.5 text-xs flex flex-col justify-between gap-2 cursor-grab select-none will-change-transform focus-visible:outline-2 focus-visible:outline-primary',
+                              'group relative overflow-hidden rounded-xl border p-2.5 xl:p-2 2xl:p-2.5 text-xs flex flex-col justify-between gap-2 cursor-grab select-none will-change-transform focus-visible:outline-2 focus-visible:outline-primary',
                               isDragging && 'opacity-0 pointer-events-none',
                               isSimulado &&
                                 'border-primary/40 bg-primary-soft/15 ring-1 ring-primary/25',
@@ -1544,14 +1544,13 @@ export function ScheduleScreen() {
                             </p>
 
                             {/* Rodapé: Ações essenciais alinhadas com respiração e lixeira isolada à direita */}
-                            <div className="flex items-center justify-between pl-1 pt-1.5 border-t border-border/40">
-                              <div className="flex items-center gap-1 max-lg:gap-1.5">
+                            <div className="flex items-center justify-between gap-0.5 pl-1 pt-1.5 border-t border-border/40">
+                              <div className="flex items-center gap-0.5 max-lg:gap-1.5">
                                 {isSimulado && (
                                   <IconButton
                                     label="Ir para tela de Simulados"
                                     icon={<ClipboardList className="size-3 max-lg:size-4 text-primary" />}
-                                    size="sm"
-                                    className="lg:!size-5 max-lg:size-9"
+                                    size="xs"
                                     onClick={() => navigate('/simulados')}
                                   />
                                 )}
@@ -1559,8 +1558,8 @@ export function ScheduleScreen() {
                                   <IconButton
                                     label="Iniciar cronômetro para esta sessão"
                                     icon={<Play className="size-3 max-lg:size-4 text-primary" />}
-                                    size="sm"
-                                    className="lg:!size-5 max-lg:size-9 hover:bg-primary-soft/40"
+                                    size="xs"
+                                    className="hover:bg-primary-soft/40"
                                     onClick={() => handleStartTimer(s)}
                                   />
                                 )}
@@ -1568,8 +1567,8 @@ export function ScheduleScreen() {
                                   <IconButton
                                     label={isLost ? 'Recuperar sessão perdida' : 'Recuperar sessão atrasada'}
                                     icon={<RotateCcw className="size-3 max-lg:size-4 text-warning" />}
-                                    size="sm"
-                                    className="lg:!size-5 max-lg:size-9 hover:bg-warning-soft/40"
+                                    size="xs"
+                                    className="hover:bg-warning-soft/40"
                                     onClick={() => openRecoverModal(s)}
                                   />
                                 )}
@@ -1577,8 +1576,8 @@ export function ScheduleScreen() {
                                   <IconButton
                                     label="Concluir sessão (caso já tenha estudado sem cronômetro)"
                                     icon={<Check className="size-3 max-lg:size-4 text-success" />}
-                                    size="sm"
-                                    className="lg:!size-5 max-lg:size-9 hover:bg-success-soft"
+                                    size="xs"
+                                    className="hover:bg-success-soft"
                                     onClick={() => void handleCompleteDirectly(s)}
                                   />
                                 )}
@@ -1586,8 +1585,7 @@ export function ScheduleScreen() {
                                   <IconButton
                                     label="Editar sessão"
                                     icon={<Edit className="size-3 max-lg:size-4 text-fg-subtle hover:text-fg" />}
-                                    size="sm"
-                                    className="lg:!size-5 max-lg:size-9"
+                                    size="xs"
                                     onClick={() => {
                                       setSessionToEdit(s);
                                       setSessionModalDate(s.date);
@@ -1606,8 +1604,8 @@ export function ScheduleScreen() {
                                       : 'Excluir sessão'
                                   }
                                   icon={<Trash2 className="size-3 max-lg:size-4 text-fg-subtle hover:text-danger" />}
-                                  size="sm"
-                                  className="lg:!size-5 max-lg:size-9 hover:bg-danger-soft/40"
+                                  size="xs"
+                                  className="hover:bg-danger-soft/40"
                                   onClick={() => {
                                     setSessionToDelete(s);
                                     setDeleteConfirmOpen(true);
