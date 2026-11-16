@@ -151,28 +151,30 @@ export function FlashcardDeck({ reviews, notes, disciplines, onComplete }: Props
       }, 700);
       return;
     }
-    // Moving to next review - keep animating state to preserve correct color during flip back
+    // Moving to next review: first flip back to front face, THEN advance review
     setAnimating(true);
-    await onComplete(current, reviewStats);
-    setDoneReviews((n) => n + 1);
-    setCardIndex(0);
-    setReviewStats({ hits: 0, misses: 0 });
-    setPicked(null);
-    // Wait for flip-back animation to complete before clearing animating
-    setTimeout(() => {
+    setPicked(null); // Start flip-back animation
+    // Wait for flip-back to complete, then advance to next review
+    setTimeout(async () => {
+      await onComplete(current, reviewStats);
+      setDoneReviews((n) => n + 1);
+      setCardIndex(0);
+      setReviewStats({ hits: 0, misses: 0 });
+      // Now on front face of new review's first card, no flip needed
       setAnimating(false);
     }, 700);
   };
 
   const completeWithoutFlashcard = async () => {
     setAnimating(true);
-    await onComplete(current);
-    setDoneReviews((n) => n + 1);
-    setCardIndex(0);
-    setReviewStats({ hits: 0, misses: 0 });
-    setPicked(null);
-    // Wait for flip-back animation to complete before clearing animating
-    setTimeout(() => {
+    setPicked(null); // Start flip-back animation
+    // Wait for flip-back to complete, then advance to next review
+    setTimeout(async () => {
+      await onComplete(current);
+      setDoneReviews((n) => n + 1);
+      setCardIndex(0);
+      setReviewStats({ hits: 0, misses: 0 });
+      // Now on front face of new review's first card, no flip needed
       setAnimating(false);
     }, 700);
   };
