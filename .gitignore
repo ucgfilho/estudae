@@ -76,3 +76,9 @@ Desktop.ini
 graphify-out/
 .vercel
 .env*
+
+# Cópias de public/ geradas pelo build SSR em api/
+api/.well-known/
+api/llms.txt
+api/robots.txt
+api/sitemap.xml

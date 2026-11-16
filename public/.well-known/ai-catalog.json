@@ -1,0 +1,8 @@
+{
+  "specVersion": "1.0",
+  "host": {
+    "displayName": "estudaê — Plataforma de Estudos",
+    "identifier": "did:web:estudaeconcursos.vercel.app"
+  },
+  "entries": []
+}
