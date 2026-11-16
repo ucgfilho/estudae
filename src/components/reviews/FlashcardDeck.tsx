@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { CheckCircle2, XCircle, Sparkles, Flame, Layers } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { FormattedText } from '../ui/RichText';
@@ -14,6 +14,23 @@ interface Props {
   onComplete: (review: ReviewTask, stats?: { hits: number; misses: number }) => Promise<void>;
 }
 
+interface SavedProgress {
+  doneReviews: number;
+  cardIndex: number;
+  reviewStats: { hits: number; misses: number };
+  streak: number;
+  totalHits: number;
+  totalCardsAnswered: number;
+  reviewIds: string[];
+  date: string;
+}
+
+const STORAGE_KEY_PREFIX = 'flashcard-deck-progress-';
+const getTodayKey = () => {
+  const today = new Date();
+  return `${STORAGE_KEY_PREFIX}${today.toISOString().split('T')[0]}`;
+};
+
 /** Baralho de flashcards: um por vez, vira ao responder (Certo/Errado) e só avança depois. */
 export function FlashcardDeck({ reviews, notes, disciplines, onComplete }: Props) {
   const [totalReviews] = useState(reviews.length);
@@ -26,6 +43,62 @@ export function FlashcardDeck({ reviews, notes, disciplines, onComplete }: Props
   const [picked, setPicked] = useState<'certo' | 'errado' | null>(null);
   const [lastCorrect, setLastCorrect] = useState(false);
   const [animating, setAnimating] = useState(false);
+  const [progressLoaded, setProgressLoaded] = useState(false);
+
+  // Create a unique identifier for the current review list to validate saved progress
+  const reviewIds = useMemo(() => reviews.map(r => r.id), [reviews]);
+
+  // Load saved progress on mount
+  useEffect(() => {
+    const key = getTodayKey();
+    try {
+      const saved = localStorage.getItem(key);
+      if (saved) {
+        const progress: SavedProgress = JSON.parse(saved);
+        // Validate that the saved progress matches current reviews
+        if (progress.date === new Date().toISOString().split('T')[0] &&
+            progress.reviewIds.length === reviewIds.length &&
+            progress.reviewIds.every((id, i) => id === reviewIds[i])) {
+          setDoneReviews(progress.doneReviews);
+          setCardIndex(progress.cardIndex);
+          setReviewStats(progress.reviewStats);
+          setStreak(progress.streak);
+          setTotalHits(progress.totalHits);
+          setTotalCardsAnswered(progress.totalCardsAnswered);
+        } else {
+          // Clear invalid progress
+          localStorage.removeItem(key);
+        }
+      }
+    } catch {
+      // Ignore parse errors
+    }
+    setProgressLoaded(true);
+  }, [reviewIds]);
+
+  // Save progress whenever relevant state changes
+  useEffect(() => {
+    if (!progressLoaded) return;
+    const key = getTodayKey();
+    const progress: SavedProgress = {
+      doneReviews,
+      cardIndex,
+      reviewStats,
+      streak,
+      totalHits,
+      totalCardsAnswered,
+      reviewIds,
+      date: new Date().toISOString().split('T')[0],
+    };
+    localStorage.setItem(key, JSON.stringify(progress));
+  }, [doneReviews, cardIndex, reviewStats, streak, totalHits, totalCardsAnswered, reviewIds, progressLoaded]);
+
+  // Clear progress when all reviews are done
+  useEffect(() => {
+    if (progressLoaded && doneReviews >= totalReviews && totalReviews > 0) {
+      localStorage.removeItem(getTodayKey());
+    }
+  }, [doneReviews, totalReviews, progressLoaded]);
 
   const current = reviews[0];
   const note = current?.errorNoteId ? notes.get(current.errorNoteId) : undefined;
