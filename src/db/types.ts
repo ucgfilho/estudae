@@ -146,6 +146,14 @@ export const ERROR_STATUS_LABELS: Record<ErrorStatus, string> = {
   dominado: 'Dominado',
 };
 
+/** Flashcard (certo/errado) gerado pela API do Gemini a partir do registro do caderno de erros. */
+export interface ErrorFlashcard {
+  statement: string;
+  answer: 'certo' | 'errado';
+  explanation: string;
+  generatedAt: string;
+}
+
 export interface ErrorNote {
   id: string;
   questionLogId: string | null;
@@ -160,6 +168,7 @@ export interface ErrorNote {
   /** Simulado de origem (cadernos criados a partir de uma prova). */
   mockExamId?: string | null;
   mockExamTitle?: string | null;
+  flashcard?: ErrorFlashcard | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -176,6 +185,8 @@ export interface ReviewTask {
   intervalDays: number;
   status: ReviewStatus;
   completedAt: string | null;
+  /** Resultado do flashcard ao concluir a revisão (define ganho/perda de XP). */
+  flashcardResult?: 'acerto' | 'erro' | null;
   createdAt: string;
 }
 

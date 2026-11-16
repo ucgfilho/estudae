@@ -437,11 +437,12 @@ export class SqlStudyDataRepository implements IStudyDataRepository {
         `INSERT INTO error_notes (
            user_id, id, question_log_id, discipline_id, topic_id,
            source_reference, error_type, explanation, error_date,
-           status, next_review_date, mock_exam_id, mock_exam_title, created_at, updated_at
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           status, next_review_date, mock_exam_id, mock_exam_title, flashcard_json, created_at, updated_at
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(user_id, id) DO UPDATE SET
            mock_exam_id = excluded.mock_exam_id,
            mock_exam_title = excluded.mock_exam_title,
+           flashcard_json = excluded.flashcard_json,
            question_log_id = excluded.question_log_id,
            discipline_id = excluded.discipline_id,
            topic_id = excluded.topic_id,
@@ -467,6 +468,7 @@ export class SqlStudyDataRepository implements IStudyDataRepository {
           e.nextReviewDate,
           e.mockExamId ?? null,
           e.mockExamTitle ?? null,
+          e.flashcard ? JSON.stringify(e.flashcard) : null,
           e.createdAt,
           e.updatedAt,
         ],
@@ -479,8 +481,8 @@ export class SqlStudyDataRepository implements IStudyDataRepository {
       this.db.run(
         `INSERT INTO review_tasks (
            user_id, id, discipline_id, topic_id, error_note_id,
-           title, due_date, interval_days, status, completed_at, created_at
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           title, due_date, interval_days, status, completed_at, flashcard_result, created_at
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(user_id, id) DO UPDATE SET
            discipline_id = excluded.discipline_id,
            topic_id = excluded.topic_id,
@@ -490,6 +492,7 @@ export class SqlStudyDataRepository implements IStudyDataRepository {
            interval_days = excluded.interval_days,
            status = excluded.status,
            completed_at = excluded.completed_at,
+           flashcard_result = excluded.flashcard_result,
            created_at = excluded.created_at`,
         [
           userId,
@@ -502,6 +505,7 @@ export class SqlStudyDataRepository implements IStudyDataRepository {
           r.intervalDays,
           r.status,
           r.completedAt,
+          r.flashcardResult ?? null,
           r.createdAt,
         ],
       );
@@ -879,12 +883,13 @@ export class SqlStudyDataRepository implements IStudyDataRepository {
       next_review_date: string | null;
       mock_exam_id: string | null;
       mock_exam_title: string | null;
+      flashcard_json: string | null;
       created_at: string;
       updated_at: string;
     }>(
       `SELECT id, question_log_id, discipline_id, topic_id, source_reference,
               error_type, explanation, error_date, status, next_review_date,
-              mock_exam_id, mock_exam_title, created_at, updated_at
+              mock_exam_id, mock_exam_title, flashcard_json, created_at, updated_at
        FROM error_notes
        WHERE user_id = ?
        ORDER BY error_date DESC, created_at DESC`,
@@ -902,6 +907,7 @@ export class SqlStudyDataRepository implements IStudyDataRepository {
       status: r.status,
       nextReviewDate: r.next_review_date,
       ...(r.mock_exam_id ? { mockExamId: r.mock_exam_id, mockExamTitle: r.mock_exam_title } : {}),
+      ...(r.flashcard_json ? { flashcard: JSON.parse(r.flashcard_json) as ErrorNote['flashcard'] } : {}),
       createdAt: r.created_at,
       updatedAt: r.updated_at,
     }));
@@ -918,10 +924,11 @@ export class SqlStudyDataRepository implements IStudyDataRepository {
       interval_days: number;
       status: ReviewTask['status'];
       completed_at: string | null;
+      flashcard_result: 'acerto' | 'erro' | null;
       created_at: string;
     }>(
       `SELECT id, discipline_id, topic_id, error_note_id, title, due_date,
-              interval_days, status, completed_at, created_at
+              interval_days, status, completed_at, flashcard_result, created_at
        FROM review_tasks
        WHERE user_id = ?
        ORDER BY due_date ASC, created_at ASC`,
@@ -937,6 +944,7 @@ export class SqlStudyDataRepository implements IStudyDataRepository {
       intervalDays: r.interval_days,
       status: r.status,
       completedAt: r.completed_at,
+      ...(r.flashcard_result ? { flashcardResult: r.flashcard_result } : {}),
       createdAt: r.created_at,
     }));
   }

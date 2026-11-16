@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -19,6 +20,7 @@ import { IconButton } from '../ui/Button';
 import { BnbLogo } from '../ui/BnbLogo';
 import { useReviews, useErrorNotes, useActiveTimer, useToday, useSettings } from '../../hooks/useData';
 import { reviewBuckets } from '../../domain/metrics';
+import { reconcileReviewsAndErrorNotes } from '../../services/performance';
 import type { UserContestProfile } from '../../services/contests';
 
 interface SidebarProps {
@@ -58,9 +60,15 @@ export function Sidebar({
   const timer = useActiveTimer();
   const settings = useSettings();
 
+  // Mantém Revisões e Caderno de Erros sincronizados (mesma contagem) em qualquer tela.
+  useEffect(() => {
+    if (reviews.length === 0 && errorNotes.length === 0) return;
+    void reconcileReviewsAndErrorNotes();
+  }, [reviews.length, errorNotes]);
+
   const buckets = reviewBuckets(reviews, today);
   const pendingReviewsCount = buckets.overdue.length + buckets.today.length;
-  const pendingErrorsCount = errorNotes.filter((e) => e.status === 'revisar').length;
+  const pendingErrorsCount = errorNotes.length;
   const isTimerRunning = Boolean(timer && timer.status === 'running');
   const dailyGoal = settings?.dailyGoalMinutes ?? 120;
   const weeklyGoal = settings?.weeklyGoalMinutes ?? 840;
@@ -168,7 +176,7 @@ export function Sidebar({
                   {isErrors && pendingErrorsCount > 0 && (
                     <span
                       className="rounded-full bg-surface-muted border border-border px-1.5 py-0.5 text-[10px] font-medium text-fg-muted tabular-nums leading-none"
-                      title={`${pendingErrorsCount} erro(s) a revisar`}
+                      title={`${pendingErrorsCount} erro(s) registrado(s)`}
                     >
                       {pendingErrorsCount}
                     </span>

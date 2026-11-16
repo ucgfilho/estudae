@@ -1,6 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
 import {
-  Plus,
   CheckCircle,
   Clock,
   CalendarDays,
@@ -11,7 +10,7 @@ import {
 import { Button, IconButton } from '../components/ui/Button';
 import { PageHeader, Segmented, Badge, EmptyState, DisciplineDot, Alert } from '../components/ui/Display';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
-import { CreateReviewModal, PostponeReviewModal } from '../components/modals/ReviewModal';
+import { PostponeReviewModal } from '../components/modals/ReviewModal';
 import {
   useDisciplines,
   useTopics,
@@ -31,6 +30,7 @@ import { formatDate } from '../lib/dates';
 import type { ReviewTask } from '../db/types';
 import { errorMessage, cn } from '../lib/utils';
 import { FormattedText } from '../components/ui/RichText';
+import { FlashcardDeck } from '../components/reviews/FlashcardDeck';
 import { useSuccessToast } from '../components/ui/Toast';
 
 type ReviewTab = 'overdue' | 'today' | 'upcoming' | 'completed';
@@ -45,7 +45,6 @@ export function ReviewsScreen() {
   const [activeTab, setActiveTab] = useState<ReviewTab>('today');
 
   // Modals state
-  const [createModalOpen, setCreateModalOpen] = useState(false);
   const [postponeModalOpen, setPostponeModalOpen] = useState(false);
   const [reviewToPostpone, setReviewToPostpone] = useState<ReviewTask | null>(null);
 
@@ -81,11 +80,11 @@ export function ReviewsScreen() {
     return completedReviews;
   }, [activeTab, buckets, completedReviews]);
 
-  const handleComplete = async (review: ReviewTask) => {
+  const handleComplete = async (review: ReviewTask, result?: 'acerto' | 'erro') => {
     setActionError(null);
     try {
-      await completeReview(review.id);
-      setActionSuccess('Revisão marcada como concluída.');
+      await completeReview(review.id, result);
+      if (!result) setActionSuccess('Revisão marcada como concluída.');
     } catch (err) {
       setActionError(errorMessage(err));
     }
@@ -124,16 +123,6 @@ export function ReviewsScreen() {
       <PageHeader
         title="Revisões espaçadas"
         description="Revise no intervalo ideal para fixar o conteúdo na memória de longo prazo."
-        actions={
-          <Button
-            variant={currentList.some((r) => r.status === 'pendente') ? 'secondary' : 'primary'}
-            size="sm"
-            icon={<Plus className="size-4" />}
-            onClick={() => setCreateModalOpen(true)}
-          >
-            Agendar revisão
-          </Button>
-        }
       />
 
       {actionError && (
@@ -160,7 +149,23 @@ export function ReviewsScreen() {
 
       {/* List Card */}
       <div className="space-y-3">
-        {currentList.length > 0 ? (
+        {activeTab === 'today' || activeTab === 'overdue' ? (
+          currentList.length > 0 ? (
+            <FlashcardDeck
+              key={activeTab}
+              reviews={currentList}
+              notes={errorNoteMap}
+              disciplines={discMap}
+              onComplete={handleComplete}
+            />
+          ) : (
+            <EmptyState
+              icon={<CheckCircle className="size-8" />}
+              title={activeTab === 'overdue' ? 'Nenhuma revisão em atraso' : 'Todas as revisões de hoje estão em dia'}
+              description="Seus ciclos de memória estão em dia."
+            />
+          )
+        ) : currentList.length > 0 ? (
           currentList.map((review) => {
             const d = discMap.get(review.disciplineId);
             const t = review.topicId ? topicMap.get(review.topicId) : null;
@@ -282,45 +287,13 @@ export function ReviewsScreen() {
         ) : (
           <EmptyState
             icon={<CheckCircle className="size-8" />}
-            title={
-              activeTab === 'overdue'
-                ? 'Nenhuma revisão em atraso'
-                : activeTab === 'today'
-                ? 'Todas as revisões de hoje estão em dia'
-                : activeTab === 'upcoming'
-                ? 'Nenhuma revisão futura agendada'
-                : 'Nenhuma revisão concluída ainda'
-            }
-            description={
-              activeTab === 'today'
-                ? 'Seus ciclos de memória estão em dia.'
-                : 'Cadastre tarefas de repetição espaçada para reter os tópicos estudados.'
-            }
-            action={
-              <Button
-                variant="secondary"
-                size="sm"
-                icon={<Plus className="size-4" />}
-                onClick={() => setCreateModalOpen(true)}
-              >
-                Agendar Novo Ciclo
-              </Button>
-            }
+            title={activeTab === 'upcoming' ? 'Nenhuma revisão futura agendada' : 'Nenhuma revisão concluída ainda'}
+            description="Cadastre tarefas de repetição espaçada para reter os tópicos estudados."
           />
         )}
       </div>
 
       {/* Modals */}
-      <CreateReviewModal
-        open={createModalOpen}
-        onClose={() => setCreateModalOpen(false)}
-        onCreated={(cnt) =>
-          setActionSuccess(
-            cnt === 1 ? '1 tarefa de revisão agendada.' : `${cnt} tarefas de revisão agendadas.`
-          )
-        }
-      />
-
       <PostponeReviewModal
         open={postponeModalOpen}
         onClose={() => setPostponeModalOpen(false)}

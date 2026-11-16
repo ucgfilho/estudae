@@ -141,6 +141,7 @@ CREATE TABLE IF NOT EXISTS error_notes (
   next_review_date TEXT NULL,
   mock_exam_id TEXT NULL,
   mock_exam_title TEXT NULL,
+  flashcard_json TEXT NULL,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
   PRIMARY KEY (user_id, id),
@@ -160,6 +161,7 @@ CREATE TABLE IF NOT EXISTS review_tasks (
   interval_days INTEGER NOT NULL CHECK (interval_days >= 0),
   status TEXT NOT NULL CHECK (status IN ('pendente', 'concluida')),
   completed_at TEXT NULL,
+  flashcard_result TEXT NULL,
   created_at TEXT NOT NULL,
   PRIMARY KEY (user_id, id),
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE

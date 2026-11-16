@@ -1,3 +1,4 @@
+import { PRIMARY_GEMINI_MODEL, orderGeminiModels } from './geminiModels';
 import { db } from '../db/db';
 import type {
   Discipline,
@@ -89,7 +90,7 @@ export interface ProcessAssistantOptions {
 }
 
 const DEFAULT_GEMINI_MODELS = [
-  'gemini-3.8-flash',
+  PRIMARY_GEMINI_MODEL,
   'gemini-2.5-flash',
   'gemini-2.0-flash',
   'gemini-1.5-flash',
@@ -900,7 +901,7 @@ export async function buildAssistantGroundingContext(today: DateKey = todayKey()
     `- Proteções ativas: Escudo de Patente=${rankState.shield ? 'Ativo' : 'Indisponível'} | Streak Freeze=${rankState.freezeAvailable ? 'Disponível' : `Em recarga (${rankState.freezeCooldownLeft}d)`}`,
   );
   lines.push(
-    '- Regras oficiais de XP e Patentes da plataforma: Dia estudado válido (>=30 min ou meta diária): +100 XP; Meta diária cumprida: +50 XP; Revisão concluída no dia: +30 XP (máx. 4/dia); Bônus de retorno após >=2 ausências: +50 XP; Penalidades em dias previstos sem estudo: 1ª ausência -250 XP, 2ª em diante -400 XP/dia (XP nunca fica negativo; Streak Freeze protege 1 ausência a cada 30 dias; Escudo de Patente ganho a cada 7 dias válidos seguidos impede 1 queda de patente).',
+    '- Regras oficiais de XP e Patentes da plataforma: Dia estudado válido (>=30 min ou meta diária): +100 XP; Meta diária cumprida: +50 XP; Flashcard de revisão acertado: +20 XP; flashcard errado: -20 XP; revisão concluída sem flashcard: +30 XP (máx. 4/dia); Bônus de retorno após >=2 ausências: +50 XP; Penalidades em dias previstos sem estudo: 1ª ausência -250 XP, 2ª em diante -400 XP/dia (XP nunca fica negativo; Streak Freeze protege 1 ausência a cada 30 dias; Escudo de Patente ganho a cada 7 dias válidos seguidos impede 1 queda de patente).',
   );
 
   // 3. Cronômetro Ativo
@@ -1125,7 +1126,7 @@ export async function buildAssistantGroundingContext(today: DateKey = todayKey()
   return lines.join('\n');
 }
 
-async function getAvailableGeminiModelsForAssistant(apiKey: string): Promise<string[]> {
+export async function getAvailableGeminiModelsForAssistant(apiKey: string): Promise<string[]> {
   const cached = geminiModelsCache.get(apiKey);
   if (cached && cached.length > 0) {
     return cached;
@@ -1144,34 +1145,13 @@ async function getAvailableGeminiModelsForAssistant(apiKey: string): Promise<str
         models?: Array<{ name?: string; supportedGenerationMethods?: string[] }>;
       };
       if (Array.isArray(data.models) && data.models.length > 0) {
-        const models = data.models
-          .filter((m) => m.supportedGenerationMethods?.includes('generateContent'))
-          .map((m) => (m.name ?? '').replace(/^models\//, ''))
-          .filter(
-            (name) =>
-              Boolean(name) &&
-              !name.includes('embedding') &&
-              !name.includes('aqa') &&
-              !name.includes('imagen') &&
-              !name.includes('tts') &&
-              !name.includes('vision'),
-          );
+        const models = orderGeminiModels(
+          data.models
+            .filter((m) => m.supportedGenerationMethods?.includes('generateContent'))
+            .map((m) => (m.name ?? '').replace(/^models\//, '')),
+        );
 
         if (models.length > 0) {
-          models.sort((a, b) => {
-            const rankModel = (n: string) => {
-              if (n === 'gemini-3.8-flash') return 0;
-              if (n.startsWith('gemini-3.8-flash')) return 1;
-              if (n === 'gemini-2.5-flash') return 2;
-              if (n.startsWith('gemini-2.5-flash')) return 3;
-              if (n === 'gemini-2.0-flash') return 4;
-              if (n.startsWith('gemini-2.0-flash')) return 5;
-              if (n.includes('flash')) return 6;
-              if (n.includes('pro')) return 7;
-              return 8;
-            };
-            return rankModel(a) - rankModel(b);
-          });
           geminiModelsCache.set(apiKey, models);
           return models;
         }

@@ -1,3 +1,4 @@
+import { PRIMARY_GEMINI_MODEL, orderGeminiModels } from './geminiModels';
 import type { DateKey } from '../lib/dates';
 import { addDays, weekdayIndex, startOfWeek } from '../lib/dates';
 import { createId, nowIso } from '../lib/utils';
@@ -3132,7 +3133,7 @@ function extractJsonFromText(rawText: string): string {
 }
 
 const FALLBACK_GEMINI_MODELS = [
-  'gemini-3.8-flash',
+  PRIMARY_GEMINI_MODEL,
   'gemini-2.5-flash',
   'gemini-2.0-flash',
   'gemini-1.5-flash',
@@ -3157,18 +3158,13 @@ async function getAvailableGeminiModels(apiKey: string): Promise<string[]> {
         models?: Array<{ name?: string; supportedGenerationMethods?: string[] }>;
       };
       if (Array.isArray(data.models) && data.models.length > 0) {
-        const models = data.models
-          .filter((m) => m.supportedGenerationMethods?.includes('generateContent'))
-          .map((m) => (m.name ?? '').replace(/^models\//, ''))
-          .filter((name) => Boolean(name) && !name.includes('embedding') && !name.includes('aqa'));
+        const models = orderGeminiModels(
+          data.models
+            .filter((m) => m.supportedGenerationMethods?.includes('generateContent'))
+            .map((m) => (m.name ?? '').replace(/^models\//, '')),
+        );
 
         if (models.length > 0) {
-          // Prioriza modelos flash ou mais rápidos
-          models.sort((a, b) => {
-            const aFlash = a.includes('flash') ? -1 : 1;
-            const bFlash = b.includes('flash') ? -1 : 1;
-            return aFlash - bFlash;
-          });
           return models;
         }
       }

@@ -195,7 +195,8 @@ export function RankCard(input: RankInput) {
           <ul className="grid gap-x-6 gap-y-0.5 sm:grid-cols-2">
             <li><span className="font-semibold text-success">+{XP.studyDay} XP</span> por dia válido (≥{XP.validMinutes} min ou meta batida)</li>
             <li><span className="font-semibold text-success">+{XP.dailyGoal} XP</span> ao bater a meta diária</li>
-            <li><span className="font-semibold text-success">+{XP.review} XP</span> por revisão concluída (até {XP.reviewsPerDayCap}/dia)</li>
+            <li><span className="font-semibold text-success">+{XP.flashcardHit} XP</span> por flashcard acertado</li>
+            <li><span className="font-semibold text-danger">−{XP.flashcardMiss} XP</span> por flashcard errado</li>
             <li><span className="font-semibold text-success">+{XP.returnBonus} XP</span> ao retomar após 2+ dias de ausência</li>
             <li><span className="font-semibold text-danger">−{XP.firstMiss} XP</span> na 1ª falta seguida</li>
             <li><span className="font-semibold text-danger">−{XP.nextMisses} XP</span> por dia a partir da 2ª falta seguida</li>

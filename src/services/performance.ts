@@ -5,6 +5,7 @@ import { buildNextReviewTask, buildReviewTasks, nextPendingDate, postponedDueDat
 import { isValidDateKey, todayKey, type DateKey } from '../lib/dates';
 import { createId, nowIso } from '../lib/utils';
 import { getSettings } from './settings';
+import { ensureFlashcard } from './flashcards';
 import { ValidationError } from './sessions';
 
 /* ------------------------------ Questões ------------------------------ */
@@ -183,6 +184,12 @@ export function resolveReviewDisplayTitle(review: ReviewTask, linkedNote?: Error
  * a disciplina e o tópico nas revisões vinculadas.
  */
 export async function saveErrorNote(input: ErrorNoteInput, options: { id?: string; scheduleReviews?: boolean } = {}): Promise<ErrorNote> {
+  const saved = await saveErrorNoteRecord(input, options);
+  void ensureFlashcard(saved.id);
+  return saved;
+}
+
+async function saveErrorNoteRecord(input: ErrorNoteInput, options: { id?: string; scheduleReviews?: boolean }): Promise<ErrorNote> {
   validateErrorNote(input);
   const settings = await getSettings();
   return db.transaction('rw', db.errorNotes, db.reviews, async () => {
@@ -192,6 +199,7 @@ export async function saveErrorNote(input: ErrorNoteInput, options: { id?: strin
       const current = await db.errorNotes.get(options.id);
       if (!current) throw new ValidationError('Anotação não encontrada.');
       const updated: ErrorNote = { ...current, ...base, updatedAt: now };
+      if (current.explanation !== base.explanation) updated.flashcard = null;
       const syncedTitle = buildErrorNoteReviewTitle(updated);
       const linkedReviews = await db.reviews.where('errorNoteId').equals(options.id).toArray();
       const pending = linkedReviews
@@ -289,6 +297,15 @@ export async function setErrorStatus(id: string, status: ErrorStatus): Promise<v
       await db.errorNotes.update(id, { status, updatedAt: nowIso() });
     }
   });
+  // Marcar como revisado conclui a revisão ativa, mantendo Revisões e Caderno sincronizados.
+  if (status === 'revisado') await completePendingReviewsOfNote(id);
+}
+
+async function completePendingReviewsOfNote(noteId: string): Promise<void> {
+  const pending = (await db.reviews.where('errorNoteId').equals(noteId).toArray())
+    .filter((r) => r.status === 'pendente')
+    .sort((a, b) => a.intervalDays - b.intervalDays || a.dueDate.localeCompare(b.dueDate));
+  if (pending[0]) await completeReview(pending[0].id);
 }
 
 /** Exclui a anotação e suas revisões pendentes (revisões concluídas permanecem no histórico). */
@@ -322,12 +339,12 @@ async function syncErrorNoteReviewDate(errorNoteId: string | null, markReviewed:
   });
 }
 
-export async function completeReview(id: string): Promise<void> {
+export async function completeReview(id: string, flashcardResult?: 'acerto' | 'erro'): Promise<void> {
   await db.transaction('rw', db.reviews, db.errorNotes, db.settings, async () => {
     const review = await db.reviews.get(id);
     if (!review) throw new ValidationError('Revisão não encontrada.');
     if (review.status === 'concluida') return;
-    await db.reviews.put({ ...review, status: 'concluida', completedAt: nowIso() });
+    await db.reviews.put({ ...review, status: 'concluida', completedAt: nowIso(), ...(flashcardResult ? { flashcardResult } : {}) });
 
     const settings = await getSettings();
     const nextTask = buildNextReviewTask(review, settings.reviewIntervals, todayKey());
@@ -355,7 +372,7 @@ export async function reopenReview(id: string): Promise<void> {
   await db.transaction('rw', db.reviews, db.errorNotes, async () => {
     const review = await db.reviews.get(id);
     if (!review) throw new ValidationError('Revisão não encontrada.');
-    await db.reviews.put({ ...review, status: 'pendente', completedAt: null });
+    await db.reviews.put({ ...review, status: 'pendente', completedAt: null, flashcardResult: null });
     await syncErrorNoteReviewDate(review.errorNoteId, false);
   });
 }
@@ -400,6 +417,15 @@ export interface ReconcileReviewsResult {
  * e sincroniza rigorosamente datas, títulos, disciplinas e tópicos entre `reviews` e `errorNotes`.
  */
 export async function reconcileReviewsAndErrorNotes(): Promise<ReconcileReviewsResult> {
+  // Erros já marcados como revisados com revisão vencida (dados antigos): conclui a revisão para sincronizar.
+  const today = todayKey();
+  const [notesNow, reviewsNow] = await Promise.all([db.errorNotes.toArray(), db.reviews.toArray()]);
+  for (const n of notesNow) {
+    if (n.status !== 'revisado') continue;
+    if (reviewsNow.some((r) => r.errorNoteId === n.id && r.status === 'pendente' && r.dueDate <= today)) {
+      await completePendingReviewsOfNote(n.id);
+    }
+  }
   return db.transaction('rw', db.reviews, db.errorNotes, db.settings, async () => {
     const [allReviews, allNotes, settings] = await Promise.all([
       db.reviews.toArray(),

@@ -239,6 +239,27 @@
     /* Evita o "pulo" lateral quando a barra de rolagem aparece ou some. */
     scrollbar-gutter: stable;
   }
+  /* Barra de rolagem na cor oficial (vermelho da paleta). */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary) transparent;
+  }
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  *::-webkit-scrollbar-thumb {
+    background-color: var(--primary);
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background-color: var(--primary-hover);
+  }
   /* Ícones nunca encolhem nem esticam dentro de linhas flex. */
   svg.lucide {
     flex-shrink: 0;

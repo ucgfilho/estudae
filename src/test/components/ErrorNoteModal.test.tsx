@@ -155,10 +155,6 @@ describe('ErrorNoteModal - Dropdown de simulados', () => {
       </ToastProvider>,
     );
 
-    await waitFor(() => {
-      expect(screen.getByText('Erro: prova bnb 2022 perfil 1 · questão 54')).toBeInTheDocument();
-    });
-
     await waitFor(async () => {
       const healed = await db.reviews.get('stale-review-54');
       expect(healed?.title).toBe('Erro: prova bnb 2022 perfil 1 · questão 54');

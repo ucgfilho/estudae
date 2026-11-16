@@ -52,6 +52,8 @@ export const XP = {
   studyDay: 100,
   dailyGoal: 50,
   review: 30,
+  flashcardHit: 20,
+  flashcardMiss: 20,
   reviewsPerDayCap: 4,
   firstMiss: 250,
   nextMisses: 400,
@@ -152,6 +154,8 @@ export interface RankInput {
 interface DayActivity {
   minutes: number;
   reviews: number;
+  flashHits: number;
+  flashMisses: number;
 }
 
 function deduplicateSessions(sessions: readonly StudySession[]): StudySession[] {
@@ -171,7 +175,7 @@ function collectActivity(sessions: readonly StudySession[], reviews: readonly Re
   const map = new Map<DateKey, DayActivity>();
   const get = (k: DateKey) => {
     let a = map.get(k);
-    if (!a) map.set(k, (a = { minutes: 0, reviews: 0 }));
+    if (!a) map.set(k, (a = { minutes: 0, reviews: 0, flashHits: 0, flashMisses: 0 }));
     return a;
   };
 
@@ -199,7 +203,9 @@ function collectActivity(sessions: readonly StudySession[], reviews: readonly Re
       if (seenReviewKeys.has(compositeKey)) continue;
       seenReviewKeys.add(compositeKey);
     }
-    get(k).reviews += 1;
+    if (r.flashcardResult === 'acerto') get(k).flashHits += 1;
+    else if (r.flashcardResult === 'erro') get(k).flashMisses += 1;
+    else get(k).reviews += 1;
   }
 
   for (const a of map.values()) a.minutes = Math.min(a.minutes, MAX_DAY_SECONDS / 60);
@@ -294,7 +300,7 @@ export function computeRank(input: RankInput): RankState {
     const valid = isValid(a);
     const closed = day < today;
 
-    if (valid || (a && a.reviews > 0)) {
+    if (valid || (a && (a.reviews > 0 || a.flashHits + a.flashMisses > 0))) {
       let gain = 0;
       const parts: string[] = [];
       if (valid) {
@@ -309,6 +315,14 @@ export function computeRank(input: RankInput): RankState {
       if (rv > 0) {
         gain += rv * XP.review;
         parts.push(rv === 1 ? '1 revisão' : `${rv} revisões`);
+      }
+      if (a && a.flashHits > 0) {
+        gain += a.flashHits * XP.flashcardHit;
+        parts.push(`${a.flashHits} flashcard(s) acertado(s)`);
+      }
+      if (a && a.flashMisses > 0) {
+        gain -= a.flashMisses * XP.flashcardMiss;
+        parts.push(`${a.flashMisses} flashcard(s) errado(s)`);
       }
       const eff = apply(day, 'study', gain, parts.join(' + '));
       if (day === today) todayXp += eff;
