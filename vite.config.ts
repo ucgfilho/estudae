@@ -2,29 +2,41 @@
 import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
-import { createAppContainer } from './server/container';
-import { handleApiRequest } from './server/app';
 
 function bnbApiServerPlugin(): Plugin {
-  let container: ReturnType<typeof createAppContainer> | null = null;
-  const getContainer = () => {
-    if (!container) {
-      container = createAppContainer();
+  let initPromise: Promise<{
+    container: ReturnType<typeof import('./server/container').createAppContainer>;
+    handleApiRequest: typeof import('./server/app').handleApiRequest;
+  }> | null = null;
+
+  const getApi = () => {
+    if (!initPromise) {
+      const containerPath = './server/container';
+      const appPath = './server/app';
+      initPromise = Promise.all([
+        import(/* @vite-ignore */ containerPath),
+        import(/* @vite-ignore */ appPath),
+      ]).then(([c, a]) => ({
+        container: c.createAppContainer(),
+        handleApiRequest: a.handleApiRequest,
+      }));
     }
-    return container;
+    return initPromise;
   };
 
   return {
     name: 'bnb-api-server',
     configureServer(server) {
       server.middlewares.use(async (req, res, next) => {
-        const handled = await handleApiRequest(getContainer(), req, res);
+        const { container, handleApiRequest } = await getApi();
+        const handled = await handleApiRequest(container, req, res);
         if (!handled) next();
       });
     },
     configurePreviewServer(server) {
       server.middlewares.use(async (req, res, next) => {
-        const handled = await handleApiRequest(getContainer(), req, res);
+        const { container, handleApiRequest } = await getApi();
+        const handled = await handleApiRequest(container, req, res);
         if (!handled) next();
       });
     },
@@ -40,7 +52,7 @@ export default defineConfig({
     chunkSizeWarningLimit: 1200,
     rolldownOptions: {
       output: {
-        advancedChunks: {
+        codeSplitting: {
           groups: [
             { name: 'vendor-react', test: /node_modules[\\/](react|react-dom|react-router|react-router-dom|scheduler)[\\/]/ },
           ],

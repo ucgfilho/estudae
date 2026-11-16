@@ -36434,6 +36434,13 @@ var errorNoteDtoSchema = object({
 	nextReviewDate: nullableDateKey,
 	mockExamId: string().max(128).nullable().optional(),
 	mockExamTitle: string().max(500).nullable().optional(),
+	flashcards: array(object({
+		id: string().min(1),
+		statement: string().max(2e4),
+		answer: _enum(["certo", "errado"]),
+		explanation: string().max(2e4),
+		createdAt: string()
+	})).max(100).optional(),
 	createdAt: iso,
 	updatedAt: iso
 });
@@ -36447,6 +36454,10 @@ var reviewTaskDtoSchema = object({
 	intervalDays: nonNegInt,
 	status: _enum(["pendente", "concluida"]),
 	completedAt: string().nullable(),
+	flashcardStats: object({
+		hits: number().int().min(0),
+		misses: number().int().min(0)
+	}).nullable().optional(),
 	createdAt: iso
 });
 var weeklyPlanDtoSchema = object({
@@ -36815,6 +36826,7 @@ CREATE TABLE IF NOT EXISTS error_notes (
   next_review_date TEXT NULL,
   mock_exam_id TEXT NULL,
   mock_exam_title TEXT NULL,
+  flashcard_json TEXT NULL,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
   PRIMARY KEY (user_id, id),
@@ -36834,6 +36846,7 @@ CREATE TABLE IF NOT EXISTS review_tasks (
   interval_days INTEGER NOT NULL CHECK (interval_days >= 0),
   status TEXT NOT NULL CHECK (status IN ('pendente', 'concluida')),
   completed_at TEXT NULL,
+  flashcard_result TEXT NULL,
   created_at TEXT NOT NULL,
   PRIMARY KEY (user_id, id),
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -36929,8 +36942,15 @@ var SqliteDatabaseClient = class {
 		]) try {
 			this.db.exec(`ALTER TABLE user_settings ADD COLUMN ${col} TEXT NULL;`);
 		} catch {}
-		for (const col of ["mock_exam_id", "mock_exam_title"]) try {
+		for (const col of [
+			"mock_exam_id",
+			"mock_exam_title",
+			"flashcard_json"
+		]) try {
 			this.db.exec(`ALTER TABLE error_notes ADD COLUMN ${col} TEXT NULL;`);
+		} catch {}
+		try {
+			this.db.exec("ALTER TABLE review_tasks ADD COLUMN flashcard_result TEXT NULL;");
 		} catch {}
 		for (const col of ["exam_date", "session_id"]) try {
 			this.db.exec(`ALTER TABLE mock_exams ADD COLUMN ${col} TEXT NULL;`);
@@ -38333,11 +38353,12 @@ var SqlStudyDataRepository = class {
 		for (const e of items) this.db.run(`INSERT INTO error_notes (
            user_id, id, question_log_id, discipline_id, topic_id,
            source_reference, error_type, explanation, error_date,
-           status, next_review_date, mock_exam_id, mock_exam_title, created_at, updated_at
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           status, next_review_date, mock_exam_id, mock_exam_title, flashcard_json, created_at, updated_at
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(user_id, id) DO UPDATE SET
            mock_exam_id = excluded.mock_exam_id,
            mock_exam_title = excluded.mock_exam_title,
+           flashcard_json = excluded.flashcard_json,
            question_log_id = excluded.question_log_id,
            discipline_id = excluded.discipline_id,
            topic_id = excluded.topic_id,
@@ -38362,6 +38383,7 @@ var SqlStudyDataRepository = class {
 			e.nextReviewDate,
 			e.mockExamId ?? null,
 			e.mockExamTitle ?? null,
+			e.flashcards && e.flashcards.length > 0 ? JSON.stringify(e.flashcards) : null,
 			e.createdAt,
 			e.updatedAt
 		]);
@@ -38369,8 +38391,8 @@ var SqlStudyDataRepository = class {
 	upsertReviews(userId, items) {
 		for (const r of items) this.db.run(`INSERT INTO review_tasks (
            user_id, id, discipline_id, topic_id, error_note_id,
-           title, due_date, interval_days, status, completed_at, created_at
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           title, due_date, interval_days, status, completed_at, flashcard_result, created_at
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(user_id, id) DO UPDATE SET
            discipline_id = excluded.discipline_id,
            topic_id = excluded.topic_id,
@@ -38380,6 +38402,7 @@ var SqlStudyDataRepository = class {
            interval_days = excluded.interval_days,
            status = excluded.status,
            completed_at = excluded.completed_at,
+           flashcard_result = excluded.flashcard_result,
            created_at = excluded.created_at`, [
 			userId,
 			r.id,
@@ -38391,6 +38414,7 @@ var SqlStudyDataRepository = class {
 			r.intervalDays,
 			r.status,
 			r.completedAt,
+			r.flashcardStats ? JSON.stringify(r.flashcardStats) : null,
 			r.createdAt
 		]);
 	}
@@ -38633,7 +38657,7 @@ var SqlStudyDataRepository = class {
 	getErrorNotes(userId) {
 		return this.db.all(`SELECT id, question_log_id, discipline_id, topic_id, source_reference,
               error_type, explanation, error_date, status, next_review_date,
-              mock_exam_id, mock_exam_title, created_at, updated_at
+              mock_exam_id, mock_exam_title, flashcard_json, created_at, updated_at
        FROM error_notes
        WHERE user_id = ?
        ORDER BY error_date DESC, created_at DESC`, [userId]).map((r) => ({
@@ -38651,13 +38675,14 @@ var SqlStudyDataRepository = class {
 				mockExamId: r.mock_exam_id,
 				mockExamTitle: r.mock_exam_title
 			} : {},
+			...parseFlashcards(r.flashcard_json),
 			createdAt: r.created_at,
 			updatedAt: r.updated_at
 		}));
 	}
 	getReviews(userId) {
 		return this.db.all(`SELECT id, discipline_id, topic_id, error_note_id, title, due_date,
-              interval_days, status, completed_at, created_at
+              interval_days, status, completed_at, flashcard_result, created_at
        FROM review_tasks
        WHERE user_id = ?
        ORDER BY due_date ASC, created_at ASC`, [userId]).map((r) => ({
@@ -38670,6 +38695,7 @@ var SqlStudyDataRepository = class {
 			intervalDays: r.interval_days,
 			status: r.status,
 			completedAt: r.completed_at,
+			...parseStats(r.flashcard_result),
 			createdAt: r.created_at
 		}));
 	}
@@ -38751,6 +38777,32 @@ var SqlStudyDataRepository = class {
 		});
 	}
 };
+/** Flashcards antigos (objeto único gerado por IA) são ignorados; só o formato manual (lista) é lido. */
+function parseFlashcards(json) {
+	if (!json) return {};
+	try {
+		const v = JSON.parse(json);
+		return Array.isArray(v) && v.length > 0 ? { flashcards: v } : {};
+	} catch {
+		return {};
+	}
+}
+function parseStats(raw) {
+	if (!raw) return {};
+	if (raw === "acerto") return { flashcardStats: {
+		hits: 1,
+		misses: 0
+	} };
+	if (raw === "erro") return { flashcardStats: {
+		hits: 0,
+		misses: 1
+	} };
+	try {
+		return { flashcardStats: JSON.parse(raw) };
+	} catch {
+		return {};
+	}
+}
 //#endregion
 //#region server/repositories/SqlUserRepository.ts
 function mapUserRow(row) {
