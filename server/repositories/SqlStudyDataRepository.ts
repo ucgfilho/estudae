@@ -468,7 +468,7 @@ export class SqlStudyDataRepository implements IStudyDataRepository {
           e.nextReviewDate,
           e.mockExamId ?? null,
           e.mockExamTitle ?? null,
-          e.flashcard ? JSON.stringify(e.flashcard) : null,
+          e.flashcards && e.flashcards.length > 0 ? JSON.stringify(e.flashcards) : null,
           e.createdAt,
           e.updatedAt,
         ],
@@ -505,7 +505,7 @@ export class SqlStudyDataRepository implements IStudyDataRepository {
           r.intervalDays,
           r.status,
           r.completedAt,
-          r.flashcardResult ?? null,
+          r.flashcardStats ? JSON.stringify(r.flashcardStats) : null,
           r.createdAt,
         ],
       );
@@ -907,7 +907,7 @@ export class SqlStudyDataRepository implements IStudyDataRepository {
       status: r.status,
       nextReviewDate: r.next_review_date,
       ...(r.mock_exam_id ? { mockExamId: r.mock_exam_id, mockExamTitle: r.mock_exam_title } : {}),
-      ...(r.flashcard_json ? { flashcard: JSON.parse(r.flashcard_json) as ErrorNote['flashcard'] } : {}),
+      ...parseFlashcards(r.flashcard_json),
       createdAt: r.created_at,
       updatedAt: r.updated_at,
     }));
@@ -924,7 +924,7 @@ export class SqlStudyDataRepository implements IStudyDataRepository {
       interval_days: number;
       status: ReviewTask['status'];
       completed_at: string | null;
-      flashcard_result: 'acerto' | 'erro' | null;
+      flashcard_result: string | null;
       created_at: string;
     }>(
       `SELECT id, discipline_id, topic_id, error_note_id, title, due_date,
@@ -944,7 +944,7 @@ export class SqlStudyDataRepository implements IStudyDataRepository {
       intervalDays: r.interval_days,
       status: r.status,
       completedAt: r.completed_at,
-      ...(r.flashcard_result ? { flashcardResult: r.flashcard_result } : {}),
+      ...parseStats(r.flashcard_result),
       createdAt: r.created_at,
     }));
   }
@@ -1086,5 +1086,27 @@ export class SqlStudyDataRepository implements IStudyDataRepository {
       if (r.session_id !== null && r.session_id !== undefined) exam.sessionId = r.session_id;
       return exam;
     });
+  }
+}
+
+/** Flashcards antigos (objeto único gerado por IA) são ignorados; só o formato manual (lista) é lido. */
+function parseFlashcards(json: string | null): { flashcards?: ErrorNote['flashcards'] } {
+  if (!json) return {};
+  try {
+    const v = JSON.parse(json) as unknown;
+    return Array.isArray(v) && v.length > 0 ? { flashcards: v as ErrorNote['flashcards'] } : {};
+  } catch {
+    return {};
+  }
+}
+
+function parseStats(raw: string | null): { flashcardStats?: ReviewTask['flashcardStats'] } {
+  if (!raw) return {};
+  if (raw === 'acerto') return { flashcardStats: { hits: 1, misses: 0 } };
+  if (raw === 'erro') return { flashcardStats: { hits: 0, misses: 1 } };
+  try {
+    return { flashcardStats: JSON.parse(raw) as ReviewTask['flashcardStats'] };
+  } catch {
+    return {};
   }
 }

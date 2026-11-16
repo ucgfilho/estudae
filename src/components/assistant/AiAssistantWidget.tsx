@@ -216,7 +216,7 @@ export function AiAssistantWidget() {
                   <Sparkles className="size-3.5 text-primary" aria-hidden="true" />
                 </h2>
                 <p className="text-[11px] text-fg-muted">
-                  Respostas baseadas nos seus dados reais e no edital
+                  Respostas baseadas nos seus dados e no edital
                 </p>
               </div>
             </div>

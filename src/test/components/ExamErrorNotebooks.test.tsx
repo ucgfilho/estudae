@@ -58,7 +58,7 @@ describe('ExamErrorNotebooks - Exibição de cadernos associados', () => {
     });
   });
 
-  it('allows marking as reviewed directly from the exam screen', async () => {
+  it('does not show Marcar Revisado and allows marking as dominated when already reviewed', async () => {
     const { exam, disciplines, note } = await setupExamWithNote();
 
     render(
@@ -68,14 +68,21 @@ describe('ExamErrorNotebooks - Exibição de cadernos associados', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /Marcar Revisado/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Criar flashcard/i })).toBeInTheDocument();
+    });
+    expect(screen.queryByRole('button', { name: /Marcar Revisado/i })).not.toBeInTheDocument();
+
+    await db.errorNotes.update(note.id, { status: 'revisado' });
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Marcar Dominado/i })).toBeInTheDocument();
     });
 
-    await userEvent.click(screen.getByRole('button', { name: /Marcar Revisado/i }));
+    await userEvent.click(screen.getByRole('button', { name: /Marcar Dominado/i }));
 
     await waitFor(async () => {
       const updated = await db.errorNotes.get(note.id);
-      expect(updated?.status).toBe('revisado');
+      expect(updated?.status).toBe('dominado');
     });
   });
 

@@ -116,14 +116,17 @@ export const errorNoteDtoSchema = z.object({
   nextReviewDate: nullableDateKey,
   mockExamId: z.string().max(128).nullable().optional(),
   mockExamTitle: z.string().max(500).nullable().optional(),
-  flashcard: z
-    .object({
-      statement: z.string().max(20000),
-      answer: z.enum(['certo', 'errado']),
-      explanation: z.string().max(20000),
-      generatedAt: z.string(),
-    })
-    .nullable()
+  flashcards: z
+    .array(
+      z.object({
+        id: z.string().min(1),
+        statement: z.string().max(20000),
+        answer: z.enum(['certo', 'errado']),
+        explanation: z.string().max(20000),
+        createdAt: z.string(),
+      }),
+    )
+    .max(100)
     .optional(),
   createdAt: iso,
   updatedAt: iso,
@@ -139,7 +142,7 @@ export const reviewTaskDtoSchema = z.object({
   intervalDays: nonNegInt,
   status: z.enum(['pendente', 'concluida']),
   completedAt: z.string().nullable(),
-  flashcardResult: z.enum(['acerto', 'erro']).nullable().optional(),
+  flashcardStats: z.object({ hits: z.number().int().min(0), misses: z.number().int().min(0) }).nullable().optional(),
   createdAt: iso,
 });
 

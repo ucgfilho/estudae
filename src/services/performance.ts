@@ -1,11 +1,10 @@
 import { db } from '../db/db';
-import type { ErrorNote, ErrorStatus, ErrorType, QuestionLog, ReviewTask } from '../db/types';
+import type { ErrorFlashcard, ErrorNote, ErrorStatus, ErrorType, QuestionLog, ReviewTask } from '../db/types';
 import { findDuplicateLog, type NormalizedQuestionValues } from '../domain/questions';
 import { buildNextReviewTask, buildReviewTasks, nextPendingDate, postponedDueDate } from '../domain/reviews';
 import { isValidDateKey, todayKey, type DateKey } from '../lib/dates';
 import { createId, nowIso } from '../lib/utils';
 import { getSettings } from './settings';
-import { ensureFlashcard } from './flashcards';
 import { ValidationError } from './sessions';
 
 /* ------------------------------ Questões ------------------------------ */
@@ -184,9 +183,7 @@ export function resolveReviewDisplayTitle(review: ReviewTask, linkedNote?: Error
  * a disciplina e o tópico nas revisões vinculadas.
  */
 export async function saveErrorNote(input: ErrorNoteInput, options: { id?: string; scheduleReviews?: boolean } = {}): Promise<ErrorNote> {
-  const saved = await saveErrorNoteRecord(input, options);
-  void ensureFlashcard(saved.id);
-  return saved;
+  return saveErrorNoteRecord(input, options);
 }
 
 async function saveErrorNoteRecord(input: ErrorNoteInput, options: { id?: string; scheduleReviews?: boolean }): Promise<ErrorNote> {
@@ -199,7 +196,6 @@ async function saveErrorNoteRecord(input: ErrorNoteInput, options: { id?: string
       const current = await db.errorNotes.get(options.id);
       if (!current) throw new ValidationError('Anotação não encontrada.');
       const updated: ErrorNote = { ...current, ...base, updatedAt: now };
-      if (current.explanation !== base.explanation) updated.flashcard = null;
       const syncedTitle = buildErrorNoteReviewTitle(updated);
       const linkedReviews = await db.reviews.where('errorNoteId').equals(options.id).toArray();
       const pending = linkedReviews
@@ -339,12 +335,12 @@ async function syncErrorNoteReviewDate(errorNoteId: string | null, markReviewed:
   });
 }
 
-export async function completeReview(id: string, flashcardResult?: 'acerto' | 'erro'): Promise<void> {
+export async function completeReview(id: string, flashcardStats?: { hits: number; misses: number }): Promise<void> {
   await db.transaction('rw', db.reviews, db.errorNotes, db.settings, async () => {
     const review = await db.reviews.get(id);
     if (!review) throw new ValidationError('Revisão não encontrada.');
     if (review.status === 'concluida') return;
-    await db.reviews.put({ ...review, status: 'concluida', completedAt: nowIso(), ...(flashcardResult ? { flashcardResult } : {}) });
+    await db.reviews.put({ ...review, status: 'concluida', completedAt: nowIso(), ...(flashcardStats ? { flashcardStats } : {}) });
 
     const settings = await getSettings();
     const nextTask = buildNextReviewTask(review, settings.reviewIntervals, todayKey());
@@ -372,7 +368,7 @@ export async function reopenReview(id: string): Promise<void> {
   await db.transaction('rw', db.reviews, db.errorNotes, async () => {
     const review = await db.reviews.get(id);
     if (!review) throw new ValidationError('Revisão não encontrada.');
-    await db.reviews.put({ ...review, status: 'pendente', completedAt: null, flashcardResult: null });
+    await db.reviews.put({ ...review, status: 'pendente', completedAt: null, flashcardStats: null });
     await syncErrorNoteReviewDate(review.errorNoteId, false);
   });
 }
@@ -599,4 +595,36 @@ export async function bulkRescheduleReviews(params: {
 
     return Math.max(updatedReviews.length, affectedErrorNoteIds.size);
   });
+}
+
+export interface FlashcardInput {
+  statement: string;
+  answer: 'certo' | 'errado';
+  explanation: string;
+}
+
+/** Adiciona um flashcard manual ao erro (é possível criar vários por erro). */
+export async function addFlashcard(noteId: string, input: FlashcardInput): Promise<ErrorFlashcard> {
+  const statement = input.statement.trim();
+  if (!statement) throw new ValidationError('Escreva o enunciado do flashcard.');
+  if (input.answer !== 'certo' && input.answer !== 'errado') {
+    throw new ValidationError('Selecione se o gabarito é Certo ou Errado.');
+  }
+  const explanation = input.explanation.trim();
+  if (!explanation) throw new ValidationError('Escreva a explicação do flashcard.');
+  const note = await db.errorNotes.get(noteId);
+  if (!note) throw new ValidationError('Erro não encontrado no caderno.');
+  const card: ErrorFlashcard = {
+    id: createId(),
+    statement,
+    answer: input.answer,
+    explanation,
+    createdAt: nowIso(),
+  };
+  await db.errorNotes.put({
+    ...note,
+    flashcards: [...(note.flashcards ?? []), card],
+    updatedAt: nowIso(),
+  });
+  return card;
 }

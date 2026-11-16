@@ -8,7 +8,6 @@ import {
   Plus,
   ArrowRight,
   TrendingUp,
-  Check,
   BarChart3,
   Trophy,
 } from 'lucide-react';
@@ -49,7 +48,7 @@ import {
 import { formatMinutes, formatPercent, formatInteger } from '../lib/format';
 import { startOfWeek, endOfWeek, formatDate } from '../lib/dates';
 import { startPlannedTimer } from '../services/timer';
-import { completeReview, resolveReviewDisplayTitle } from '../services/performance';
+import { resolveReviewDisplayTitle } from '../services/performance';
 import { errorMessage } from '../lib/utils';
 import { useSuccessToast } from '../components/ui/Toast';
 
@@ -119,16 +118,6 @@ export function OverviewScreen() {
     try {
       await startPlannedTimer(sessionId);
       navigate('/estudar-agora');
-    } catch (err) {
-      setActionError(errorMessage(err));
-    }
-  };
-
-  const handleCompleteUrgentReview = async (reviewId: string) => {
-    setActionError(null);
-    try {
-      await completeReview(reviewId);
-      setActionSuccess('Revisão concluída.');
     } catch (err) {
       setActionError(errorMessage(err));
     }
@@ -208,12 +197,30 @@ export function OverviewScreen() {
           }
         >
           {urgentReviews.length > 0 ? (
-            <ul className="max-h-64 divide-y divide-border overflow-y-auto pr-1">
+            <ul className="max-h-64 divide-y divide-border overflow-y-auto pr-3">
               {urgentReviews.map((rev) => {
                 const disc = discMap.get(rev.disciplineId);
                 const linkedNote = rev.errorNoteId ? errorNoteMap.get(rev.errorNoteId) : undefined;
                 const displayTitle = resolveReviewDisplayTitle(rev, linkedNote);
                 const isOverdue = rev.dueDate < today;
+                const openReviewNote = () => {
+                  const targetNote =
+                    linkedNote ??
+                    errorNotes.find(
+                      (n) =>
+                        n.disciplineId === rev.disciplineId &&
+                        n.sourceReference &&
+                        rev.title.toLowerCase().includes(n.sourceReference.toLowerCase())
+                    );
+                  if (targetNote) {
+                    navigate(`/erros?noteId=${encodeURIComponent(targetNote.id)}`);
+                  } else {
+                    const query = rev.title.replace(/^Erro:\s*/i, '').trim();
+                    navigate(
+                      `/erros?disciplineId=${encodeURIComponent(rev.disciplineId)}&q=${encodeURIComponent(query)}`
+                    );
+                  }
+                };
                 return (
                   <li key={rev.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 py-2.5 first:pt-0 last:pb-0">
                     <div className="min-w-0 flex-1">
@@ -223,41 +230,16 @@ export function OverviewScreen() {
                         <Badge tone={isOverdue ? 'danger' : 'warning'}>
                           {isOverdue ? 'Vencida' : 'Para hoje'}
                         </Badge>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const targetNote =
-                              linkedNote ??
-                              errorNotes.find(
-                                (n) =>
-                                  n.disciplineId === rev.disciplineId &&
-                                  n.sourceReference &&
-                                  rev.title.toLowerCase().includes(n.sourceReference.toLowerCase())
-                              );
-                            if (targetNote) {
-                              navigate(`/erros?noteId=${encodeURIComponent(targetNote.id)}`);
-                            } else {
-                              const query = rev.title.replace(/^Erro:\s*/i, '').trim();
-                              navigate(
-                                `/erros?disciplineId=${encodeURIComponent(rev.disciplineId)}&q=${encodeURIComponent(query)}`
-                              );
-                            }
-                          }}
-                          className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline max-lg:min-h-9 max-lg:px-2"
-                        >
-                          Ver revisão
-                        </button>
                       </div>
                       <p className="mt-0.5 truncate text-sm font-medium text-fg">{displayTitle}</p>
                     </div>
                     <Button
                       variant="secondary"
                       size="sm"
-                      className="shrink-0 max-sm:self-end"
-                      icon={<Check className="size-3.5 text-success" aria-hidden="true" />}
-                      onClick={() => void handleCompleteUrgentReview(rev.id)}
+                      className="shrink-0 max-sm:self-end text-primary"
+                      onClick={openReviewNote}
                     >
-                      Concluir
+                      Ver revisão
                     </Button>
                   </li>
                 );

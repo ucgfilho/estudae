@@ -10,12 +10,14 @@ import {
   RotateCcw,
   Edit2,
   Trash2,
+  Layers,
 } from 'lucide-react';
 import { Button, IconButton } from '../ui/Button';
 import { Alert, Badge, Card, DisciplineDot } from '../ui/Display';
 import { Checkbox } from '../ui/Form';
 import { ConfirmModal } from '../ui/ConfirmModal';
 import { ErrorNoteModal } from '../modals/ErrorNoteModal';
+import { FlashcardModal } from '../modals/FlashcardModal';
 import { FormattedText } from '../ui/RichText';
 import { useErrorNotes, useReviews, useTopics } from '../../hooks/useData';
 import { createExamErrorNotebooks, wrongQuestionsByDiscipline } from '../../services/mockExams';
@@ -45,6 +47,7 @@ export function ExamErrorNotebooks({ exam, disciplines }: { exam: MockExam; disc
   const [manualOpen, setManualOpen] = useState(false);
   const [noteToEdit, setNoteToEdit] = useState<ErrorNote | null>(null);
   const [noteToDelete, setNoteToDelete] = useState<ErrorNote | null>(null);
+  const [noteForFlashcard, setNoteForFlashcard] = useState<ErrorNote | null>(null);
 
   const discMap = useMemo(() => new Map(disciplines.map((d) => [d.id, d])), [disciplines]);
   const topicMap = useMemo(() => new Map(topics.map((t) => [t.id, t])), [topics]);
@@ -206,19 +209,22 @@ export function ExamErrorNotebooks({ exam, disciplines }: { exam: MockExam; disc
                       </div>
 
                       <div className="flex flex-wrap shrink-0 items-center gap-1.5">
-                        {note.status !== 'dominado' && (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          icon={<Layers className="size-3.5 text-primary" />}
+                          onClick={() => setNoteForFlashcard(note)}
+                        >
+                          Criar flashcard
+                        </Button>
+                        {note.status === 'revisado' && (
                           <Button
                             variant="secondary"
                             size="sm"
                             icon={<Check className="size-3.5 text-success" />}
-                            onClick={() =>
-                              handleStatusChange(
-                                note.id,
-                                note.status === 'revisar' ? 'revisado' : 'dominado'
-                              )
-                            }
+                            onClick={() => handleStatusChange(note.id, 'dominado')}
                           >
-                            {note.status === 'revisar' ? 'Marcar Revisado' : 'Marcar Dominado'}
+                            Marcar Dominado
                           </Button>
                         )}
                         {note.status === 'dominado' && (
@@ -387,6 +393,13 @@ export function ExamErrorNotebooks({ exam, disciplines }: { exam: MockExam; disc
             noteToEdit ? 'Caderno de erros atualizado.' : 'Caderno de erros criado.'
           );
         }}
+      />
+
+      <FlashcardModal
+        open={noteForFlashcard !== null}
+        onClose={() => setNoteForFlashcard(null)}
+        note={noteForFlashcard}
+        onSaved={() => setSuccessMsg('Flashcard criado.')}
       />
 
       {/* Confirmação de exclusão */}

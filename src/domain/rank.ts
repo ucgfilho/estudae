@@ -203,9 +203,10 @@ function collectActivity(sessions: readonly StudySession[], reviews: readonly Re
       if (seenReviewKeys.has(compositeKey)) continue;
       seenReviewKeys.add(compositeKey);
     }
-    if (r.flashcardResult === 'acerto') get(k).flashHits += 1;
-    else if (r.flashcardResult === 'erro') get(k).flashMisses += 1;
-    else get(k).reviews += 1;
+    if (r.flashcardStats) {
+      get(k).flashHits += r.flashcardStats.hits;
+      get(k).flashMisses += r.flashcardStats.misses;
+    } else get(k).reviews += 1;
   }
 
   for (const a of map.values()) a.minutes = Math.min(a.minutes, MAX_DAY_SECONDS / 60);

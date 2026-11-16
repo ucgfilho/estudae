@@ -11,11 +11,13 @@ import {
   RotateCcw,
   BookOpen,
   FileText,
+  Layers,
 } from 'lucide-react';
 import { Button, IconButton } from '../components/ui/Button';
 import { Card, PageHeader, Badge, EmptyState, DisciplineDot, Alert } from '../components/ui/Display';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { ErrorNoteModal } from '../components/modals/ErrorNoteModal';
+import { FlashcardModal } from '../components/modals/FlashcardModal';
 import { Select, Input } from '../components/ui/Form';
 import { Search, X } from 'lucide-react';
 import {
@@ -68,6 +70,7 @@ export function ErrorNotebookScreen() {
   // Modals state
   const [modalOpen, setModalOpen] = useState(false);
   const [noteToEdit, setNoteToEdit] = useState<ErrorNote | null>(null);
+  const [noteForFlashcard, setNoteForFlashcard] = useState<ErrorNote | null>(null);
 
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [noteToDelete, setNoteToDelete] = useState<ErrorNote | null>(null);
@@ -395,19 +398,22 @@ export function ErrorNotebookScreen() {
                 }
                 actions={
                   <div className="flex flex-wrap shrink-0 items-center gap-1.5">
-                    {note.status !== 'dominado' && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      icon={<Layers className="size-3.5 text-primary" />}
+                      onClick={() => setNoteForFlashcard(note)}
+                    >
+                      Criar flashcard
+                    </Button>
+                    {note.status === 'revisado' && (
                       <Button
                         variant="secondary"
                         size="sm"
                         icon={<Check className="size-3.5 text-success" />}
-                        onClick={() =>
-                          handleStatusChange(
-                            note.id,
-                            note.status === 'revisar' ? 'revisado' : 'dominado'
-                          )
-                        }
+                        onClick={() => handleStatusChange(note.id, 'dominado')}
                       >
-                        {note.status === 'revisar' ? 'Marcar Revisado' : 'Marcar Dominado'}
+                        Marcar Dominado
                       </Button>
                     )}
                     {note.status === 'dominado' && (
@@ -517,6 +523,13 @@ export function ErrorNotebookScreen() {
         onClose={() => setModalOpen(false)}
         noteToEdit={noteToEdit}
         onSaved={() => setActionSuccess('Anotação salva.')}
+      />
+
+      <FlashcardModal
+        open={noteForFlashcard !== null}
+        onClose={() => setNoteForFlashcard(null)}
+        note={noteForFlashcard}
+        onSaved={() => setActionSuccess('Flashcard criado.')}
       />
 
       <ConfirmModal
