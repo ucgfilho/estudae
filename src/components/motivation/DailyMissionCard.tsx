@@ -56,7 +56,7 @@ export function DailyMissionCard({
 
   return (
     <Card
-      title="Missão de Hoje"
+      title="Missão de hoje"
       description={progressFraming(p.studiedMinutes, p.goalMinutes)}
       className="border-border-strong shadow-2xs"
     >
@@ -70,7 +70,7 @@ export function DailyMissionCard({
                   ? 'Vamos começar? Seu próximo bloco de hoje'
                   : primaryTask
                     ? `Próxima sessão (${formatDate(primaryTask.date)})`
-                    : 'Execução imediata'}
+                    : 'Seu próximo passo'}
               </span>
               {primaryTask && (
                 <Badge tone="neutral" className="tabular-nums">

@@ -1,6 +1,7 @@
 import { Fragment, useRef, type KeyboardEvent, type ReactNode, type TextareaHTMLAttributes } from 'react';
 import { Bold, Code, Italic, List, ListOrdered, Quote, Strikethrough, Underline, type LucideIcon } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { IconButton } from './Button';
 
 /*
  * Formatação leve (estilo Markdown) para textos como o diagnóstico de erros:
@@ -194,21 +195,19 @@ export function RichTextEditor({ value, onChange, className, rows = 6, ...rest }
   };
 
   return (
-    <div className="rounded-lg border border-border bg-surface focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/30">
+    <div className="min-w-0 rounded-lg border border-border-strong bg-surface focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/30">
       <div role="toolbar" aria-label="Formatação de texto" className="flex flex-wrap items-center gap-0.5 border-b border-border p-1">
         {TOOLS.map((t) => (
-          <button
+          <IconButton
             key={t.key}
-            type="button"
+            size="sm"
+            label={t.label}
+            icon={<t.icon className="size-4" aria-hidden />}
             title={t.shortcut ? `${t.label} (${t.shortcut})` : t.label}
-            aria-label={t.label}
             // evita que o textarea perca a seleção ao clicar no botão
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => apply(t)}
-            className="inline-flex items-center justify-center rounded p-1.5 max-lg:p-2 max-lg:size-9 text-fg-muted hover:bg-surface-muted hover:text-fg"
-          >
-            <t.icon className="size-4" aria-hidden />
-          </button>
+          />
         ))}
       </div>
       <textarea

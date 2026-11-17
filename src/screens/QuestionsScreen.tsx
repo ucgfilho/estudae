@@ -7,7 +7,6 @@ import {
   Edit2,
   TrendingUp,
   AlertOctagon,
-  Search,
   X,
   BookOpen,
 } from 'lucide-react';
@@ -16,7 +15,7 @@ import { Card, PageHeader, StatCard, EmptyState, DisciplineDot, Alert } from '..
 import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { QuestionModal } from '../components/modals/QuestionModal';
 import { ErrorNoteModal } from '../components/modals/ErrorNoteModal';
-import { Input, Select } from '../components/ui/Form';
+import { Field, Input, Select } from '../components/ui/Form';
 import {
   useDisciplines,
   useTopics,
@@ -160,9 +159,9 @@ export function QuestionsScreen() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="page-stack">
       <PageHeader
-        title="Banco de questões e desempenho"
+        title="Banco de questões"
         description="Registre suas listas de exercícios para acompanhar sua taxa de acerto por disciplina."
         actions={
           <Button
@@ -184,9 +183,9 @@ export function QuestionsScreen() {
 
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="stats-grid">
         <StatCard
-          label="Total de Questões"
+          label="Questões resolvidas"
           value={formatInteger(totals.total)}
           icon={<CheckSquare className="size-4" />}
         />
@@ -201,12 +200,12 @@ export function QuestionsScreen() {
           hint="Oportunidades de revisão"
         />
         <StatCard
-          label="Em Branco"
+          label="Em branco"
           value={formatInteger(totals.blank)}
           hint="Não entram na taxa de acerto"
         />
         <StatCard
-          label="Taxa de Acerto"
+          label="Taxa de acerto"
           value={formatPercent(totals.accuracy)}
           hint={`Meta: ${settings?.accuracyGoal ?? 80}%`}
           icon={<TrendingUp className="size-4" />}
@@ -218,7 +217,7 @@ export function QuestionsScreen() {
         title={
           <div className="flex items-center gap-2">
             <Filter className="size-4 text-fg-subtle" />
-            <span>Filtros de Consulta</span>
+            <span>Filtros</span>
           </div>
         }
         actions={
@@ -229,16 +228,16 @@ export function QuestionsScreen() {
               icon={<X className="size-3.5" />}
               onClick={handleClearFilters}
             >
-              Limpar Filtros
+              Limpar filtros
             </Button>
           )
         }
       >
         <div className="flex flex-col gap-3">
           <div className="flex flex-wrap items-center gap-1.5 pb-1">
-            <span className="text-xs font-medium text-fg-subtle mr-1">Atalhos de período:</span>
+            <span className="text-xs font-medium text-fg-subtle mr-1">Período:</span>
             {[
-              { id: 'all', label: 'Todas' },
+              { id: 'all', label: 'Todo o período' },
               { id: 'today', label: 'Hoje' },
               { id: '7d', label: 'Últimos 7 dias' },
               { id: '30d', label: 'Últimos 30 dias' },
@@ -246,10 +245,11 @@ export function QuestionsScreen() {
               <button
                 key={p.id}
                 type="button"
+                aria-pressed={activeDatePreset === p.id}
                 onClick={() => applyDatePreset(p.id as 'all' | 'today' | '7d' | '30d')}
-                className={`rounded-full px-2.5 py-1 max-lg:px-3.5 max-lg:py-2 max-lg:min-h-10 text-xs font-medium transition-colors ${
+                className={`rounded-full px-2.5 py-1 max-lg:px-3.5 max-lg:py-2 max-lg:min-h-11 text-xs font-medium transition-colors ${
                   activeDatePreset === p.id
-                    ? 'bg-primary text-white shadow-sm'
+                    ? 'bg-primary text-primary-fg shadow-sm'
                     : 'bg-surface-muted text-fg-muted hover:bg-surface-muted/80 hover:text-fg'
                 }`}
               >
@@ -258,25 +258,22 @@ export function QuestionsScreen() {
             ))}
           </div>
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-            <div>
-              <label className="text-xs font-medium text-fg-subtle block mb-1">Data Início</label>
+          <div className="filter-grid">
+            <Field label="Data inicial">
               <DateInput
                 value={filterStartDate}
                 onChange={(e) => setFilterStartDate(e.target.value)}
               />
-            </div>
+            </Field>
 
-            <div>
-              <label className="text-xs font-medium text-fg-subtle block mb-1">Data Fim</label>
+            <Field label="Data final">
               <DateInput
                 value={filterEndDate}
                 onChange={(e) => setFilterEndDate(e.target.value)}
               />
-            </div>
+            </Field>
 
-            <div>
-              <label className="text-xs font-medium text-fg-subtle block mb-1">Disciplina</label>
+            <Field label="Disciplina">
               <Select
                 value={filterDisciplineId}
                 onChange={(e) => {
@@ -291,10 +288,9 @@ export function QuestionsScreen() {
                   </option>
                 ))}
               </Select>
-            </div>
+            </Field>
 
-            <div>
-              <label className="text-xs font-medium text-fg-subtle block mb-1">Tópico</label>
+            <Field label="Tópico">
               <Select
                 value={filterTopicId}
                 onChange={(e) => setFilterTopicId(e.target.value)}
@@ -309,31 +305,24 @@ export function QuestionsScreen() {
                     </option>
                   ))}
               </Select>
-            </div>
+            </Field>
 
-            <div className="sm:col-span-2 lg:col-span-2 xl:col-span-1">
-              <label className="text-xs font-medium text-fg-subtle block mb-1">Banca / Fonte</label>
-              <div className="relative">
+            <Field label="Banca ou fonte">
                 <Input
                   type="text"
                   placeholder="Ex: Cebraspe, FCC..."
                   value={filterSource}
                   onChange={(e) => setFilterSource(e.target.value)}
-                  className="pr-9"
                 />
-                <span className="pointer-events-none absolute inset-y-0 right-0 flex w-9 items-center justify-center text-fg-subtle">
-                  <Search className="size-3.5" />
-                </span>
-              </div>
-            </div>
+            </Field>
           </div>
         </div>
       </Card>
 
       {/* Accuracy by Discipline Breakdown */}
       <Card
-        title="Desempenho por Disciplina"
-        description="Fórmula: Acertos / (Acertos + Erros) * 100 • Clique em uma disciplina para filtrar a tabela"
+        title="Desempenho por disciplina"
+        description="Selecione uma disciplina para filtrar os registros. Questões em branco não entram na taxa de acerto."
       >
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {discAcc.map((d) => {
@@ -342,6 +331,7 @@ export function QuestionsScreen() {
               <button
                 key={d.disciplineId}
                 type="button"
+                aria-pressed={isSelected}
                 onClick={() => {
                   setFilterDisciplineId(isSelected ? '' : d.disciplineId);
                   setFilterTopicId('');
@@ -378,8 +368,8 @@ export function QuestionsScreen() {
 
       {/* Questions Log Table */}
       <Card
-        title={`Lançamentos de Questões (${filteredLogs.length})`}
-        description="Histórico detalhado de baterias cadastradas"
+        title={`Registros de questões (${filteredLogs.length})`}
+        description="Listas de questões que você registrou."
       >
         {filteredLogs.length > 0 ? (
           <>
@@ -629,11 +619,11 @@ export function QuestionsScreen() {
             action={
               hasActiveFilters ? (
                 <Button variant="secondary" size="sm" onClick={handleClearFilters}>
-                  Limpar Filtros
+                  Limpar filtros
                 </Button>
               ) : (
                 <Button variant="secondary" size="sm" icon={<Plus className="size-4" />} onClick={openNewLog}>
-                  Registrar Primeira Bateria
+                  Registrar questões
                 </Button>
               )
             }

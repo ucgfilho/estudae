@@ -104,7 +104,7 @@ export function ContestSelectorScreen({ onSelectContest }: ContestSelectorScreen
               data-testid="selector-profile-button"
               onClick={() => setProfileOpen(true)}
               title="Editar perfil"
-              className="inline-flex h-9 max-lg:h-10 items-center gap-2 rounded-lg border border-border-strong bg-surface px-2.5 text-xs font-medium text-fg hover:border-primary/40 transition cursor-pointer"
+              className="inline-flex control-height items-center gap-2 rounded-lg border border-border-strong bg-surface px-2.5 text-xs font-medium text-fg hover:border-primary/40 transition cursor-pointer"
             >
               <Avatar name={authUser.name || authUser.email} src={authUser.avatarUrl} size="sm" />
               <span className="hidden sm:inline-block max-w-36 truncate font-semibold text-fg">
@@ -116,7 +116,7 @@ export function ContestSelectorScreen({ onSelectContest }: ContestSelectorScreen
           <button
             type="button"
             onClick={() => setAuthSession(null)}
-            className="inline-flex h-9 max-lg:h-10 items-center gap-1.5 rounded-lg border border-border-strong bg-surface px-3 text-xs font-medium text-fg-muted hover:text-danger hover:border-danger/40 transition cursor-pointer"
+            className="inline-flex control-height items-center gap-1.5 rounded-lg border border-border-strong bg-surface px-3 text-xs font-medium text-fg-muted hover:text-danger hover:border-danger/40 transition cursor-pointer"
           >
             <LogOut className="size-3.5" />
             <span>Sair</span>
@@ -127,11 +127,11 @@ export function ContestSelectorScreen({ onSelectContest }: ContestSelectorScreen
       {/* Conteúdo Central estilo Netflix Profiles */}
       <main className="relative z-10 flex-1 flex flex-col items-center justify-center px-4 sm:px-8 py-6 sm:py-10 max-w-5xl w-full mx-auto text-center">
         <div className="space-y-2 mb-8 sm:mb-10">
-          <h1 className="text-2xl sm:text-4xl font-bold tracking-tight text-fg">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-fg">
             Qual concurso você vai estudar agora?
           </h1>
-          <p className="text-xs sm:text-sm text-fg-muted max-w-xl mx-auto">
-            Escolha um concurso para abrir o edital verticalizado, as questões e o ciclo contínuo de estudos, ou cadastre outro.
+          <p className="text-sm leading-relaxed text-fg-muted max-w-xl mx-auto">
+            Escolha um concurso para continuar seus estudos ou adicione um novo edital.
           </p>
         </div>
 
@@ -194,10 +194,10 @@ export function ContestSelectorScreen({ onSelectContest }: ContestSelectorScreen
                   </span>
                 </div>
 
-                <div className="font-bold text-sm sm:text-base text-fg group-hover:text-primary transition line-clamp-1">
+                <div className="font-semibold text-base text-fg group-hover:text-primary transition-colors">
                   {contest.name}
                 </div>
-                <div className="text-xs text-fg-muted line-clamp-1 mt-0.5">{contest.role}</div>
+                <div className="text-sm leading-relaxed text-fg-muted mt-1">{contest.role}</div>
 
                 <div className="mt-3 pt-3 border-t border-border w-full flex items-center justify-center gap-3 text-[11px] text-fg-subtle">
                   <span className="inline-flex items-center gap-1">
@@ -245,7 +245,7 @@ export function ContestSelectorScreen({ onSelectContest }: ContestSelectorScreen
             <button
               type="button"
               onClick={() => setManageMode((prev) => !prev)}
-              className="rounded-lg border border-border-strong bg-surface px-4 py-2 max-lg:py-2.5 max-lg:min-h-10 text-xs font-semibold text-fg-muted hover:text-fg hover:border-primary/40 transition"
+              className="rounded-lg border border-border-strong bg-surface px-4 py-2 max-lg:py-2.5 max-lg:min-h-11 text-xs font-semibold text-fg-muted hover:text-fg hover:border-primary/40 transition"
             >
               {manageMode ? 'Concluir gerenciamento' : 'Gerenciar concursos'}
             </button>

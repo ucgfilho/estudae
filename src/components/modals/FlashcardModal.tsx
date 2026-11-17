@@ -56,8 +56,8 @@ export function FlashcardModal({ open, onClose, note, cardToEdit, onSaved }: Fla
       title={cardToEdit ? 'Editar flashcard' : 'Criar flashcard'}
       description={
         note?.sourceReference
-          ? `Vinculado ao erro "${note.sourceReference}". O flashcard aparecerá na tela de revisões no dia programado para revisar este erro.`
-          : 'O flashcard aparecerá na tela de revisões no dia programado para revisar este erro.'
+          ? `Vinculado a "${note.sourceReference}". Aparecerá nas revisões na data agendada para este erro.`
+          : 'Aparecerá nas revisões na data agendada para este erro.'
       }
       size="md"
       footer={
@@ -88,8 +88,9 @@ export function FlashcardModal({ open, onClose, note, cardToEdit, onSaved }: Fla
           />
         </Field>
 
-        <Field label="Gabarito" required>
-          <div className="grid grid-cols-2 gap-3 pt-1">
+        <fieldset className="min-w-0">
+          <legend className="text-sm font-medium text-fg">Gabarito <span className="text-danger" aria-hidden="true">*</span></legend>
+          <div className="mt-1.5 grid grid-cols-2 gap-3">
             <div className="rounded-lg border border-border bg-surface-muted/30 p-3">
               <Radio
                 name="flashcard-answer"
@@ -119,7 +120,7 @@ export function FlashcardModal({ open, onClose, note, cardToEdit, onSaved }: Fla
               />
             </div>
           </div>
-        </Field>
+        </fieldset>
 
         <Field label="Explicação" required>
           <Textarea

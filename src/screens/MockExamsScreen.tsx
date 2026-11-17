@@ -26,10 +26,10 @@ export function MockExamsScreen() {
   const selected = exams.find((e) => e.id === selectedId) ?? null;
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="page-stack">
       <PageHeader
         title="Simulados"
-        description="Envie a prova e o gabarito, marque suas respostas e receba a correção com análise de desempenho."
+        description="Envie a prova e o gabarito, responda às questões e acompanhe seu desempenho."
         actions={
           selected && (
             <Button variant="secondary" size="sm" icon={<Plus className="size-4" />} onClick={() => setSelectedId(null)}>

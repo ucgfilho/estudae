@@ -154,9 +154,9 @@ export function ReportsScreen() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="page-stack">
       <PageHeader
-        title="Relatórios e diagnóstico de desempenho"
+        title="Relatórios"
         description="Acompanhe suas horas estudadas, constância e taxa de acerto por matéria."
         actions={
           <div className="flex flex-wrap items-center gap-2">
@@ -181,26 +181,26 @@ export function ReportsScreen() {
       />
 
       {/* Global Summary Statistics */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="stats-grid">
         <StatCard
-          label="Total de Horas Estudadas"
+          label="Tempo estudado"
           value={formatMinutes(sessions.reduce((acc, s) => acc + s.actualSeconds / 60, 0))}
           hint={`${sessions.filter((s) => s.status === 'concluida').length} sessões concluídas`}
           icon={<Clock className="size-4" />}
         />
         <StatCard
-          label="Questões Totais"
+          label="Questões resolvidas"
           value={formatInteger(questionTotals.total)}
           hint={`${formatInteger(questionTotals.correct)} acertos (${formatPercent(questionTotals.accuracy)})`}
           icon={<CheckCircle className="size-4" />}
         />
         <StatCard
-          label="Tópicos Dominados"
+          label="Tópicos dominados"
           value={formatInteger(topicsProg.mastered)}
           hint={`${topicsProg.completed} concluídos de ${topicsProg.total} cadastrados`}
         />
         <StatCard
-          label="Revisões Pendentes"
+          label="Revisões pendentes"
           value={formatInteger(revBuckets.overdue.length + revBuckets.today.length)}
           hint={`${revBuckets.overdue.length} em atraso`}
           icon={<AlertTriangle className="size-4 text-warning" />}
@@ -227,7 +227,7 @@ export function ReportsScreen() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs font-medium text-fg-muted">Janela:</span>
+          <span className="text-xs font-medium text-fg-muted">Período:</span>
           <Segmented
             label="Período do relatório"
             value={periodDays}
@@ -240,7 +240,7 @@ export function ReportsScreen() {
               { value: '30', label: '30 dias' },
               { value: '60', label: '60 dias' },
               { value: '90', label: '90 dias' },
-              { value: 'all', label: 'Tudo' },
+              { value: 'all', label: 'Todo o período' },
             ]}
           />
         </div>
@@ -250,8 +250,8 @@ export function ReportsScreen() {
       <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-2">
         {/* Chart 1: Planned vs Done Time */}
         <Card
-          title="Tempo Planejado versus Tempo Realizado"
-          description="Evolução da carga horária de estudos pelo agrupamento selecionado (minutos)"
+          title="Tempo planejado e realizado"
+          description="Compare o tempo planejado e o estudado, em minutos."
         >
           {studyData.some((d) => d.studiedMinutes > 0 || d.plannedMinutes > 0) ? (
             <div className="h-72 w-full">
@@ -288,8 +288,8 @@ export function ReportsScreen() {
 
         {/* Chart 2: Accuracy Evolution */}
         <Card
-          title="Evolução da Taxa de Acerto (%)"
-          description="Percentual de acerto calculado em cada período com base em questões resolvidas"
+          title="Evolução da taxa de acerto"
+          description="Acompanhe a taxa de acerto no período selecionado."
         >
           {accuracyData.length > 0 ? (
             <div className="h-72 w-full">
@@ -325,8 +325,8 @@ export function ReportsScreen() {
       <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
         {/* Disciplines Accuracy */}
         <Card
-          title="Ranking de Desempenho por Disciplina"
-          description="Classificação decrescente por taxa de acerto apurada"
+          title="Desempenho por disciplina"
+          description="Disciplinas ordenadas pela taxa de acerto."
         >
           <div className="space-y-2.5">
             {discAccuracy.map((d, index) => {
@@ -338,15 +338,15 @@ export function ReportsScreen() {
               return (
                 <div
                   key={d.disciplineId}
-                  className="flex items-center justify-between gap-2 p-2.5 rounded-lg border border-border bg-surface transition-colors hover:border-border-strong hover:bg-surface-elevated/40"
+                  className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-lg border border-border bg-surface transition-colors hover:border-border-strong hover:bg-surface-elevated/40"
                 >
-                  <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="flex flex-1 basis-40 items-center gap-2.5 min-w-0">
                     <span
                       className={`flex size-6 shrink-0 items-center justify-center rounded-md font-mono text-xs font-bold ${
                         isTop1
-                          ? 'bg-amber-500/15 text-amber-500 ring-1 ring-amber-500/40'
+                          ? 'bg-warning-soft text-warning ring-1 ring-warning/40'
                           : isTop2
-                          ? 'bg-slate-400/15 text-slate-300 ring-1 ring-slate-400/40'
+                          ? 'bg-surface-muted text-fg-muted ring-1 ring-border-strong'
                           : isTop3
                           ? 'bg-amber-700/15 text-amber-600 ring-1 ring-amber-700/40'
                           : 'bg-surface-muted text-fg-subtle'
@@ -357,7 +357,7 @@ export function ReportsScreen() {
                     <DisciplineDot color={d.color} />
                     <span className="font-medium text-sm text-fg truncate">{d.name}</span>
                   </div>
-                  <div className="flex items-center gap-3 text-xs shrink-0">
+                  <div className="flex items-center gap-3 text-xs shrink-0 ml-auto">
                     <span className="text-fg-subtle">{d.total} resolvidas</span>
                     <span
                       className={`font-mono font-bold tabular-nums text-sm ${
@@ -381,8 +381,8 @@ export function ReportsScreen() {
 
         {/* Worst Performing Topics */}
         <Card
-          title="Conteúdos com Pior Desempenho (Pontos de Atenção)"
-          description="Tópicos que demandam mais reforço teórico e resolução de questões"
+          title="Conteúdos para reforçar"
+          description="Priorize os tópicos com menor taxa de acerto."
         >
           {worstPerforming.length > 0 ? (
             <div className="space-y-3">
@@ -416,7 +416,7 @@ export function ReportsScreen() {
             <EmptyState
               icon={<CheckCircle className="size-6" />}
               title="Nenhum ponto crítico identificado"
-              description="Quando você lançar questões associadas a tópicos específicos, os pontos de menor rendimento serão listados aqui para priorização."
+              description="Registre questões com um tópico para descobrir quais conteúdos precisam de reforço."
             />
           )}
         </Card>

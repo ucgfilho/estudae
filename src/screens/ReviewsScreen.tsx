@@ -50,7 +50,7 @@ export function ReviewsScreen() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="page-stack">
       <PageHeader
         title="Revisões espaçadas"
         description="Revise no intervalo ideal para fixar o conteúdo na memória de longo prazo."
@@ -74,7 +74,7 @@ export function ReviewsScreen() {
           <EmptyState
             icon={<CheckCircle className="size-8" />}
             title="Todas as revisões de hoje estão em dia"
-            description="Seus ciclos de memória estão em dia."
+            description="As próximas revisões aparecerão aqui na data agendada."
           />
         )}
       </div>

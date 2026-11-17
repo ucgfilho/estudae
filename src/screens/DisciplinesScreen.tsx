@@ -214,7 +214,7 @@ export function DisciplinesScreen() {
   });
 
   return (
-    <div className="space-y-6">
+    <div className="page-stack">
       <PageHeader
         title="Disciplinas e conteúdos"
         description="Organize os tópicos do edital e marque o que você já estudou."
@@ -271,6 +271,7 @@ export function DisciplinesScreen() {
               <button
                 key={d.id}
                 type="button"
+                aria-pressed={isSelected}
                 onClick={() => setSelectedDisciplineId(d.id)}
                 className={cn(
                   'flex items-center gap-2 rounded-lg px-3 py-2 max-lg:min-h-11 text-xs font-medium transition-all shrink-0',

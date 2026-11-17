@@ -219,7 +219,8 @@ describe('Simulados screen', () => {
     const user = userEvent.setup();
     await openScreen();
     await user.type(screen.getByLabelText(/nome do simulado/i), 'Quatro');
-    await user.selectOptions(screen.getByLabelText(/alternativas por questão/i), '4');
+    await user.click(screen.getByRole('combobox', { name: /alternativas por questão/i }));
+    await user.click(screen.getByRole('option', { name: '4 alternativas (A–D)' }));
     await user.type(screen.getByLabelText(/gabarito \(texto\)/i), '1 A');
     await user.click(await screen.findByRole('button', { name: /gerar folha de respostas/i }));
     const group = await screen.findByRole('radiogroup', { name: 'Questão 1' });
@@ -230,7 +231,8 @@ describe('Simulados screen', () => {
     const user = userEvent.setup();
     await openScreen();
     await user.type(screen.getByLabelText(/nome do simulado/i), 'Simulado Cebraspe');
-    await user.selectOptions(screen.getByLabelText(/alternativas por questão/i), '2');
+    await user.click(screen.getByRole('combobox', { name: /alternativas por questão/i }));
+    await user.click(screen.getByRole('option', { name: 'Certo ou Errado (C–E)' }));
     await user.type(screen.getByLabelText(/gabarito \(texto\)/i), '1 Certo\n2 Errado\n3 C');
     expect(await screen.findByText(/3 questões identificadas/i)).toBeInTheDocument();
     await user.click(await screen.findByRole('button', { name: /gerar folha de respostas/i }));

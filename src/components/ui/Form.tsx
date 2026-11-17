@@ -34,7 +34,7 @@ export function Field({ label, hint, error, required, className, children }: Fie
     ? cloneElement(children, { id, 'aria-invalid': error ? true : undefined, 'aria-describedby': describedBy, required })
     : children;
   return (
-    <div className={cn('flex flex-col gap-1.5', className)}>
+    <div className={cn('flex min-w-0 flex-col gap-1.5', className)}>
       <label htmlFor={id} className="text-sm font-medium text-fg">
         {label}
         {required && (
@@ -46,7 +46,7 @@ export function Field({ label, hint, error, required, className, children }: Fie
       </label>
       {control}
       {hint && (
-        <p id={hintId} className="text-xs text-fg-subtle">
+        <p id={hintId} className="text-xs leading-relaxed text-fg-muted">
           {hint}
         </p>
       )}
@@ -60,7 +60,7 @@ export function Field({ label, hint, error, required, className, children }: Fie
 }
 
 export function Input({ className, ...rest }: InputHTMLAttributes<HTMLInputElement>) {
-  return <input className={cn('input-base h-9 max-lg:h-11', className)} {...rest} />;
+  return <input className={cn('input-base control-height', className)} {...rest} />;
 }
 
 interface InputWithIconProps extends InputHTMLAttributes<HTMLInputElement> {
@@ -73,14 +73,14 @@ export const InputWithIcon = forwardRef<HTMLInputElement, InputWithIconProps>(fu
   ref,
 ) {
   return (
-    <div className="relative">
+    <div className="relative min-w-0">
       <span
         className="pointer-events-none absolute inset-y-0 left-0 flex w-10 items-center justify-center text-fg-subtle [&_svg]:size-4"
         aria-hidden="true"
       >
         {icon}
       </span>
-      <input ref={ref} className={cn('input-base input-with-icon h-10 max-lg:h-11', className)} {...rest} />
+      <input ref={ref} className={cn('input-base input-with-icon control-height', className)} {...rest} />
     </div>
   );
 });
@@ -99,7 +99,7 @@ export function Checkbox({ label, description, className, id: customId, ...rest 
   const generatedId = useId();
   const id = customId || generatedId;
   return (
-    <label htmlFor={id} className={cn('group flex items-start gap-2.5 cursor-pointer select-none max-lg:py-1.5', className)}>
+    <label htmlFor={id} className={cn('group flex min-h-11 items-start gap-3 cursor-pointer select-none py-2', className)}>
       <input
         id={id}
         type="checkbox"
@@ -111,16 +111,16 @@ export function Checkbox({ label, description, className, id: customId, ...rest 
           'mt-0.5 size-4 max-lg:size-5 shrink-0 rounded border border-border-strong bg-surface transition-all flex items-center justify-center',
           'group-hover:border-primary/70',
           'peer-focus-visible:ring-2 peer-focus-visible:ring-primary/40 peer-focus-visible:ring-offset-1 peer-focus-visible:ring-offset-surface',
-          'peer-checked:bg-primary peer-checked:border-primary peer-checked:text-primary-fg',
+          'peer-checked:bg-primary peer-checked:border-primary peer-checked:text-primary-fg peer-checked:[&_svg]:opacity-100',
           'peer-disabled:opacity-50 peer-disabled:cursor-not-allowed'
         )}
         aria-hidden="true"
       >
-        <Check className="size-3 stroke-[3] opacity-0 peer-checked:opacity-100 transition-opacity" />
+        <Check className="size-3 stroke-[3] opacity-0 transition-opacity" />
       </div>
       <div className="text-sm text-fg">
         <span className="font-medium text-fg">{label}</span>
-        {description && <span className="block text-xs text-fg-subtle mt-0.5">{description}</span>}
+        {description && <span className="block text-xs leading-relaxed text-fg-muted mt-1">{description}</span>}
       </div>
     </label>
   );
@@ -136,7 +136,7 @@ export function Radio({ label, description, className, id: customId, ...rest }: 
   const generatedId = useId();
   const id = customId || generatedId;
   return (
-    <label htmlFor={id} className={cn('group flex items-start gap-2.5 cursor-pointer select-none max-lg:py-1.5', className)}>
+    <label htmlFor={id} className={cn('group flex min-h-11 items-start gap-3 cursor-pointer select-none py-2', className)}>
       <input
         id={id}
         type="radio"
@@ -148,16 +148,16 @@ export function Radio({ label, description, className, id: customId, ...rest }: 
           'mt-0.5 size-4 max-lg:size-5 shrink-0 rounded-full border border-border-strong bg-surface transition-all flex items-center justify-center',
           'group-hover:border-primary/70',
           'peer-focus-visible:ring-2 peer-focus-visible:ring-primary/40 peer-focus-visible:ring-offset-1 peer-focus-visible:ring-offset-surface',
-          'peer-checked:border-primary peer-checked:bg-primary/10',
+          'peer-checked:border-primary peer-checked:bg-primary/10 peer-checked:[&_span]:opacity-100 peer-checked:[&_span]:scale-100',
           'peer-disabled:opacity-50 peer-disabled:cursor-not-allowed'
         )}
         aria-hidden="true"
       >
-        <span className="size-2 rounded-full bg-primary opacity-0 scale-0 transition-all peer-checked:opacity-100 peer-checked:scale-100" />
+        <span className="size-2 rounded-full bg-primary opacity-0 scale-0 transition-all" />
       </div>
       <div className="text-sm text-fg">
         <span className="font-medium text-fg">{label}</span>
-        {description && <span className="block text-xs text-fg-subtle mt-0.5">{description}</span>}
+        {description && <span className="block text-xs leading-relaxed text-fg-muted mt-1">{description}</span>}
       </div>
     </label>
   );

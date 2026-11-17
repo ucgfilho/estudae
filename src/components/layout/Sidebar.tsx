@@ -35,7 +35,7 @@ interface SidebarProps {
 export const NAV_ITEMS = [
   { to: '/', label: 'Visão geral', shortLabel: 'Início', icon: LayoutDashboard, section: 'Execução e agenda' },
   { to: '/calendario', label: 'Calendário', shortLabel: 'Agenda', icon: Calendar },
-  { to: '/cronograma', label: 'Ciclo de Estudos', shortLabel: 'Ciclo', icon: CalendarClock },
+  { to: '/cronograma', label: 'Ciclo de estudos', shortLabel: 'Ciclo', icon: CalendarClock },
   { to: '/estudar-agora', label: 'Estudar agora', shortLabel: 'Estudar', icon: Timer },
   { to: '/questoes', label: 'Questões', icon: CheckSquare, section: 'Prática e retenção' },
   { to: '/erros', label: 'Caderno de erros', icon: AlertOctagon },
@@ -88,7 +88,7 @@ export function Sidebar({
       <aside
         className={cn(
           'fixed inset-y-0 left-0 z-40 flex w-60 xl:w-64 max-lg:w-72 max-lg:max-w-[85vw] max-lg:shadow-2xl max-lg:pb-[env(safe-area-inset-bottom)] flex-col border-r border-border bg-surface transition-transform duration-200 ease-in-out lg:static lg:translate-x-0',
-          mobileOpen ? 'translate-x-0' : '-translate-x-full',
+          mobileOpen ? 'translate-x-0' : '-translate-x-full max-lg:invisible',
         )}
         aria-label="Navegação principal"
       >
@@ -97,9 +97,9 @@ export function Sidebar({
           <div className="flex items-center gap-2.5 min-w-0">
             <BnbLogo className="size-7 shrink-0 rounded-md" />
             <div className="min-w-0">
-              <h1 className="text-sm font-bold tracking-tight text-fg truncate leading-tight">
+              <p className="text-sm font-bold tracking-tight text-fg truncate leading-tight">
                 estudaê
-              </h1>
+              </p>
               <p className="text-[11px] text-fg-subtle truncate leading-none mt-0.5">
                 {activeContest ? `${activeContest.shortName} · ${activeContest.role}` : 'Multi-Concursos'}
               </p>
@@ -115,7 +115,7 @@ export function Sidebar({
         </div>
 
         {/* Navigation list */}
-        <nav className="flex-1 overflow-y-auto px-2.5 py-3 space-y-0.5">
+        <nav aria-label="Menu principal" className="flex-1 overflow-y-auto px-2.5 py-3 space-y-0.5">
           {NAV_ITEMS.map((item, idx) => {
             const Icon = item.icon;
             const isReviews = item.to === '/revisoes';
@@ -202,7 +202,7 @@ export function Sidebar({
             >
               <div className="min-w-0">
                 <div className="text-xs font-semibold text-fg group-hover:text-primary transition-colors truncate">
-                  {activeContest ? activeContest.name : 'Concurso Ativo'}
+                  {activeContest ? activeContest.name : 'Concurso ativo'}
                 </div>
                 <div className="text-[11px] text-fg-subtle truncate mt-0.5">
                   {activeContest ? activeContest.role : 'Analista de Sistemas — Desenvolvimento'}
@@ -221,7 +221,7 @@ export function Sidebar({
         {!onSwitchContestScreen && (
           <div className="border-t border-border p-3 text-[11px] text-fg-subtle">
             <div className="font-semibold text-fg">
-              {activeContest ? activeContest.name : 'Concurso Ativo'}
+              {activeContest ? activeContest.name : 'Concurso ativo'}
             </div>
             <div className="truncate">
               {activeContest ? activeContest.role : 'Analista de Sistemas — Desenvolvimento'}

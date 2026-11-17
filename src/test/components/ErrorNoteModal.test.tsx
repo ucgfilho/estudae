@@ -45,16 +45,12 @@ describe('ErrorNoteModal - Dropdown de simulados', () => {
       expect(screen.getByLabelText(/Simulado de referência \(Prova\)/i)).toBeInTheDocument();
     });
 
-    const select = screen.getByLabelText(/Simulado de referência \(Prova\)/i) as HTMLSelectElement;
-    expect(select.options.length).toBeGreaterThanOrEqual(3); // Nenhum + 2 simulados
-
-    const optionsText = Array.from(select.options).map((o) => o.textContent);
-    expect(optionsText.some((t) => t?.includes('Prova BNB 2022 Perfil 1'))).toBe(true);
-    expect(optionsText.some((t) => t?.includes('Simulado BNB 2024 Geral'))).toBe(true);
-
-    // Seleciona o primeiro simulado
-    await userEvent.selectOptions(select, exam1.id);
-    expect(select.value).toBe(exam1.id);
+    const select = screen.getByRole('combobox', { name: /Simulado de referência \(Prova\)/i });
+    await userEvent.click(select);
+    expect(screen.getAllByRole('option').length).toBeGreaterThanOrEqual(3);
+    expect(screen.getByRole('option', { name: /Simulado BNB 2024 Geral/ })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('option', { name: /Prova BNB 2022 Perfil 1/ }));
+    expect(select).toHaveTextContent('Prova BNB 2022 Perfil 1');
   });
 
   it('pre-selects the mock exam when passed via props', async () => {
@@ -76,8 +72,7 @@ describe('ErrorNoteModal - Dropdown de simulados', () => {
     );
 
     await waitFor(() => {
-      const select = screen.getByLabelText(/Simulado de referência \(Prova\)/i) as HTMLSelectElement;
-      expect(select.value).toBe(exam.id);
+      expect(screen.getByRole('combobox', { name: /Simulado de referência \(Prova\)/i })).toHaveTextContent(exam.title);
     });
   });
 

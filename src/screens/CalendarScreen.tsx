@@ -177,9 +177,9 @@ export function CalendarScreen() {
   };
 
   return (
-    <div className="space-y-5">
+    <div className="page-stack">
       <PageHeader
-        title="Calendário de estudos"
+        title="Calendário"
         description="Planeje e acompanhe suas sessões por dia, semana ou mês."
         actions={
           <div className="flex flex-wrap items-center gap-2">

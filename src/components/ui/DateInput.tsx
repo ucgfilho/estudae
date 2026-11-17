@@ -120,7 +120,7 @@ export function DateInput({ className, disabled, min, max, value, onChange, onBl
   const isOutOfRange = (k: string) => (!!min && k < String(min)) || (!!max && k > String(max));
 
   return (
-    <div ref={wrapRef} className="relative">
+    <div ref={wrapRef} className="relative min-w-0">
       <input
         ref={inputRef}
         type="text"
@@ -145,7 +145,7 @@ export function DateInput({ className, disabled, min, max, value, onChange, onBl
           if (text !== '' && parseDisplay(text) === null) setText(toDisplay(value ?? ''));
           onBlur?.(e);
         }}
-        className={cn('input-base h-9 pr-9 max-lg:h-11 max-lg:pr-11', className)}
+        className={cn('input-base control-height pr-10 max-lg:pr-11', className)}
         {...rest}
       />
       <button

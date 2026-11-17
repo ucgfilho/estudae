@@ -82,7 +82,7 @@ export function ExamResult({ exam, disciplines, accuracyGoal }: ExamResultProps)
           </div>
         )}
 
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="stats-grid">
           <StatCard label="Acertos" value={<span data-testid="stat-correct">{totals.correct}</span>} />
           <StatCard label="Erros" value={<span data-testid="stat-wrong">{totals.wrong}</span>} />
           <StatCard label="Em branco" value={<span data-testid="stat-blank">{totals.blank}</span>} />

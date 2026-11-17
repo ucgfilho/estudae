@@ -51,7 +51,7 @@ describe("estudaê — Multi-Concursos, Edital Verticalizado e Perfis Estilo Net
     render(<AuthScreen onAuthenticated={() => {}} />);
 
     // Alterna para a aba de cadastro
-    fireEvent.click(screen.getByRole("tab", { name: /cadastrar novo/i }));
+    fireEvent.click(screen.getByRole("tab", { name: /cadastrar conta/i }));
 
     // Antes de escolher o concurso, a área de envio do edital verticalizado deve estar bloqueada
     expect(screen.getByTestId("edital-upload-locked")).toBeInTheDocument();
@@ -143,7 +143,7 @@ Tecnologia da Informação e Ciência de Dados:
 
     // Verifica que a marca "estudaê" e o botão de trocar de concurso estão presentes na barra lateral esquerda
     expect(
-      screen.getByRole("heading", { name: /^estudaê$/i }),
+      screen.getByRole("complementary", { name: /navegação principal/i }),
     ).toBeInTheDocument();
     const switchContestBtn = screen.getByTestId("sidebar-switch-contest-button");
     expect(switchContestBtn).toBeInTheDocument();

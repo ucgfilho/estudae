@@ -18,8 +18,8 @@ import { Card, PageHeader, Badge, EmptyState, DisciplineDot, Alert } from '../co
 import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { ErrorNoteModal } from '../components/modals/ErrorNoteModal';
 import { FlashcardModal } from '../components/modals/FlashcardModal';
-import { Select, Input } from '../components/ui/Form';
-import { Search, X } from 'lucide-react';
+import { Field, Select, Input } from '../components/ui/Form';
+import { X } from 'lucide-react';
 import {
   useDisciplines,
   useTopics,
@@ -155,9 +155,9 @@ export function ErrorNotebookScreen() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="page-stack">
       <PageHeader
-        title="Caderno de erros e aprendizados"
+        title="Caderno de erros"
         description="Registre questões que você errou para revisar no momento certo."
         actions={
           <Button
@@ -179,73 +179,77 @@ export function ErrorNotebookScreen() {
 
 
       {/* Interactive Status Filter Cards */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4" role="tablist" aria-label="Filtrar por status">
+      <div className="stats-grid" role="group" aria-label="Filtrar por status">
         <button
           type="button"
+          aria-pressed={filterStatus === '' && !focusedNoteId}
           onClick={() => {
             if (focusedNoteId) setSearchParams({});
             setFilterStatus('');
           }}
           className={cn(
-            'rounded-xl border p-4 text-left transition-all cursor-pointer',
+            'panel-padding flex flex-col gap-3 rounded-xl border text-left transition-colors',
             filterStatus === '' && !focusedNoteId
               ? 'border-primary bg-surface shadow-xs ring-2 ring-primary/40'
               : 'border-border bg-surface hover:bg-surface-muted/60'
           )}
         >
           <div className="text-xs font-medium text-fg-muted">Total de registros</div>
-          <div className="text-2xl font-bold text-fg mt-1 tabular-nums">{counts.total}</div>
+          <div className="text-2xl font-bold leading-tight text-fg tabular-nums">{counts.total}</div>
         </button>
 
         <button
           type="button"
+          aria-pressed={filterStatus === 'revisar' && !focusedNoteId}
           onClick={() => {
             if (focusedNoteId) setSearchParams({});
             setFilterStatus(filterStatus === 'revisar' ? '' : 'revisar');
           }}
           className={cn(
-            'rounded-xl border p-4 text-left transition-all cursor-pointer',
+            'panel-padding flex flex-col gap-3 rounded-xl border text-left transition-colors',
             filterStatus === 'revisar' && !focusedNoteId
               ? 'border-warning bg-warning-soft/40 shadow-xs ring-2 ring-warning/50'
               : 'border-warning/30 bg-warning-soft/20 hover:bg-warning-soft/30'
           )}
         >
           <div className="text-xs font-medium text-warning">A revisar</div>
-          <div className="text-2xl font-bold text-warning mt-1 tabular-nums">{counts.revisar}</div>
+          <div className="text-2xl font-bold leading-tight text-warning tabular-nums">{counts.revisar}</div>
         </button>
 
         <button
           type="button"
+          aria-pressed={filterStatus === 'revisado' && !focusedNoteId}
           onClick={() => {
             if (focusedNoteId) setSearchParams({});
             setFilterStatus(filterStatus === 'revisado' ? '' : 'revisado');
           }}
           className={cn(
-            'rounded-xl border p-4 text-left transition-all cursor-pointer',
+            'panel-padding flex flex-col gap-3 rounded-xl border text-left transition-colors',
             filterStatus === 'revisado' && !focusedNoteId
               ? 'border-info bg-info-soft/40 shadow-xs ring-2 ring-info/50'
               : 'border-info/30 bg-info-soft/20 hover:bg-info-soft/30'
           )}
         >
           <div className="text-xs font-medium text-info">Revisados</div>
-          <div className="text-2xl font-bold text-info mt-1 tabular-nums">{counts.revisado}</div>
+          <div className="text-2xl font-bold leading-tight text-info tabular-nums">{counts.revisado}</div>
         </button>
 
         <button
           type="button"
+          aria-pressed={filterStatus === 'dominado' && !focusedNoteId}
           onClick={() => {
             if (focusedNoteId) setSearchParams({});
             setFilterStatus(filterStatus === 'dominado' ? '' : 'dominado');
           }}
           className={cn(
-            'rounded-xl border p-4 text-left transition-all cursor-pointer',
+            'panel-padding flex flex-col gap-3 rounded-xl border text-left transition-colors',
             filterStatus === 'dominado' && !focusedNoteId
               ? 'border-success bg-success-soft/40 shadow-xs ring-2 ring-success/50'
               : 'border-success/30 bg-success-soft/20 hover:bg-success-soft/30'
           )}
         >
           <div className="text-xs font-medium text-success">Dominados</div>
-          <div className="text-2xl font-bold text-success mt-1 tabular-nums">{counts.dominado}</div>
+          <div className="text-2xl font-bold leading-tight text-success tabular-nums">{counts.dominado}</div>
         </button>
       </div>
 
@@ -254,7 +258,7 @@ export function ErrorNotebookScreen() {
         title={
           <div className="flex items-center gap-2">
             <Filter className="size-4 text-fg-subtle" />
-            <span>Filtros do Caderno</span>
+            <span>Filtros</span>
           </div>
         }
         actions={
@@ -272,30 +276,22 @@ export function ErrorNotebookScreen() {
                 setFilterSearch('');
               }}
             >
-              {focusedNoteId ? 'Ver todos os erros' : 'Limpar Filtros'}
+              {focusedNoteId ? 'Ver todos os erros' : 'Limpar filtros'}
             </Button>
           )
         }
       >
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-          <div>
-            <label className="text-xs font-medium text-fg-subtle block mb-1">Buscar por palavra</label>
-            <div className="relative">
+        <div className="filter-grid">
+          <Field label="Buscar por palavra">
               <Input
                 type="text"
                 placeholder="Explicação, questão, tópico..."
                 value={filterSearch}
                 onChange={(e) => setFilterSearch(e.target.value)}
-                className="pr-9"
               />
-              <span className="pointer-events-none absolute inset-y-0 right-0 flex w-9 items-center justify-center text-fg-subtle">
-                <Search className="size-3.5" />
-              </span>
-            </div>
-          </div>
+          </Field>
 
-          <div>
-            <label className="text-xs font-medium text-fg-subtle block mb-1">Simulado / Prova</label>
+          <Field label="Simulado ou prova">
             <Select
               value={filterMockExamId}
               onChange={(e) => setFilterMockExamId(e.target.value)}
@@ -308,10 +304,9 @@ export function ErrorNotebookScreen() {
                 </option>
               ))}
             </Select>
-          </div>
+          </Field>
 
-          <div>
-            <label className="text-xs font-medium text-fg-subtle block mb-1">Disciplina</label>
+          <Field label="Disciplina">
             <Select
               value={filterDisciplineId}
               onChange={(e) => setFilterDisciplineId(e.target.value)}
@@ -323,10 +318,9 @@ export function ErrorNotebookScreen() {
                 </option>
               ))}
             </Select>
-          </div>
+          </Field>
 
-          <div>
-            <label className="text-xs font-medium text-fg-subtle block mb-1">Status</label>
+          <Field label="Status">
             <Select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
@@ -338,10 +332,9 @@ export function ErrorNotebookScreen() {
                 </option>
               ))}
             </Select>
-          </div>
+          </Field>
 
-          <div>
-            <label className="text-xs font-medium text-fg-subtle block mb-1">Motivo do Erro</label>
+          <Field label="Motivo do erro">
             <Select
               value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
@@ -353,7 +346,7 @@ export function ErrorNotebookScreen() {
                 </option>
               ))}
             </Select>
-          </div>
+          </Field>
         </div>
       </Card>
 
@@ -422,7 +415,7 @@ export function ErrorNotebookScreen() {
                         icon={<Check className="size-3.5 text-success" />}
                         onClick={() => handleStatusChange(note.id, 'dominado')}
                       >
-                        Marcar Dominado
+                        Marcar como dominado
                       </Button>
                     )}
                     {note.status === 'dominado' && (
@@ -432,7 +425,7 @@ export function ErrorNotebookScreen() {
                         icon={<RotateCcw className="size-3.5" />}
                         onClick={() => handleStatusChange(note.id, 'revisar')}
                       >
-                        Voltar a Revisar
+                        Voltar a revisar
                       </Button>
                     )}
                     <IconButton
@@ -510,7 +503,7 @@ export function ErrorNotebookScreen() {
         ) : (
           <EmptyState
             icon={<AlertOctagon className="size-8" />}
-            title="Nenhum registro encontrado no Caderno de Erros"
+            title="Nenhum erro encontrado"
             description="Cadastre questões que errou ou geraram dúvidas para agendar revisões espaçadas automáticas."
             action={
               <Button
@@ -519,7 +512,7 @@ export function ErrorNotebookScreen() {
                 icon={<Plus className="size-4" />}
                 onClick={openNewNote}
               >
-                Cadastrar Primeiro Erro
+                Registrar erro
               </Button>
             }
           />

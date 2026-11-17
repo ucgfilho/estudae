@@ -321,16 +321,16 @@ export function Select({
   const isPlaceholderSelected = !selectedOption || selectedOption.value === '';
 
   const sizeClasses = {
-    sm: 'h-7 px-2 py-1 text-xs rounded max-lg:h-10 max-lg:px-3 max-lg:text-sm',
-    md: 'h-9 px-3 py-2 text-sm rounded-md max-lg:h-11',
+    sm: 'control-height-sm px-3 text-sm',
+    md: 'control-height px-3 text-sm',
   };
 
   return (
-    <div className="relative w-full">
+    <div className="relative min-w-0 w-full">
       {/* Select nativo mantido oculto mas presente para compatibilidade com formulários e testes */}
       <select
         ref={nativeSelectRef}
-        id={selectId}
+        id={`${selectId}-native`}
         name={name}
         value={currentValue}
         onChange={(e) => {
@@ -353,7 +353,7 @@ export function Select({
       <button
         ref={triggerRef}
         type="button"
-        id={`${selectId}-trigger`}
+        id={selectId}
         role="combobox"
         aria-haspopup="listbox"
         aria-expanded={isOpen}
@@ -377,7 +377,7 @@ export function Select({
       >
         <span
           className={cn(
-            'truncate mr-2',
+            'min-w-0 truncate mr-2',
             isPlaceholderSelected ? 'text-fg-subtle font-normal' : 'text-fg font-medium'
           )}
         >

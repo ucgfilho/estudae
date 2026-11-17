@@ -66,13 +66,13 @@ export function Dialog({ open, onClose, title, description, children, footer, si
       {render && (
         <div className="flex max-h-[calc(100dvh-2rem)] max-sm:max-h-[92dvh] flex-col">
           <span aria-hidden className="mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-border-strong sm:hidden" />
-          <div className="relative flex items-start justify-between gap-4 border-b border-border px-5 py-4 pr-12 max-sm:px-4 max-sm:pt-2 max-sm:pr-14">
+          <div className="relative shrink-0 flex items-start justify-between gap-4 border-b border-border px-[var(--panel-padding)] py-4 pr-16 max-sm:pt-2">
             <div className="min-w-0">
-              <h2 id={titleId} className="text-base font-semibold">
+              <h2 id={titleId} className="section-title">
                 {title}
               </h2>
               {description && (
-                <div id={descId} className="mt-0.5 text-sm text-fg-muted">
+                <div id={descId} className="mt-1 text-sm leading-relaxed text-fg-muted">
                   {description}
                 </div>
               )}
@@ -85,9 +85,9 @@ export function Dialog({ open, onClose, title, description, children, footer, si
               className="absolute top-3.5 right-3.5 max-sm:top-1 max-sm:right-2"
             />
           </div>
-          <div className="overflow-y-auto overscroll-contain px-5 py-4 max-sm:px-4">{children}</div>
+          <div className="panel-padding min-h-0 overflow-y-auto overscroll-contain">{children}</div>
           {footer && (
-            <div className="flex flex-wrap justify-end gap-2 border-t border-border px-5 py-3 max-sm:px-4 max-sm:pb-[calc(0.75rem+env(safe-area-inset-bottom))] max-sm:[&>*]:flex-1">
+            <div className="flex shrink-0 flex-wrap justify-end gap-2 border-t border-border px-[var(--panel-padding)] py-4 max-sm:pb-[calc(1rem+env(safe-area-inset-bottom))] max-sm:[&>*]:flex-1">
               {footer}
             </div>
           )}

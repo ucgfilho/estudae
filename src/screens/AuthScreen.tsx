@@ -99,7 +99,7 @@ export function AuthScreen({ onAuthenticated }: AuthScreenProps) {
         </div>
 
         <div className="my-4 sm:my-8 lg:my-0 space-y-3 sm:space-y-5 max-w-lg relative z-10">
-          <div className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3.5 py-1 text-xs font-medium backdrop-blur-xs">
+          <div className="inline-flex max-w-full items-center gap-2 rounded-full bg-white/15 px-3.5 py-1.5 text-xs font-medium">
             <ShieldCheck className="size-4 text-[#f68b1f] shrink-0" />
             <span>Ciclo contínuo de estudos feito a partir do seu edital</span>
           </div>
@@ -148,7 +148,7 @@ export function AuthScreen({ onAuthenticated }: AuthScreenProps) {
         >
           <div className="space-y-1.5 text-center sm:text-left">
             <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-fg">
-              {mode === 'login' ? 'Acesse sua conta no estudaê' : 'Crie sua conta de estudos no estudaê'}
+              {mode === 'login' ? 'Acesse sua conta no estudaê' : 'Crie sua conta de estudos'}
             </h2>
             <p className="text-xs sm:text-sm text-fg-muted">
               {mode === 'login'
@@ -158,7 +158,7 @@ export function AuthScreen({ onAuthenticated }: AuthScreenProps) {
           </div>
 
           {/* Seletor de Modo */}
-          <div role="tablist" className="grid grid-cols-2 gap-1 rounded-xl bg-surface-muted p-1 border border-border">
+          <div role="tablist" aria-label="Acesso à plataforma" className="grid grid-cols-2 gap-1 rounded-xl bg-surface-muted p-1 border border-border">
             <button
               type="button"
               role="tab"
@@ -167,7 +167,7 @@ export function AuthScreen({ onAuthenticated }: AuthScreenProps) {
                 setMode('login');
                 setError(null);
               }}
-              className={`flex items-center justify-center gap-2 rounded-lg py-2 max-lg:py-2.5 max-lg:min-h-10 text-xs max-lg:text-sm font-semibold transition ${
+              className={`flex items-center justify-center gap-2 rounded-lg py-2 max-lg:py-2.5 max-lg:min-h-11 text-xs max-lg:text-sm font-semibold transition ${
                 mode === 'login'
                   ? 'bg-surface text-primary shadow-xs'
                   : 'text-fg-muted hover:text-fg'
@@ -184,14 +184,14 @@ export function AuthScreen({ onAuthenticated }: AuthScreenProps) {
                 setMode('register');
                 setError(null);
               }}
-              className={`flex items-center justify-center gap-2 rounded-lg py-2 max-lg:py-2.5 max-lg:min-h-10 text-xs max-lg:text-sm font-semibold transition ${
+              className={`flex items-center justify-center gap-2 rounded-lg py-2 max-lg:py-2.5 max-lg:min-h-11 text-xs max-lg:text-sm font-semibold transition ${
                 mode === 'register'
                   ? 'bg-surface text-primary shadow-xs'
                   : 'text-fg-muted hover:text-fg'
               }`}
             >
               <UserPlus className="size-3.5" />
-              Cadastrar novo
+              Cadastrar conta
             </button>
           </div>
 

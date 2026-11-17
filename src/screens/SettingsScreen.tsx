@@ -220,7 +220,7 @@ export function SettingsScreen() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="page-stack">
       <PageHeader
         title="Configurações e metas"
         description="Ajuste suas metas de estudo, intervalos de revisão, tema e cópias de segurança."
@@ -249,13 +249,13 @@ export function SettingsScreen() {
         title={
           <div className="flex items-center gap-2">
             <Target className="size-4 text-primary" />
-            <span>Metas Operacionais de Estudo</span>
+            <span>Metas de estudo</span>
           </div>
         }
-        description="Parâmetros de comparação utilizados nos painéis do dashboard e relatórios"
+        description="Defina as metas que acompanham seu progresso."
       >
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <Field label="Meta Diária de Estudo (minutos)" required hint="Padrão: 120 minutos (2 horas)">
+          <Field label="Meta diária de estudo (min)" required hint="Padrão: 120 minutos (2 horas)">
             <Input
               type="number"
               min="1"
@@ -266,7 +266,7 @@ export function SettingsScreen() {
             />
           </Field>
 
-          <Field label="Meta Semanal de Estudo (minutos)" required hint="Padrão: 840 minutos (14 horas)">
+          <Field label="Meta semanal de estudo (min)" required hint="Padrão: 840 minutos (14 horas)">
             <Input
               type="number"
               min="1"
@@ -277,7 +277,7 @@ export function SettingsScreen() {
             />
           </Field>
 
-          <Field label="Meta Operacional de Acerto (%)" required hint="Padrão: 80% de acerto em questões">
+          <Field label="Meta de acerto (%)" required hint="Padrão: 80% de acerto em questões">
             <Input
               type="number"
               min="1"
@@ -288,7 +288,7 @@ export function SettingsScreen() {
             />
           </Field>
 
-          <Field label="Meta Diária de Questões" hint="Opcional (deixe em branco se não quiser meta fixa)">
+          <Field label="Meta diária de questões" hint="Opcional. Deixe em branco para estudar sem uma meta fixa.">
             <Input
               type="number"
               min="1"
@@ -298,7 +298,7 @@ export function SettingsScreen() {
             />
           </Field>
 
-          <Field label="Meta de Conclusão do Edital (%)" hint="Opcional (ex: 90% dos tópicos finalizados)">
+          <Field label="Meta de conclusão do edital (%)" hint="Opcional. Exemplo: concluir 90% dos tópicos.">
             <Input
               type="number"
               min="1"
@@ -309,7 +309,7 @@ export function SettingsScreen() {
             />
           </Field>
 
-          <Field label="Data Prevista da Prova" hint="Opcional (não assume data fixa automaticamente)">
+          <Field label="Data da prova" hint="Opcional. Defina quando a data for confirmada.">
             <DateInput
               value={examDate}
               onChange={(e) => setExamDate(e.target.value)}
@@ -323,15 +323,15 @@ export function SettingsScreen() {
         title={
           <div className="flex items-center gap-2">
             <RotateCcw className="size-4 text-primary" />
-            <span>Repetição Espaçada e Interface</span>
+            <span>Revisões e aparência</span>
           </div>
         }
-        description="Ajuste os intervalos para geração automática de revisões e preferência visual"
+        description="Escolha quando revisar e como visualizar a plataforma."
       >
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field
-            label="Intervalos de Revisão (dias)"
-            hint="Valores padrão editáveis separados por vírgula (ex: 1, 7, 30)"
+            label="Intervalos de revisão (dias)"
+            hint="Separe os intervalos por vírgula. Exemplo: 1, 7, 30."
             required
           >
             <Input
@@ -343,11 +343,11 @@ export function SettingsScreen() {
             />
           </Field>
 
-          <Field label="Tema Visual da Interface">
+          <Field label="Tema da plataforma">
             <Select value={theme} onChange={(e) => setTheme(e.target.value as ThemePreference)}>
-              <option value="system">Padrão do Sistema Operacional</option>
-              <option value="light">Tema Claro (Light)</option>
-              <option value="dark">Tema Escuro (Dark)</option>
+              <option value="system">Seguir o sistema</option>
+              <option value="light">Claro</option>
+              <option value="dark">Escuro</option>
             </Select>
           </Field>
 
@@ -356,7 +356,7 @@ export function SettingsScreen() {
             checked={celebrationsEnabled}
             onChange={(e) => setCelebrationsEnabled(e.target.checked)}
             label="Animações de celebração ao concluir metas"
-            description="Confete ao finalizar sessões, bater a meta do dia, completar as sessões planejadas ou ir bem nas questões. Os avisos de conquista continuam aparecendo mesmo desativado. Aplicado imediatamente."
+            description="Mostra confetes nas conquistas. Os avisos continuam ativos sem as animações. A mudança é aplicada na hora."
           />
         </div>
       </Card>
@@ -366,14 +366,14 @@ export function SettingsScreen() {
         title={
           <div className="flex items-center gap-2">
             <Sparkles className="size-4 text-primary" />
-            <span>Inteligência Artificial (IA) e Modelos</span>
+            <span>Assistente de estudos</span>
           </div>
         }
-        description="Configure a chave de API para o assistente de estudos"
+        description="Adicione sua chave do Google Gemini para usar o assistente."
       >
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field
-            label="Chave de API do Google Gemini (API Key)"
+            label="Chave de API do Google Gemini"
             hint={
               <span className="inline-flex flex-wrap items-center gap-1">
                 <span>Opcional para o assistente de estudos.</span>
@@ -404,7 +404,7 @@ export function SettingsScreen() {
         title={
           <div className="flex items-center gap-2">
             <Database className="size-4 text-primary" />
-            <span>Persistência, Privacidade e Backup</span>
+            <span>Dados e cópias de segurança</span>
           </div>
         }
         description="Seus dados são salvos automaticamente e você pode exportar ou restaurar uma cópia de segurança a qualquer momento."
@@ -412,7 +412,7 @@ export function SettingsScreen() {
         <div className="space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-lg border border-border bg-surface-muted/30 p-4">
             <div>
-              <div className="font-semibold text-sm text-fg">Exportar Cópia de Segurança (JSON)</div>
+              <div className="font-semibold text-sm text-fg">Exportar cópia de segurança</div>
               <p className="text-xs text-fg-muted mt-0.5">
                 Gera um arquivo com todas as suas disciplinas, tópicos, sessões, questões e caderno de erros.
               </p>
@@ -423,13 +423,13 @@ export function SettingsScreen() {
               icon={<Download className="size-4" />}
               onClick={handleExportBackup}
             >
-              Baixar Backup JSON
+              Baixar cópia (JSON)
             </Button>
           </div>
 
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-lg border border-border bg-surface-muted/30 p-4">
             <div>
-              <div className="font-semibold text-sm text-fg">Restaurar Cópia de Segurança</div>
+              <div className="font-semibold text-sm text-fg">Restaurar cópia de segurança</div>
               <p className="text-xs text-fg-muted mt-0.5">
                 Importa um arquivo JSON previamente salvo. Os dados serão validados antes de qualquer sobrescrita.
               </p>
@@ -448,20 +448,20 @@ export function SettingsScreen() {
                 icon={<Upload className="size-4" />}
                 onClick={() => fileInputRef.current?.click()}
               >
-                Selecionar Arquivo JSON
+                Selecionar arquivo JSON
               </Button>
             </div>
           </div>
 
           <details className="group rounded-lg border border-danger/30 bg-danger-soft/5 p-4">
             <summary className="cursor-pointer text-xs font-semibold text-danger select-none flex items-center justify-between">
-              <span>Zona de risco — Reinicialização e exclusão permanente de dados</span>
+              <span>Excluir dados ou conta</span>
               <span className="text-[11px] font-normal text-fg-muted group-open:hidden">Expandir opções</span>
             </summary>
             <div className="mt-4 space-y-3 border-t border-danger/20 pt-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-lg border border-danger/25 bg-surface p-3.5">
                 <div>
-                  <div className="font-semibold text-sm text-fg">Reiniciar o Sistema</div>
+                  <div className="font-semibold text-sm text-fg">Reiniciar a plataforma</div>
                   <p className="text-xs text-fg-muted mt-0.5">
                     Apaga todos os registros de estudo, questões e sessões e recria as disciplinas iniciais.
                   </p>
@@ -473,14 +473,14 @@ export function SettingsScreen() {
                   onClick={() => setResetConfirmOpen(true)}
                   className="text-danger border-danger/30 hover:bg-danger-soft/30"
                 >
-                  Reiniciar Sistema
+                  Reiniciar plataforma
                 </Button>
               </div>
 
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-lg border border-danger/25 bg-surface p-3.5">
                 <div>
                   <div className="font-semibold text-sm text-fg">
-                    Excluir Minha Conta e Dados Pessoais (LGPD — Art. 18, VI)
+                    Excluir conta e dados pessoais
                   </div>
                   <p className="text-xs text-fg-muted mt-0.5">
                     Elimina permanentemente seu cadastro e todos os dados vinculados no banco de dados.
@@ -493,7 +493,7 @@ export function SettingsScreen() {
                   onClick={() => setDeleteAccountConfirmOpen(true)}
                   className="text-danger border-danger/30 hover:bg-danger-soft/30"
                 >
-                  Excluir Conta e Dados
+                  Excluir conta e dados
                 </Button>
               </div>
             </div>
@@ -509,7 +509,7 @@ export function SettingsScreen() {
             setRestoreConfirmOpen(false);
             setPendingBackup(null);
           }}
-          title="Confirmar Restauração de Backup?"
+          title="Restaurar cópia de segurança?"
           message={
             <div className="space-y-2">
               <p>
@@ -528,7 +528,7 @@ export function SettingsScreen() {
               </p>
             </div>
           }
-          confirmLabel="Restaurar e Sobrescrever"
+          confirmLabel="Substituir dados e restaurar"
           variant="danger"
           onConfirm={handleConfirmRestore}
           loading={loading}

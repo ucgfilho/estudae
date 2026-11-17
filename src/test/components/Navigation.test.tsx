@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from '../../App';
 import { db, ensureSeed } from '../../db/db';
@@ -59,7 +59,7 @@ describe('App Navigation, Auth Gate and Screen Integration', () => {
     expect(screen.getByRole('link', { name: /simulados/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /disciplinas/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /relatórios/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /configurações/i })).toBeInTheDocument();
+    expect(within(screen.getByRole('navigation', { name: 'Menu principal' })).getByRole('link', { name: /configurações/i })).toBeInTheDocument();
 
     const disciplines = await db.disciplines.toArray();
     expect(disciplines).toHaveLength(8);
@@ -131,7 +131,7 @@ describe('App Navigation, Auth Gate and Screen Integration', () => {
     });
 
     // 9. Configurações
-    await user.click(screen.getByRole('link', { name: /configurações/i }));
+    await user.click(within(screen.getByRole('navigation', { name: 'Menu principal' })).getByRole('link', { name: /configurações/i }));
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: /configurações/i })).toBeInTheDocument();
     });

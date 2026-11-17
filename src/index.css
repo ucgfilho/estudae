@@ -173,6 +173,12 @@
 
 @layer base {
   :root {
+    /* Escala compartilhada por páginas, cards, formulários e diálogos. */
+    --page-gap: 1.5rem;
+    --panel-padding: 1rem;
+    --control-height: 2.5rem;
+    --control-height-sm: 2.25rem;
+    --control-height-lg: 2.75rem;
     --canvas: #f7f7f5;
     --surface: #ffffff;
     --surface-muted: #f0f0ec;
@@ -181,7 +187,7 @@
     --border-strong: #cfcfc8;
     --fg: #141413;
     --fg-muted: #52524e;
-    --fg-subtle: #70706a;
+    --fg-subtle: #666660;
 
     --primary: #b8001f;
     --primary-hover: #9a001a;
@@ -212,11 +218,11 @@
     --border-strong: #42423d;
     --fg: #f3f3ef;
     --fg-muted: #b5b5ad;
-    --fg-subtle: #85857c;
+    --fg-subtle: #a3a399;
 
-    --primary: #e02841;
-    --primary-hover: #f03a53;
-    --primary-fg: #ffffff;
+    --primary: #f06478;
+    --primary-hover: #ff7b8d;
+    --primary-fg: #25060c;
     --primary-soft: #331217;
     --accent: #ff9a1f;
     --accent-fg: #121212;
@@ -231,7 +237,7 @@
     --info: #4299e1;
     --info-soft: #0f263c;
 
-    --ring: #e02841;
+    --ring: #f06478;
   }
 
   html {
@@ -271,6 +277,19 @@
   body {
     @apply bg-canvas text-fg font-sans antialiased;
     font-feature-settings: 'cv11', 'tnum';
+    font-size: 0.875rem;
+    line-height: 1.5;
+  }
+  h1, h2, h3 {
+    text-wrap: balance;
+    overflow-wrap: anywhere;
+  }
+  p {
+    overflow-wrap: anywhere;
+  }
+  button:disabled,
+  [role='button'][aria-disabled='true'] {
+    cursor: not-allowed;
   }
   :focus-visible {
     outline: 2px solid var(--ring);
@@ -307,11 +326,49 @@
  * sempre vençam. Borda fixa de 1px e foco só com ring (sem mudar o tamanho).
  */
 @layer components {
+  .page-stack {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: var(--page-gap);
+  }
+  .panel-padding {
+    padding: var(--panel-padding);
+  }
+  .section-title {
+    @apply text-base font-semibold leading-6 text-fg;
+  }
+  .stats-grid,
+  .filter-grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr));
+  }
+  .filter-grid {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+    align-items: end;
+  }
+  .stats-grid > *,
+  .filter-grid > * {
+    min-width: 0;
+  }
   .skip-link {
     @apply sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-md focus:bg-primary focus:px-3.5 focus:py-2 focus:text-xs focus:font-semibold focus:text-primary-fg focus:shadow-md focus:outline-2 focus:outline-offset-2 focus:outline-ring;
   }
   .input-base {
-    @apply w-full rounded-md border border-border bg-surface px-3 py-1.5 text-sm text-fg transition-colors placeholder:text-fg-subtle focus-visible:border-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-50;
+    @apply min-w-0 w-full rounded-lg border border-border-strong bg-surface px-3 py-2 text-sm leading-5 text-fg transition-colors placeholder:text-fg-subtle focus-visible:border-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .control-height {
+    min-height: var(--control-height);
+  }
+  .control-height-sm {
+    min-height: var(--control-height-sm);
+  }
+  .control-height-lg {
+    min-height: var(--control-height-lg);
+  }
+  .input-base[aria-invalid='true'] {
+    border-color: var(--danger);
   }
   /* Campo com ícone à esquerda: o espaço do ícone é reservado pelo padding. */
   .input-with-icon {
@@ -336,6 +393,11 @@ input[type='number']::-webkit-outer-spin-button {
  * - `touch-action: manipulation` remove o atraso de toque duplo nos controles.
  */
 @media (width < 64rem) {
+  :root {
+    --control-height: 2.75rem;
+    --control-height-sm: 2.75rem;
+    --control-height-lg: 3rem;
+  }
   input:not([type='checkbox']):not([type='radio']):not([type='range']),
   textarea,
   select {
@@ -347,6 +409,15 @@ input[type='number']::-webkit-outer-spin-button {
   label {
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
+  }
+}
+
+@media (width >= 40rem) {
+  :root {
+    --panel-padding: 1.25rem;
+  }
+  .stats-grid {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr));
   }
 }
 

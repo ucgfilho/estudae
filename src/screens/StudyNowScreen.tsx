@@ -254,7 +254,7 @@ export function StudyNowScreen() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="page-stack">
       <PageHeader
         title="Estudar agora"
         description="Inicie o cronômetro para registrar seu tempo de estudo com foco."
@@ -280,14 +280,14 @@ export function StudyNowScreen() {
                   aria-hidden
                 />
                 <span>
-                  {activeTimer.status === 'running' ? 'Sessão em Andamento' : 'Sessão Pausada'}
+                  {activeTimer.status === 'running' ? 'Sessão em andamento' : 'Sessão pausada'}
                 </span>
               </div>
             }
             actions={
               <div className="flex items-center gap-2">
                 <Badge tone={activeTimer.status === 'running' ? 'primary' : 'warning'}>
-                  {activeTimer.sessionId ? 'Sessão Planejada' : 'Sessão Avulsa'}
+                  {activeTimer.sessionId ? 'Sessão planejada' : 'Sessão avulsa'}
                 </Badge>
                 <Button
                   variant="secondary"
@@ -392,7 +392,7 @@ export function StudyNowScreen() {
                   onClick={handleFinish}
                   loading={loading}
                 >
-                  Finalizar e Salvar
+                  Finalizar e salvar
                 </Button>
 
                 <Button
@@ -490,14 +490,14 @@ export function StudyNowScreen() {
                     icon={<CheckCircle className="size-4" aria-hidden />}
                     onClick={() => setQuestionModalOpen(true)}
                   >
-                    Lançar Questões Desta Sessão
+                    Registrar questões
                   </Button>
                   <Button
                     variant="secondary"
                     size="sm"
                     onClick={() => setErrorModalOpen(true)}
                   >
-                    Cadastrar Erro / Aprendizado
+                    Registrar erro
                   </Button>
                   {nextBlock && (
                     <Button
@@ -521,7 +521,7 @@ export function StudyNowScreen() {
           <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
             {/* Option A: Start Planned Session (Prioritized when schedule exists — Decision Reduction) */}
             <Card
-              title="Iniciar Sessão Planejada"
+              title="Iniciar sessão planejada"
               description="Execute uma sessão planejada manualmente no calendário."
               className={cn(plannedCandidates.length > 0 && 'border-primary/40')}
             >
@@ -581,7 +581,7 @@ export function StudyNowScreen() {
                     disabled={!selectedPlannedSessionId || loading}
                     loading={loading}
                   >
-                    Iniciar Sessão Selecionada
+                    Iniciar sessão selecionada
                   </Button>
                 </div>
               ) : (
@@ -589,7 +589,7 @@ export function StudyNowScreen() {
                   <Calendar className="mx-auto size-8 text-fg-subtle" />
                   <p className="text-sm font-medium text-fg">Nenhuma sessão planejada pendente</p>
                   <p className="text-xs text-fg-muted max-w-xs mx-auto">
-                    Você pode planejar novas sessões pelo Calendário, ou iniciar uma sessão avulsa ao lado.
+                    Planeje uma sessão no calendário ou use o formulário de sessão avulsa.
                   </p>
                 </div>
               )}
@@ -597,7 +597,7 @@ export function StudyNowScreen() {
 
             {/* Option B: Start Ad-Hoc Session */}
             <Card
-              title="Iniciar Sessão Avulsa"
+              title="Iniciar sessão avulsa"
               description="Estude livremente qualquer disciplina fora do planejamento do dia."
             >
               <div className="space-y-4">
@@ -620,16 +620,17 @@ export function StudyNowScreen() {
 
                 <div className="space-y-1.5">
                   <div className="flex flex-wrap items-center justify-between gap-1">
-                    <label className="text-sm font-medium text-fg">Tópico ou Conteúdo</label>
+                    <label htmlFor="study-topic" className="text-sm font-medium text-fg">Tópico ou conteúdo</label>
                     <button
                       type="button"
                       onClick={() => setTopicModalOpen(true)}
                       className="text-xs font-semibold text-primary hover:underline inline-flex items-center gap-1 max-lg:min-h-9 max-lg:px-2"
                     >
-                      <Plus className="size-3" /> Criar Tópico Rápido
+                      <Plus className="size-3" /> Criar tópico
                     </button>
                   </div>
                   <Select
+                    id="study-topic"
                     value={adHocTopicId}
                     onChange={(e) => setAdHocTopicId(e.target.value)}
                     disabled={filteredTopics.length === 0}
@@ -649,7 +650,7 @@ export function StudyNowScreen() {
                         onClick={() => setTopicModalOpen(true)}
                         className="text-primary hover:underline max-lg:py-1.5 inline-block"
                       >
-                        Clique aqui para adicionar um tópico.
+                        Adicionar tópico
                       </button>
                     </p>
                   )}
@@ -672,9 +673,10 @@ export function StudyNowScreen() {
                         <button
                           key={mins}
                           type="button"
+                          aria-pressed={adHocPlannedMinutes === String(mins)}
                           onClick={() => setAdHocPlannedMinutes(String(mins))}
                           className={cn(
-                            'rounded-md px-2 py-0.5 max-lg:px-3.5 max-lg:py-2 max-lg:min-h-9 text-xs font-medium transition-colors',
+                            'rounded-md px-2 py-0.5 max-lg:px-3.5 max-lg:py-2 max-lg:min-h-11 text-xs font-medium transition-colors',
                             adHocPlannedMinutes === String(mins)
                               ? 'bg-primary text-primary-fg font-semibold'
                               : 'bg-surface-muted text-fg-muted hover:bg-surface-muted/80 hover:text-fg'

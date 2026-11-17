@@ -108,7 +108,7 @@ export function AppLayout({ onSwitchContestScreen }: AppLayoutProps) {
 
   const mobileQuickLinks = [
     { to: '/', label: 'Início', icon: LayoutDashboard },
-    { to: '/estudar-agora', label: 'Foco', icon: Timer },
+    { to: '/estudar-agora', label: 'Estudar', icon: Timer },
     { to: '/cronograma', label: 'Ciclo', icon: CalendarClock },
     { to: '/calendario', label: 'Agenda', icon: Calendar },
     { to: '/disciplinas', label: 'Edital', icon: BookMarked },
@@ -134,10 +134,10 @@ export function AppLayout({ onSwitchContestScreen }: AppLayoutProps) {
         />
         <main
           id="main-content"
-          className="flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain px-3 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-7 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:pb-[calc(6rem+env(safe-area-inset-bottom))] lg:pb-20 focus:outline-hidden"
+          className="flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:pb-[calc(6rem+env(safe-area-inset-bottom))] lg:pb-20 focus:outline-hidden"
           tabIndex={-1}
         >
-          <div className="mx-auto max-w-7xl 2xl:max-w-[1440px]">
+          <div className="mx-auto w-full min-w-0 max-w-7xl">
             <Outlet />
           </div>
         </main>

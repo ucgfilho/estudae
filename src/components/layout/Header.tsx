@@ -114,7 +114,7 @@ export function Header({
             className="lg:hidden shrink-0"
           />
 
-          <BnbLogo className="size-7 shrink-0 lg:hidden rounded-lg" />
+          <BnbLogo className={cn('size-7 shrink-0 lg:hidden rounded-lg', timer && 'max-sm:hidden')} />
 
           <div className="hidden md:flex items-center gap-2">
             <CalendarDays className="size-4 text-fg-subtle" />
@@ -142,7 +142,7 @@ export function Header({
             <button
               type="button"
               onClick={() => navigate('/estudar-agora')}
-              className="inline-flex h-8 max-lg:h-10 items-center gap-1.5 sm:gap-2 rounded-md border border-primary/30 bg-primary-soft px-2.5 text-xs font-semibold text-primary transition-colors hover:brightness-95"
+              className="inline-flex control-height items-center gap-1.5 sm:gap-2 rounded-lg border border-primary/30 bg-primary-soft px-2 text-xs font-semibold text-primary transition-colors hover:brightness-95"
               title="Sessão de estudo em andamento — Clique para abrir o cronômetro"
             >
               <TimerIcon className="size-3.5" aria-hidden="true" />
@@ -159,20 +159,21 @@ export function Header({
               data-testid="header-profile-button"
               onClick={() => setProfileOpen(true)}
               title={`Editar perfil (${authUser.name} · Patente: ${rankState.rank.name} · ${rankState.xp} XP)`}
-              className="inline-flex h-9 max-lg:h-10 items-center gap-2 max-sm:gap-1.5 rounded-md border border-border bg-surface hover:bg-surface-muted px-2.5 max-sm:px-2 py-1.5 text-xs font-medium text-fg transition-colors cursor-pointer"
+              className="inline-flex control-height items-center gap-2 rounded-lg border border-border bg-surface hover:bg-surface-muted px-2.5 max-sm:px-2 py-1.5 text-xs font-medium text-fg transition-colors cursor-pointer"
+              aria-label="Editar perfil"
             >
               <span
                 data-testid="header-rank-icon"
                 title={`Patente atual: ${rankState.rank.name} (${rankState.xp} XP)`}
                 className={cn(
-                  'inline-flex size-5 shrink-0 items-center justify-center rounded-md bg-surface-muted ring-1',
+                  'hidden sm:inline-flex size-5 shrink-0 items-center justify-center rounded-md bg-surface-muted ring-1',
                   rankTier.ring,
                 )}
               >
                 <RankIcon className={cn('size-3.5', rankTier.color)} aria-hidden="true" />
               </span>
               <Avatar name={authUser.name || authUser.email} src={authUser.avatarUrl} size="xs" />
-              <span className="hidden md:inline-block max-w-28 truncate font-medium text-fg">
+              <span className="hidden md:inline-block max-w-24 truncate font-medium text-fg">
                 {authUser.name}
               </span>
               <Pencil className="hidden sm:block size-3 text-fg-subtle shrink-0" aria-hidden="true" />
@@ -180,13 +181,13 @@ export function Header({
           )}
 
           <IconButton
-            label={`Alterar tema (atual: ${settings?.theme ?? 'sistema'})`}
+            label={`Alterar tema (atual: ${{ light: 'claro', dark: 'escuro', system: 'sistema' }[settings?.theme ?? 'system']})`}
             icon={themeIcon}
             onClick={cycleTheme}
           />
 
-          <Link to="/configuracoes" className="max-sm:hidden">
-            <IconButton label="Configurações" icon={<SettingsIcon className="size-4" />} />
+          <Link to="/configuracoes" aria-label="Configurações" title="Configurações" className="hidden size-10 items-center justify-center rounded-lg text-fg-muted transition-colors hover:bg-surface-muted hover:text-fg lg:inline-flex">
+            <SettingsIcon className="size-4" aria-hidden="true" />
           </Link>
 
           <IconButton

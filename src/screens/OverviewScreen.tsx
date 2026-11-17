@@ -124,7 +124,7 @@ export function OverviewScreen() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="page-stack">
       <PageHeader
         title="Visão geral"
         description={
@@ -148,7 +148,7 @@ export function OverviewScreen() {
               icon={<CheckCircle className="size-4" aria-hidden="true" />}
               onClick={() => setQuestionModalOpen(true)}
             >
-              Lançar questões
+              Registrar questões
             </Button>
           </div>
         }
@@ -268,9 +268,9 @@ export function OverviewScreen() {
           description={
             overdueSessionsInWeek.length > 0
               ? overdueSessionsInWeek.length === 1
-                ? '1 bloco de dias anteriores aguarda execução.'
-                : `${overdueSessionsInWeek.length} blocos de dias anteriores aguardam execução.`
-              : 'Nenhum bloco atrasado nesta semana.'
+                ? '1 sessão de dias anteriores aguarda conclusão.'
+                : `${overdueSessionsInWeek.length} sessões de dias anteriores aguardam conclusão.`
+              : 'Nenhuma sessão atrasada nesta semana.'
           }
           actions={
             <button
@@ -335,7 +335,7 @@ export function OverviewScreen() {
       </div>
 
       {/* Resumo enxuto de ritmo e progresso (Informações Progressivas — sem gráficos pesados no painel de execução) */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="stats-grid">
         <StatCard
           label="Ritmo na semana"
           value={formatMinutes(weekDoneMinutes)}
@@ -352,7 +352,7 @@ export function OverviewScreen() {
         </StatCard>
 
         <StatCard
-          label="Precisão em questões"
+          label="Taxa de acerto"
           value={formatPercent(questionTotals.accuracy)}
           hint={`${formatInteger(questionTotals.correct)} acertos em ${formatInteger(questionTotals.total)} resolvidas`}
           icon={<TrendingUp className="size-4" />}

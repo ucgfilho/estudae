@@ -12,12 +12,11 @@ const variants: Record<Variant, string> = {
   subtle: 'bg-primary-soft text-primary hover:brightness-95 active:brightness-90 border border-transparent dark:hover:brightness-115',
 };
 
-// Em telas < lg (smartphones/tablets) os alvos de toque crescem para ≥ 40–44px;
-// no desktop as dimensões originais são preservadas.
+// A mesma escala de altura é usada por campos, selects e botões.
 const sizes: Record<Size, string> = {
-  sm: 'h-8 px-3 text-xs gap-1.5 max-lg:h-10 max-lg:px-3.5',
-  md: 'h-9 px-3.5 text-sm gap-2 max-lg:h-11 max-lg:px-4',
-  lg: 'h-11 px-5 text-sm gap-2 max-lg:h-12',
+  sm: 'control-height-sm px-3 text-sm gap-1.5',
+  md: 'control-height px-4 text-sm gap-2',
+  lg: 'control-height-lg px-5 text-sm gap-2',
 };
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -38,7 +37,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       disabled={disabled || loading}
       aria-busy={loading || undefined}
       className={cn(
-        'inline-flex shrink-0 items-center justify-center rounded-md font-medium whitespace-nowrap transition-colors',
+        'inline-flex max-w-full shrink-0 items-center justify-center rounded-lg font-medium leading-5 text-center transition-colors',
         'disabled:cursor-not-allowed disabled:opacity-55',
         variants[variant],
         sizes[size],
@@ -47,7 +46,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       {...rest}
     >
       {(loading || icon) && (
-        <span className="inline-flex size-4 shrink-0 items-center justify-center" aria-hidden={loading || undefined}>
+        <span className="inline-flex size-4 shrink-0 items-center justify-center" aria-hidden="true">
           {loading ? (
             <span className="size-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
           ) : (
@@ -68,10 +67,10 @@ export interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement>
 }
 
 const iconSizes: Record<'xs' | Size, string> = {
-  xs: 'size-5 max-lg:size-9',
-  sm: 'size-8 max-lg:size-10',
-  md: 'size-9 max-lg:size-10',
-  lg: 'size-11',
+  xs: 'size-6 max-lg:size-11',
+  sm: 'size-8 max-lg:size-11',
+  md: 'size-10 max-lg:size-11',
+  lg: 'size-11 max-lg:size-12',
 };
 
 /** Botão somente com ícone; `label` é obrigatório para leitores de tela. */
@@ -86,14 +85,14 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(functio
       aria-label={label}
       title={label}
       className={cn(
-        'inline-flex shrink-0 items-center justify-center rounded-md transition-colors disabled:cursor-not-allowed disabled:opacity-45',
+        'inline-flex shrink-0 items-center justify-center rounded-lg transition-colors disabled:cursor-not-allowed disabled:opacity-45',
         variants[variant],
         iconSizes[size],
         className,
       )}
       {...rest}
     >
-      {icon}
+      <span className="inline-flex" aria-hidden="true">{icon}</span>
     </button>
   );
 });

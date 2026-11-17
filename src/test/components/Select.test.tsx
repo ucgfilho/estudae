@@ -2,9 +2,27 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Select } from '../../components/ui/Select';
-import { Checkbox, Radio } from '../../components/ui/Form';
+import { Checkbox, Field, Radio } from '../../components/ui/Form';
 
 describe('Custom Select Component (UI-UX Pro Max)', () => {
+  it('associates the visible trigger with its field label, hint and error', async () => {
+    const user = userEvent.setup();
+    render(
+      <Field label="Disciplina" hint="Escolha uma disciplina." error="Selecione uma opção.">
+        <Select defaultValue="">
+          <option value="">Selecione</option>
+          <option value="sql">Banco de dados</option>
+        </Select>
+      </Field>,
+    );
+    const trigger = screen.getByRole('combobox', { name: 'Disciplina' });
+    expect(screen.getByLabelText('Disciplina')).toBe(trigger);
+    expect(trigger).toHaveAccessibleDescription('Escolha uma disciplina. Selecione uma opção.');
+    expect(trigger).toHaveAttribute('aria-invalid', 'true');
+    await user.click(screen.getByText('Disciplina', { selector: 'label' }));
+    expect(trigger).toHaveFocus();
+  });
+
   it('renders custom trigger button with selected option label', () => {
     render(
       <Select value="opt2" onChange={vi.fn()}>

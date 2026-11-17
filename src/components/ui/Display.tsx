@@ -16,7 +16,7 @@ const toneClasses: Record<Tone, string> = {
 
 export function Badge({ tone = 'neutral', icon, children, className }: { tone?: Tone; icon?: ReactNode; children: ReactNode; className?: string }) {
   return (
-    <span className={cn('inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium whitespace-nowrap', toneClasses[tone], className)}>
+    <span className={cn('inline-flex max-w-full items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium leading-5 break-words', toneClasses[tone], className)}>
       {icon}
       {children}
     </span>
@@ -43,24 +43,24 @@ export function Card({
   as?: 'section' | 'div' | 'article';
 }) {
   return (
-    <Tag className={cn('relative rounded-xl border border-border bg-surface', className)}>
+    <Tag className={cn('relative min-w-0 rounded-xl border border-border bg-surface', className)}>
       {(title || actions || onClose) && (
         <header
           className={cn(
-            'relative flex flex-wrap items-start justify-between gap-2 border-b border-border px-4 py-3',
-            onClose && 'pr-11 max-lg:pr-12',
+            'relative flex flex-wrap items-start justify-between gap-3 border-b border-border px-[var(--panel-padding)] py-4',
+            onClose && 'pr-14',
           )}
         >
-          <div className="min-w-0">
-            {title && <h2 className="text-sm font-semibold text-fg">{title}</h2>}
-            {description && <p className="mt-0.5 text-xs text-fg-subtle">{description}</p>}
+          <div className="min-w-0 flex-1 basis-48">
+            {title && <h2 className="section-title">{title}</h2>}
+            {description && <p className="mt-1 max-w-prose text-sm leading-relaxed text-fg-muted">{description}</p>}
           </div>
-          {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+          {actions && <div className="flex max-w-full flex-wrap items-center gap-2">{actions}</div>}
           {onClose && (
             <button
               type="button"
               onClick={onClose}
-              className="absolute top-2.5 right-2.5 max-lg:top-1.5 max-lg:right-1.5 inline-flex size-7 max-lg:size-10 shrink-0 items-center justify-center rounded-md text-fg-muted hover:text-fg hover:bg-surface-muted transition-colors focus:outline-none focus:ring-2 focus:ring-ring cursor-pointer"
+              className="absolute top-3 right-3 max-lg:top-2 max-lg:right-2 inline-flex size-8 max-lg:size-11 shrink-0 items-center justify-center rounded-lg text-fg-muted hover:text-fg hover:bg-surface-muted transition-colors focus-visible:ring-2 focus-visible:ring-ring"
               aria-label="Fechar"
               title="Fechar"
             >
@@ -69,7 +69,7 @@ export function Card({
           )}
         </header>
       )}
-      <div className={cn('p-4', bodyClassName)}>{children}</div>
+      <div className={cn('panel-padding min-w-0', bodyClassName)}>{children}</div>
     </Tag>
   );
 }
@@ -105,11 +105,11 @@ export function ProgressBar({ value, max, label, tone = 'primary', className, sh
 
 export function EmptyState({ icon, title, description, action, className }: { icon?: ReactNode; title: string; description?: ReactNode; action?: ReactNode; className?: string }) {
   return (
-    <div className={cn('flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border px-4 py-8 text-center', className)}>
+    <div className={cn('flex min-w-0 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border-strong bg-surface px-5 py-10 text-center', className)}>
       {icon && <div className="text-fg-subtle" aria-hidden>{icon}</div>}
-      <p className="text-sm font-medium text-fg">{title}</p>
-      {description && <div className="max-w-md text-sm text-fg-muted">{description}</div>}
-      {action && <div className="mt-2">{action}</div>}
+      <p className="text-base font-semibold text-fg">{title}</p>
+      {description && <div className="max-w-md text-sm leading-relaxed text-fg-muted">{description}</div>}
+      {action && <div className="mt-1 max-w-full">{action}</div>}
     </div>
   );
 }
@@ -211,7 +211,7 @@ export function Alert({
   return (
     <div
       className={cn(
-        'relative flex items-start gap-2.5 rounded-lg px-3.5 py-2.5 pr-9 max-lg:pr-11 text-sm max-sm:flex-wrap',
+        'relative flex items-start gap-3 rounded-xl p-4 pr-14 text-sm leading-relaxed max-sm:flex-wrap',
         toneClasses[tone],
         className,
       )}
@@ -226,7 +226,7 @@ export function Alert({
       <button
         type="button"
         onClick={handleClose}
-        className="absolute top-2 right-2 max-lg:top-1 max-lg:right-1 inline-flex size-6 max-lg:size-10 shrink-0 items-center justify-center rounded-md text-current/80 hover:text-current hover:bg-black/10 dark:hover:bg-white/15 transition-all focus:outline-none focus:ring-2 focus:ring-current cursor-pointer"
+        className="absolute top-2 right-2 inline-flex size-8 max-lg:size-11 shrink-0 items-center justify-center rounded-lg text-current/80 hover:text-current hover:bg-black/10 dark:hover:bg-white/15 transition-colors focus-visible:ring-2 focus-visible:ring-current"
         aria-label="Fechar mensagem"
         title="Fechar mensagem"
       >
@@ -238,15 +238,15 @@ export function Alert({
 
 export function PageHeader({ title, description, actions }: { title: string; description?: ReactNode; actions?: ReactNode }) {
   return (
-    <div className="mb-5 flex flex-wrap items-start justify-between gap-4 max-sm:gap-3 max-sm:mb-4 border-b border-border/80 pb-4">
-      <div className="min-w-0 space-y-1">
-        <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-fg leading-tight">{title}</h1>
-        {description && <p className="max-w-2xl text-sm text-fg-muted leading-relaxed">{description}</p>}
+    <header className="flex flex-wrap items-start justify-between gap-4 border-b border-border pb-5">
+      <div className="min-w-0 flex-1 basis-72 space-y-2">
+        <h1 className="text-2xl sm:text-[1.75rem] font-bold tracking-tight text-fg leading-tight">{title}</h1>
+        {description && <p className="max-w-prose text-sm text-fg-muted leading-relaxed">{description}</p>}
       </div>
       {actions && (
-        <div className="flex max-w-full flex-wrap items-center gap-2 shrink-0 max-sm:w-full max-sm:[&>*]:max-w-full">{actions}</div>
+        <div className="flex max-w-full flex-wrap items-center gap-2 max-sm:w-full [&>*]:max-w-full">{actions}</div>
       )}
-    </div>
+    </header>
   );
 }
 
@@ -264,13 +264,13 @@ export function StatCard({
   children?: ReactNode;
 }) {
   return (
-    <div className="flex min-w-0 flex-col justify-between gap-2 rounded-xl border border-border bg-surface p-4 max-sm:p-3.5">
+    <div className="panel-padding flex min-w-0 flex-col gap-3 rounded-xl border border-border bg-surface">
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs font-medium text-fg-muted">{label}</p>
         {icon && <span className="text-fg-subtle" aria-hidden="true">{icon}</span>}
       </div>
-      <p className="text-2xl font-bold tracking-tight text-fg tabular-nums leading-none">{value}</p>
-      {hint && <div className="text-xs text-fg-subtle">{hint}</div>}
+      <p className="text-2xl font-bold tracking-tight text-fg tabular-nums leading-tight break-words">{value}</p>
+      {hint && <div className="text-xs leading-relaxed text-fg-muted">{hint}</div>}
       {children}
     </div>
   );
@@ -284,7 +284,7 @@ interface SegmentedOption<T extends string> {
 /** Grupo de opções exclusivas (botões com aria-pressed). */
 export function Segmented<T extends string>({ value, onChange, options, label }: { value: T; onChange: (v: T) => void; options: SegmentedOption<T>[]; label: string }) {
   return (
-    <div role="group" aria-label={label} className="inline-flex max-w-full overflow-x-auto rounded-lg border border-border bg-surface-muted p-0.5">
+    <div role="group" aria-label={label} className="inline-flex max-w-full flex-wrap gap-1 rounded-xl border border-border bg-surface-muted p-1">
       {options.map((o) => (
         <button
           key={o.value}
@@ -292,7 +292,7 @@ export function Segmented<T extends string>({ value, onChange, options, label }:
           aria-pressed={value === o.value}
           onClick={() => onChange(o.value)}
           className={cn(
-            'rounded-md px-3 py-1 max-lg:py-2.5 max-lg:px-3.5 max-lg:text-sm whitespace-nowrap text-xs font-medium transition-colors',
+            'min-h-8 max-lg:min-h-11 rounded-lg px-3 whitespace-nowrap text-sm font-medium transition-colors',
             value === o.value ? 'bg-surface text-fg shadow-sm' : 'text-fg-muted hover:text-fg',
           )}
         >
