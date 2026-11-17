@@ -55,6 +55,11 @@ export function Header({
   );
   const rankTier = tierOf(rankState.rankIndex);
   const RankIcon = rankTier.icon;
+  const rankIconColor = rankState.rankIndex < 4 ? 'text-slate-700'
+    : rankState.rankIndex < 8 ? 'text-blue-700'
+    : rankState.rankIndex < 12 ? 'text-amber-800'
+    : rankState.rankIndex < 15 ? 'text-violet-700'
+    : 'text-emerald-800';
 
   useEffect(() => {
     return subscribeAuth(() => {
@@ -170,7 +175,7 @@ export function Header({
                   rankTier.ring,
                 )}
               >
-                <RankIcon className={cn('size-3.5', rankTier.color)} aria-hidden="true" />
+                <RankIcon className={cn('size-3.5', rankIconColor)} strokeWidth={2.5} aria-hidden="true" />
               </span>
               <Avatar name={authUser.name || authUser.email} src={authUser.avatarUrl} size="xs" />
               <span className="hidden md:inline-block max-w-24 truncate font-medium text-fg">

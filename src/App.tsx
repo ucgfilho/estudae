@@ -53,6 +53,23 @@ export function App() {
       });
   }, [activeToken]);
 
+  useEffect(() => {
+    if (!activeToken || activeToken === TEST_BYPASS_TOKEN) return;
+    const refresh = () => {
+      if (document.visibilityState === 'visible') {
+        void ensureSeed().catch((err) => console.error('Falha ao atualizar dados:', err));
+      }
+    };
+    window.addEventListener('online', refresh);
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', refresh);
+    return () => {
+      window.removeEventListener('online', refresh);
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', refresh);
+    };
+  }, [activeToken]);
+
   if (!session) {
     return (
       <ToastProvider>

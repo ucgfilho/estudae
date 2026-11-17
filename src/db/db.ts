@@ -1,10 +1,12 @@
 import {
   fetchUserWorkspaceFromApi,
   getAuthSession,
+  getActiveContestScopeId,
   getAuthToken,
   getWorkspaceCacheKey,
   hasUnsyncedChanges,
   replaceUserWorkspaceInApi,
+  retryPendingMutations,
   syncBatchMutationsToApi,
   TEST_BYPASS_TOKEN,
   waitForPendingSync,
@@ -282,7 +284,7 @@ export class AppDatabase {
       } else {
         this.persistLocalWorkspaceCache();
         this.notifyListeners();
-        void syncBatchMutationsToApi([mutation], () => this.exportWorkspaceSnapshot());
+        void syncBatchMutationsToApi([mutation]);
       }
     };
 
@@ -418,7 +420,7 @@ export class AppDatabase {
       window.localStorage.setItem(
         key,
         JSON.stringify({
-          schemaRevision: 2,
+          schemaRevision: 3,
           savedAt: Date.now(),
           explicitlyClearedTables: this.explicitlyClearedTables,
           deletedIds: serializedDeleted,
@@ -514,7 +516,7 @@ export class AppDatabase {
         this.pendingMutations = [];
         this.persistLocalWorkspaceCache();
         this.notifyListeners();
-        void syncBatchMutationsToApi(batch, () => this.exportWorkspaceSnapshot());
+        void syncBatchMutationsToApi(batch);
       }
     }
   }
@@ -570,64 +572,9 @@ export function reconcileWorkspaces(
   remote: Record<DataTableName, unknown[]>,
   localEnvelope: LocalWorkspaceCacheEnvelope,
 ): { workspace: Record<DataTableName, unknown[]>; needsRemoteHeal: boolean } {
-  const out = {} as Record<DataTableName, unknown[]>;
-  let needsRemoteHeal = false;
-  const isAuthoritativeLocal = localEnvelope.schemaRevision === 2;
-
-  for (const tableName of DATA_TABLES) {
-    const localRows = Array.isArray(localEnvelope.data[tableName])
-      ? (localEnvelope.data[tableName] as { id: string; weekIndex?: number }[])
-      : [];
-    const remoteRows = Array.isArray(remote[tableName])
-      ? (remote[tableName] as { id: string; weekIndex?: number }[])
-      : [];
-    const isCleared = Boolean(localEnvelope.explicitlyClearedTables?.[tableName]);
-    const deletedSet = new Set(localEnvelope.deletedIds?.[tableName] ?? []);
-    const validRemoteRows = isCleared ? [] : remoteRows.filter((r) => !deletedSet.has(r.id));
-
-    let merged: unknown[];
-    if (tableName === 'settings' && validRemoteRows.length > 0 && localRows.length > 0) {
-      const remoteSettings = validRemoteRows[0] as unknown as Settings;
-      const localSettings = localRows[0] as unknown as Settings;
-      merged = [
-        {
-          ...(isAuthoritativeLocal ? localSettings : remoteSettings),
-          geminiApiKey: localSettings.geminiApiKey || remoteSettings.geminiApiKey || '',
-        },
-      ];
-    } else if (isCleared && localRows.length === 0) {
-      merged = [];
-    } else if (localRows.length === 0) {
-      merged = validRemoteRows;
-    } else if (validRemoteRows.length === 0 || isAuthoritativeLocal) {
-      merged = localRows;
-    } else {
-      // Cache legado (anterior a schemaRevision 2): preserva registros locais e recupera registros remotos ausentes
-      const seenIds = new Set(localRows.map((r) => r.id));
-      const seenWeekIndices =
-        tableName === 'weeklyPlans'
-          ? new Set(localRows.map((r) => r.weekIndex).filter((w) => w !== undefined))
-          : null;
-      merged = [...localRows];
-      for (const r of validRemoteRows) {
-        if (seenIds.has(r.id)) continue;
-        if (seenWeekIndices && r.weekIndex !== undefined && seenWeekIndices.has(r.weekIndex)) {
-          continue;
-        }
-        merged.push(r);
-      }
-    }
-
-    out[tableName] = merged;
-    if (
-      merged.length !== remoteRows.length ||
-      JSON.stringify(merged) !== JSON.stringify(remoteRows)
-    ) {
-      needsRemoteHeal = true;
-    }
-  }
-
-  return { workspace: out, needsRemoteHeal };
+  // A cache is only a fallback for offline reads. Pending writes are replayed separately.
+  void localEnvelope;
+  return { workspace: structuredClone(remote), needsRemoteHeal: false };
 }
 
 export function shouldRecoverFromLocalCache(
@@ -652,21 +599,17 @@ export function shouldRecoverFromLocalCache(
   return false;
 }
 
-let inFlightEnsureSeed: Promise<void> | null = null;
+const inFlightEnsureSeed = new Map<string, Promise<void>>();
 
-/**
- * Sincroniza o estado em memória com o banco de dados do usuário autenticado (quando houver token)
- * e garante que as oito disciplinas e as configurações existam.
- */
+/** Carrega o banco da conta/concurso atual e aplica os padrões locais. */
 export async function ensureSeed(database: AppDatabase = db): Promise<void> {
-  if (database === db) {
-    if (inFlightEnsureSeed) return inFlightEnsureSeed;
-    inFlightEnsureSeed = runEnsureSeed(database).finally(() => {
-      inFlightEnsureSeed = null;
-    });
-    return inFlightEnsureSeed;
-  }
-  return runEnsureSeed(database);
+  if (database !== db) return runEnsureSeed(database);
+  const key = `${getAuthToken() ?? ''}:${getActiveContestScopeId()}`;
+  const pending = inFlightEnsureSeed.get(key);
+  if (pending) return pending;
+  const run = runEnsureSeed(database).finally(() => inFlightEnsureSeed.delete(key));
+  inFlightEnsureSeed.set(key, run);
+  return run;
 }
 
 /**
@@ -816,9 +759,9 @@ export async function ensureLocalDefaults(database: AppDatabase = db): Promise<v
 
 async function runEnsureSeed(database: AppDatabase): Promise<void> {
   const token = getAuthToken();
+  const scope = getActiveContestScopeId();
   const isRealAuthenticatedDb =
     database === db && Boolean(token) && token !== TEST_BYPASS_TOKEN;
-  let needsRemoteHeal = false;
 
   if (database === db && token) {
     await waitForPendingSync();
@@ -830,12 +773,41 @@ async function runEnsureSeed(database: AppDatabase): Promise<void> {
       );
     }
     try {
+      await retryPendingMutations();
+      const version = database.getSnapshotVersion();
       const remoteWorkspace = await fetchUserWorkspaceFromApi();
+      if (token !== getAuthToken() || scope !== getActiveContestScopeId()) return;
+      // An edit made while the GET was in flight must not be replaced by its stale response.
+      if (database.getSnapshotVersion() !== version) return runEnsureSeed(database);
       if (remoteWorkspace) {
+        if (localEnvelope && (localEnvelope.schemaRevision ?? 0) < 3) {
+          const completed = (localEnvelope.data.reviews ?? []) as ReviewTask[];
+          const remoteReviews = remoteWorkspace.reviews as ReviewTask[];
+          const recovered = completed.filter((review) => review.status === 'concluida' &&
+            remoteReviews.some((remote) => remote.id === review.id && remote.status === 'pendente'));
+          if (recovered.length > 0) {
+            const noteIds = new Set(recovered.map((review) => review.errorNoteId).filter(Boolean));
+            const relatedReviews = completed.filter((review) => noteIds.has(review.errorNoteId) &&
+              !remoteReviews.some((remote) => remote.id === review.id));
+            const notes = (localEnvelope.data.errorNotes as ErrorNote[]).filter((note) => noteIds.has(note.id));
+            await syncBatchMutationsToApi([
+              { table: 'reviews', action: 'upsert', records: [...recovered, ...relatedReviews] },
+              { table: 'errorNotes', action: 'upsert', records: notes },
+            ]);
+            if (!hasUnsyncedChanges()) {
+              remoteWorkspace.reviews = remoteReviews.map((review) =>
+                recovered.find((local) => local.id === review.id) ?? review).concat(relatedReviews);
+              remoteWorkspace.errorNotes = (remoteWorkspace.errorNotes as ErrorNote[]).map((note) =>
+                notes.find((local) => local.id === note.id) ?? note);
+            }
+          }
+        }
+        if (!hasUnsyncedChanges()) database.setSyncMetadata();
         if (localEnvelope) {
-          const reconciled = reconcileWorkspaces(remoteWorkspace, localEnvelope);
+          const reconciled = hasUnsyncedChanges()
+            ? { workspace: localEnvelope.data, needsRemoteHeal: false }
+            : reconcileWorkspaces(remoteWorkspace, localEnvelope);
           database.hydrateFromWorkspace(reconciled.workspace);
-          needsRemoteHeal = reconciled.needsRemoteHeal || hasUnsyncedChanges();
         } else {
           database.hydrateFromWorkspace(remoteWorkspace);
         }
@@ -864,17 +836,13 @@ async function runEnsureSeed(database: AppDatabase): Promise<void> {
     database.topics.toArraySync().length === 0 &&
     !database.isTableExplicitlyCleared('topics')
   ) {
-    database.topics.replaceAllSilent(DEFAULT_TOPICS);
-    needsRemoteHeal = true;
+    await database.topics.bulkPut(DEFAULT_TOPICS);
   }
 
   await ensureLocalDefaults(database);
 
   if (isRealAuthenticatedDb) {
     database.persistLocalWorkspaceCache();
-    if (needsRemoteHeal || hasUnsyncedChanges()) {
-      await replaceUserWorkspaceInApi(database.exportWorkspaceSnapshot());
-    }
   }
   await waitForPendingSync();
 }

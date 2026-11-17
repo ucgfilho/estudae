@@ -5,6 +5,7 @@ import { buildNextReviewTask, buildReviewTasks, nextPendingDate, postponedDueDat
 import { isValidDateKey, todayKey, type DateKey } from '../lib/dates';
 import { createId, nowIso } from '../lib/utils';
 import { getSettings } from './settings';
+import { hasUnsyncedChanges, waitForPendingSync } from './auth';
 import { ValidationError } from './sessions';
 
 /* ------------------------------ Questões ------------------------------ */
@@ -363,6 +364,10 @@ export async function completeReview(id: string, flashcardStats?: { hits: number
 
     await syncErrorNoteReviewDate(review.errorNoteId, true);
   });
+  await waitForPendingSync();
+  if (hasUnsyncedChanges()) {
+    throw new ValidationError('Revisão salva neste dispositivo. Não foi possível confirmar no servidor; ela será reenviada ao reconectar.');
+  }
 }
 
 export async function reopenReview(id: string): Promise<void> {

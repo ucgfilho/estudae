@@ -125,7 +125,7 @@ export function setAuthSession(session: AuthSessionDto | null): void {
           const keysToRemove: string[] = [];
           for (let i = 0; i < window.localStorage.length; i++) {
             const k = window.localStorage.key(i);
-            if (k && (k === cachePrefix || k.startsWith(`${cachePrefix}::`))) {
+            if (k && (k === cachePrefix || (k.startsWith(`${cachePrefix}::`) && !k.endsWith(':pending-batches')))) {
               keysToRemove.push(k);
             }
           }
@@ -263,6 +263,7 @@ export async function fetchUserWorkspaceFromApi(): Promise<Record<DataTableName,
   if (!token || token === TEST_BYPASS_TOKEN) return null;
   const res = await fetch('/api/study-data', {
     method: 'GET',
+    cache: 'no-store',
     headers: buildBearerHeaders(),
   });
   const body = await parseApiJson<{ data: Record<DataTableName, unknown[]> }>(res);
@@ -270,11 +271,16 @@ export async function fetchUserWorkspaceFromApi(): Promise<Record<DataTableName,
 }
 
 const UNSYNCED_KEY = 'bnb_unsynced_changes_v1';
+function unsyncedKey(): string {
+  return `${UNSYNCED_KEY}:${getAuthSession()?.user.email.toLowerCase() ?? ''}:${getActiveContestScopeId()}`;
+}
 
 /** Indica que alguma alteração local não chegou ao servidor (ex.: lote rejeitado ou em trânsito). */
 export function hasUnsyncedChanges(): boolean {
   try {
-    return typeof window !== 'undefined' && window.localStorage?.getItem(UNSYNCED_KEY) === '1';
+    const key = pendingBatchKey();
+    return (key !== null && readPendingBatches(key).length > 0) ||
+      (typeof window !== 'undefined' && window.localStorage?.getItem(unsyncedKey()) === '1');
   } catch {
     return false;
   }
@@ -283,8 +289,8 @@ export function hasUnsyncedChanges(): boolean {
 export function setUnsyncedChanges(value: boolean): void {
   try {
     if (typeof window === 'undefined' || !window.localStorage) return;
-    if (value) window.localStorage.setItem(UNSYNCED_KEY, '1');
-    else window.localStorage.removeItem(UNSYNCED_KEY);
+    if (value) window.localStorage.setItem(unsyncedKey(), '1');
+    else window.localStorage.removeItem(unsyncedKey());
   } catch {
     // Ignore storage errors
   }
@@ -317,32 +323,10 @@ export async function waitForPendingSync(): Promise<void> {
   await syncQueue;
 }
 
-function isRemoteMissingLocalRecords(
-  remote: Record<DataTableName, unknown[]>,
-  local: Record<DataTableName, unknown[]>,
-): boolean {
-  const tables: DataTableName[] = [
-    'topics',
-    'sessions',
-    'weeklyPlans',
-    'questionLogs',
-    'errorNotes',
-    'reviews',
-    'mockExams',
-    'timer',
-  ];
-  for (const table of tables) {
-    if ((local[table]?.length ?? 0) !== (remote[table]?.length ?? 0)) {
-      return true;
-    }
-  }
-  return false;
-}
-
-async function putWorkspaceDirect(workspace: Record<DataTableName, unknown[]>): Promise<boolean> {
+async function putWorkspaceDirect(workspace: Record<DataTableName, unknown[]>, headers: Record<string, string>): Promise<boolean> {
   const res = await fetch('/api/study-data/workspace', {
     method: 'PUT',
-    headers: buildBearerHeaders(),
+    headers,
     body: JSON.stringify(workspace),
   });
   return res.ok;
@@ -353,9 +337,13 @@ export async function replaceUserWorkspaceInApi(
 ): Promise<boolean> {
   const token = getAuthToken();
   if (!token || token === TEST_BYPASS_TOKEN) return false;
+  const headers = buildBearerHeaders();
+  const key = pendingBatchKey();
+  const superseded = new Set(key ? readPendingBatches(key).map((batch) => batch.id) : []);
   return enqueueSyncTask(async () => {
     try {
-      const ok = await putWorkspaceDirect(workspace);
+      const ok = await putWorkspaceDirect(workspace, headers);
+      if (ok && key) storePendingBatches(key, readPendingBatches(key).filter((batch) => !superseded.has(batch.id)));
       hasSyncFailure = !ok;
       if (!ok) {
         setUnsyncedChanges(true);
@@ -370,52 +358,95 @@ export async function replaceUserWorkspaceInApi(
   });
 }
 
+interface PendingBatch {
+  id: string;
+  operations: RemoteTableMutation[];
+}
+
+function pendingBatchKey(): string | null {
+  const email = getAuthSession()?.user.email;
+  return email ? `${getWorkspaceCacheKey(email)}:pending-batches` : null;
+}
+
+function readPendingBatches(key: string): PendingBatch[] {
+  try {
+    return JSON.parse(window.localStorage.getItem(key) || '[]') as PendingBatch[];
+  } catch {
+    return [];
+  }
+}
+
+function storePendingBatches(key: string, batches: PendingBatch[]): void {
+  // API keys stay out of browser storage. On replay, keep the server's key.
+  const safe = batches.map((batch) => ({ ...batch, operations: batch.operations.map((op) =>
+    op.table === 'settings' && op.action === 'upsert'
+      ? { ...op, records: op.records.map((record) => {
+          const safeRecord = { ...(record as Record<string, unknown>) };
+          delete safeRecord.geminiApiKey;
+          return safeRecord;
+        }) }
+      : op,
+  ) }));
+  window.localStorage.setItem(key, JSON.stringify(safe));
+}
+
+async function sendPendingBatch(
+  key: string,
+  batch: PendingBatch,
+  headers: Record<string, string>,
+): Promise<boolean> {
+  try {
+    const res = await fetch('/api/study-data/batch', {
+      method: 'POST', headers, body: JSON.stringify({ operations: batch.operations }),
+    });
+    if (!res.ok) throw new Error(`Erro ao salvar alterações (${res.status}).`);
+    storePendingBatches(key, readPendingBatches(key).filter((item) => item.id !== batch.id));
+    hasSyncFailure = readPendingBatches(key).length > 0;
+    return true;
+  } catch (err) {
+    hasSyncFailure = true;
+    setUnsyncedChanges(true);
+    console.error('Falha ao sincronizar alterações com o banco de dados:', err);
+    return false;
+  }
+}
+
+/** Reenvia somente operações não confirmadas, sem substituir dados de outros dispositivos. */
+export async function retryPendingMutations(): Promise<void> {
+  const key = pendingBatchKey();
+  if (!key || !getAuthToken() || getAuthToken() === TEST_BYPASS_TOKEN) return;
+  const headers = buildBearerHeaders();
+  await enqueueSyncTask(async () => {
+    for (const batch of readPendingBatches(key)) {
+      if (batch.operations.some((op) => op.table === 'settings' && op.action === 'upsert')) {
+        const res = await fetch('/api/study-data', { headers });
+        if (!res.ok) { hasSyncFailure = true; return; }
+        const body = await res.json() as { data: Record<DataTableName, unknown[]> };
+        const settings = body.data.settings[0] as { geminiApiKey?: string } | undefined;
+        batch.operations = batch.operations.map((op) => op.table === 'settings' && op.action === 'upsert'
+          ? { ...op, records: op.records.map((record) => ({
+              ...(record as object), geminiApiKey: settings?.geminiApiKey || '',
+            })) }
+          : op);
+      }
+      if (!await sendPendingBatch(key, batch, headers)) return;
+    }
+    hasSyncFailure = false;
+  });
+}
+
 export async function syncBatchMutationsToApi(
   operations: readonly RemoteTableMutation[],
-  getLocalSnapshot?: () => Record<DataTableName, unknown[]>,
 ): Promise<void> {
   const token = getAuthToken();
-  if (!token || token === TEST_BYPASS_TOKEN || operations.length === 0) return;
+  const key = pendingBatchKey();
+  if (!token || token === TEST_BYPASS_TOKEN || !key || operations.length === 0) return;
+  const headers = buildBearerHeaders();
+  const batch: PendingBatch = { id: crypto.randomUUID(), operations: structuredClone([...operations]) };
+  storePendingBatches(key, [...readPendingBatches(key), batch]);
   return enqueueSyncTask(async () => {
-    try {
-      const res = await fetch('/api/study-data/batch', {
-        method: 'POST',
-        headers: buildBearerHeaders(),
-        body: JSON.stringify({ operations }),
-      });
-      if (!res.ok && res.status !== 401) {
-        hasSyncFailure = true;
-        setUnsyncedChanges(true);
-        console.error('Servidor rejeitou alterações; serão reenviadas ao recarregar.', res.status);
-        return;
-      }
-      if (res.status === 401) {
-        const meRes = await fetch('/api/auth/me', {
-          method: 'GET',
-          headers: buildBearerHeaders(),
-        }).catch(() => null);
-        if (meRes && meRes.status === 401) {
-          setAuthSession(null);
-        }
-        return;
-      }
-      if (res.ok && getLocalSnapshot) {
-        const body = (await res.json().catch(() => null)) as {
-          data?: Record<DataTableName, unknown[]>;
-        } | null;
-        const localSnapshot = getLocalSnapshot();
-        if (body?.data && isRemoteMissingLocalRecords(body.data, localSnapshot)) {
-          const healed = await putWorkspaceDirect(localSnapshot);
-          hasSyncFailure = !healed;
-          if (!healed) setUnsyncedChanges(true);
-          return;
-        }
-      }
-      hasSyncFailure = false;
-    } catch (err) {
-      hasSyncFailure = true;
-      setUnsyncedChanges(true);
-      console.error('Falha ao sincronizar alterações com o banco de dados:', err);
-    }
+    // Keep ordering: later operations cannot acknowledge an earlier failed batch.
+    if (readPendingBatches(key)[0]?.id !== batch.id) { hasSyncFailure = true; return; }
+    await sendPendingBatch(key, batch, headers);
   });
 }

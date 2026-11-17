@@ -36383,6 +36383,7 @@ var sessionDtoSchema = object({
 });
 var timerDtoSchema = object({
 	id: literal("active"),
+	cycleStudy: boolean().optional(),
 	sessionId: string().nullable(),
 	status: _enum(["running", "paused"]),
 	startedAt: number().nullable(),
@@ -36488,8 +36489,8 @@ var settingsDtoSchema = object({
 		"system"
 	]),
 	examDate: nullableDateKey,
-	scheduleStartDate: nullableDateKey,
-	scheduleWeeks: number().int().positive(),
+	scheduleStartDate: nullableDateKey.optional(),
+	scheduleWeeks: number().int().positive().optional(),
 	distribution: record(string(), nonNegInt),
 	geminiApiKey: string().optional(),
 	aiProvider: _enum(["builtin", "gemini"]).optional(),
@@ -36775,6 +36776,7 @@ CREATE TABLE IF NOT EXISTS timer_states (
   user_id TEXT NOT NULL,
   id TEXT NOT NULL DEFAULT 'active',
   session_id TEXT NULL,
+  cycle_study INTEGER NULL CHECK (cycle_study IN (0, 1)),
   status TEXT NOT NULL CHECK (status IN ('running', 'paused')),
   started_at INTEGER NULL,
   first_started_at INTEGER NOT NULL,
@@ -36931,6 +36933,9 @@ var SqliteDatabaseClient = class {
 			this.db.exec("PRAGMA synchronous = NORMAL;");
 		}
 		this.db.exec(RELATIONAL_SCHEMA_SQL);
+		try {
+			this.db.exec("ALTER TABLE timer_states ADD COLUMN cycle_study INTEGER NULL;");
+		} catch {}
 		try {
 			this.db.exec("ALTER TABLE users ADD COLUMN avatar_url TEXT NULL;");
 		} catch {}
@@ -37304,8 +37309,6 @@ var DEFAULT_SETTINGS = {
 	],
 	theme: "system",
 	examDate: null,
-	scheduleStartDate: null,
-	scheduleWeeks: 24,
 	distribution: {
 		portugues: 120,
 		raciocinio: 120,
@@ -37751,7 +37754,7 @@ var MongoStudyDataRepository = class {
 				rlsVersion: 1,
 				updatedAt: (/* @__PURE__ */ new Date()).toISOString()
 			};
-			await this.collection().updateOne(rlsFilter, { $set: doc }, { upsert: true });
+			await this.collection().updateOne(rlsFilter, { $setOnInsert: doc }, { upsert: true });
 			return;
 		}
 		assertWorkspaceDocumentOwnership(existing, userId);
@@ -37768,7 +37771,10 @@ var MongoStudyDataRepository = class {
 			}];
 			needsUpdate = true;
 		}
-		if (needsUpdate) await this.collection().updateOne(rlsFilter, { $set: {
+		if (needsUpdate) await this.collection().updateOne({
+			...rlsFilter,
+			encryptedPayload: existing.encryptedPayload
+		}, { $set: {
 			encryptedPayload: this.serializeAndEncryptWorkspace(ctx.ownerId, workspace),
 			updatedAt: (/* @__PURE__ */ new Date()).toISOString()
 		} });
@@ -37830,25 +37836,39 @@ var MongoStudyDataRepository = class {
 		await this.collection().deleteMany(cascadeFilter);
 	}
 	async applyBatch(userId, operations) {
-		const workspace = await this.getWorkspace(userId);
-		for (const op of operations) if (op.action === "clear") workspace[op.table] = [];
-		else if (op.action === "delete") {
-			const idSet = new Set(op.ids);
-			workspace[op.table] = workspace[op.table].filter((item) => !idSet.has(item.id));
-		} else if (op.action === "upsert") {
-			const validated = validateTableRecords(op.table, op.records);
-			const currentList = [...workspace[op.table]];
-			const indexMap = new Map(currentList.map((item, idx) => [item.id, idx]));
-			for (const item of validated) if (indexMap.has(item.id)) {
-				const idx = indexMap.get(item.id);
-				currentList[idx] = item;
-			} else {
-				currentList.push(item);
-				indexMap.set(item.id, currentList.length - 1);
+		await this.ensureUserSeed(userId);
+		for (let attempt = 0; attempt < 10; attempt++) {
+			const filter = buildWorkspaceRlsFilter(userId);
+			const doc = await this.collection().findOne(filter);
+			if (!doc) throw new ConflictError("Workspace indisponível. Tente novamente.");
+			const ctx = assertWorkspaceDocumentOwnership(doc, userId);
+			const workspace = this.decryptAndDeserializeWorkspace(ctx.ownerId, doc.encryptedPayload);
+			for (const op of operations) if (op.action === "clear") workspace[op.table] = [];
+			else if (op.action === "delete") {
+				const idSet = new Set(op.ids);
+				workspace[op.table] = workspace[op.table].filter((item) => !idSet.has(item.id));
+			} else if (op.action === "upsert") {
+				const validated = validateTableRecords(op.table, op.records);
+				const currentList = [...workspace[op.table]];
+				const indexMap = new Map(currentList.map((item, idx) => [item.id, idx]));
+				for (const item of validated) if (indexMap.has(item.id)) {
+					const idx = indexMap.get(item.id);
+					currentList[idx] = item;
+				} else {
+					currentList.push(item);
+					indexMap.set(item.id, currentList.length - 1);
+				}
+				workspace[op.table] = currentList;
 			}
-			workspace[op.table] = currentList;
+			if ((await this.collection().updateOne({
+				...filter,
+				encryptedPayload: doc.encryptedPayload
+			}, { $set: {
+				encryptedPayload: this.serializeAndEncryptWorkspace(ctx.ownerId, workspace),
+				updatedAt: (/* @__PURE__ */ new Date()).toISOString()
+			} })).matchedCount === 1) return;
 		}
-		await this.replaceWorkspace(userId, workspace);
+		throw new ConflictError("Dados alterados em outro dispositivo. Tente novamente.");
 	}
 	async upsertTable(userId, table, records) {
 		await this.applyBatch(userId, [{
@@ -38283,8 +38303,8 @@ var SqlStudyDataRepository = class {
 		for (const t of items) this.db.run(`INSERT INTO timer_states (
            user_id, id, session_id, status, started_at, first_started_at,
            accumulated_seconds, planned_seconds, discipline_id, topic_id,
-           objective, notes, updated_at
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           objective, notes, updated_at, cycle_study
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(user_id, id) DO UPDATE SET
            session_id = excluded.session_id,
            status = excluded.status,
@@ -38296,7 +38316,8 @@ var SqlStudyDataRepository = class {
            topic_id = excluded.topic_id,
            objective = excluded.objective,
            notes = excluded.notes,
-           updated_at = excluded.updated_at`, [
+           updated_at = excluded.updated_at,
+           cycle_study = excluded.cycle_study`, [
 			userId,
 			t.id,
 			t.sessionId,
@@ -38309,7 +38330,8 @@ var SqlStudyDataRepository = class {
 			t.topicId,
 			t.objective,
 			t.notes,
-			t.updatedAt
+			t.updatedAt,
+			t.cycleStudy === void 0 ? null : Number(t.cycleStudy)
 		]);
 	}
 	upsertQuestionLogs(userId, items) {
@@ -38486,8 +38508,8 @@ var SqlStudyDataRepository = class {
 			JSON.stringify(s.reviewIntervals),
 			s.theme,
 			s.examDate,
-			s.scheduleStartDate,
-			s.scheduleWeeks,
+			s.scheduleStartDate ?? null,
+			s.scheduleWeeks ?? 24,
 			JSON.stringify(s.distribution),
 			this.cipher ? this.cipher.encrypt(s.geminiApiKey ?? "") : s.geminiApiKey ?? "",
 			s.aiProvider ?? "builtin",
@@ -38615,7 +38637,7 @@ var SqlStudyDataRepository = class {
 	}
 	getTimers(userId) {
 		return this.db.all(`SELECT session_id, status, started_at, first_started_at, accumulated_seconds,
-              planned_seconds, discipline_id, topic_id, objective, notes, updated_at
+              planned_seconds, discipline_id, topic_id, objective, notes, updated_at, cycle_study
        FROM timer_states
        WHERE user_id = ?`, [userId]).map((r) => ({
 			id: ACTIVE_TIMER_ID,
@@ -38629,7 +38651,8 @@ var SqlStudyDataRepository = class {
 			topicId: r.topic_id,
 			objective: r.objective,
 			notes: r.notes,
-			updatedAt: r.updated_at
+			updatedAt: r.updated_at,
+			...r.cycle_study === null ? {} : { cycleStudy: Boolean(r.cycle_study) }
 		}));
 	}
 	getQuestionLogs(userId) {

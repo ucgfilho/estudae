@@ -468,7 +468,7 @@ function createInMemoryMongoDbMock(): {
         },
         updateOne: async (
           filter: Record<string, unknown>,
-          update: { $set?: Record<string, unknown>; $unset?: Record<string, unknown> },
+          update: { $set?: Record<string, unknown>; $setOnInsert?: Record<string, unknown>; $unset?: Record<string, unknown> },
           opts?: { upsert?: boolean },
         ) => {
           let existing: Record<string, unknown> | undefined;
@@ -484,6 +484,9 @@ function createInMemoryMongoDbMock(): {
           const next: Record<string, unknown> = existing
             ? structuredClone(existing)
             : { _id: filter._id };
+          if (!existing && update.$setOnInsert) {
+            Object.assign(next, structuredClone(update.$setOnInsert));
+          }
           if (update.$set) {
             Object.assign(next, structuredClone(update.$set));
           }
@@ -534,6 +537,26 @@ describe('MongoDB Row-Level Security (RLS) & Zero Explicit Data at Rest', () => 
     expect((await reopened.getWorkspace('user-cycle')).timer).toEqual(saved.timer);
     expect((await reopened.getWorkspace('user-cycle')).sessions).toEqual(saved.sessions);
     expect((await reopened.getWorkspace('another-user')).sessions).toHaveLength(0);
+  });
+
+  it('preserva a conclusão de revisão quando outro dispositivo grava simultaneamente', async () => {
+    const { db } = createInMemoryMongoDbMock();
+    const first = new MongoStudyDataRepository(db, cipher);
+    const second = new MongoStudyDataRepository(db, cipher);
+    await first.initIndexes();
+    const review = {
+      id: 'review-concurrent', disciplineId: 'portugues', topicId: null, errorNoteId: null,
+      title: 'Revisão', dueDate: '2026-11-17', intervalDays: 1,
+      status: 'pendente', completedAt: null, createdAt: '2026-11-16T10:00:00Z',
+    };
+    await first.upsertTable('user-concurrent', 'reviews', [review]);
+    await Promise.all([
+      first.upsertTable('user-concurrent', 'reviews', [{ ...review, status: 'concluida', completedAt: '2026-11-17T10:00:00Z' }]),
+      second.upsertTable('user-concurrent', 'sessions', [cycleSession]),
+    ]);
+    const saved = await second.getWorkspace('user-concurrent');
+    expect(saved.reviews[0].status).toBe('concluida');
+    expect(saved.sessions).toEqual([cycleSession]);
   });
 
   it('enforces zero explicit PII in MongoDB users collection with Blind Indexing and AAD tenant encryption', async () => {

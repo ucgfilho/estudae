@@ -1,4 +1,5 @@
 import type { Db } from 'mongodb';
+import { ConflictError } from '../errors/AppError';
 import { DEFAULT_DISCIPLINES, DEFAULT_SETTINGS } from '../../src/db/seed';
 import {
   SETTINGS_ID,
@@ -276,7 +277,7 @@ export class MongoStudyDataRepository implements IStudyDataRepository {
         rlsVersion: 1,
         updatedAt: new Date().toISOString(),
       };
-      await this.collection().updateOne(rlsFilter, { $set: doc }, { upsert: true });
+      await this.collection().updateOne(rlsFilter, { $setOnInsert: doc }, { upsert: true });
       return;
     }
 
@@ -296,7 +297,7 @@ export class MongoStudyDataRepository implements IStudyDataRepository {
     }
 
     if (needsUpdate) {
-      await this.collection().updateOne(rlsFilter, {
+      await this.collection().updateOne({ ...rlsFilter, encryptedPayload: existing.encryptedPayload }, {
         $set: {
           encryptedPayload: this.serializeAndEncryptWorkspace(ctx.ownerId, workspace),
           updatedAt: new Date().toISOString(),
@@ -383,35 +384,50 @@ export class MongoStudyDataRepository implements IStudyDataRepository {
     userId: string,
     operations: readonly TableMutationOperationDto[],
   ): Promise<void> {
-    const workspace = await this.getWorkspace(userId);
+    await this.ensureUserSeed(userId);
+    for (let attempt = 0; attempt < 10; attempt++) {
+      const filter = buildWorkspaceRlsFilter(userId);
+      const doc = await this.collection().findOne(filter);
+      if (!doc) throw new ConflictError('Workspace indisponível. Tente novamente.');
+      const ctx = assertWorkspaceDocumentOwnership(doc, userId);
+      const workspace = this.decryptAndDeserializeWorkspace(ctx.ownerId, doc.encryptedPayload);
 
-    for (const op of operations) {
-      if (op.action === 'clear') {
-        (workspace[op.table] as unknown[]) = [];
-      } else if (op.action === 'delete') {
-        const idSet = new Set(op.ids);
-        (workspace[op.table] as unknown[]) = (workspace[op.table] as { id: string }[]).filter(
-          (item) => !idSet.has(item.id),
-        );
-      } else if (op.action === 'upsert') {
-        const validated = validateTableRecords(op.table, op.records) as { id: string }[];
-        const currentList = [...(workspace[op.table] as { id: string }[])];
-        const indexMap = new Map(currentList.map((item, idx) => [item.id, idx]));
+      for (const op of operations) {
+        if (op.action === 'clear') {
+          (workspace[op.table] as unknown[]) = [];
+        } else if (op.action === 'delete') {
+          const idSet = new Set(op.ids);
+          (workspace[op.table] as unknown[]) = (workspace[op.table] as { id: string }[]).filter(
+            (item) => !idSet.has(item.id),
+          );
+        } else if (op.action === 'upsert') {
+          const validated = validateTableRecords(op.table, op.records) as { id: string }[];
+          const currentList = [...(workspace[op.table] as { id: string }[])];
+          const indexMap = new Map(currentList.map((item, idx) => [item.id, idx]));
 
-        for (const item of validated) {
-          if (indexMap.has(item.id)) {
-            const idx = indexMap.get(item.id)!;
-            currentList[idx] = item;
-          } else {
-            currentList.push(item);
-            indexMap.set(item.id, currentList.length - 1);
+          for (const item of validated) {
+            if (indexMap.has(item.id)) {
+              const idx = indexMap.get(item.id)!;
+              currentList[idx] = item;
+            } else {
+              currentList.push(item);
+              indexMap.set(item.id, currentList.length - 1);
+            }
           }
+          (workspace[op.table] as unknown[]) = currentList;
         }
-        (workspace[op.table] as unknown[]) = currentList;
       }
-    }
 
-    await this.replaceWorkspace(userId, workspace);
+      const result = await this.collection().updateOne(
+        { ...filter, encryptedPayload: doc.encryptedPayload },
+        { $set: {
+          encryptedPayload: this.serializeAndEncryptWorkspace(ctx.ownerId, workspace),
+          updatedAt: new Date().toISOString(),
+        } },
+      );
+      if (result.matchedCount === 1) return;
+    }
+    throw new ConflictError('Dados alterados em outro dispositivo. Tente novamente.');
   }
 
   public async upsertTable(

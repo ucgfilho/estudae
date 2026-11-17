@@ -1,7 +1,7 @@
 import { startCycleTimer } from '../../services/timer';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { db, ensureSeed, resetDatabase } from '../../db/db';
-import { setAuthSession } from '../../services/auth';
+import { setAuthSession, waitForPendingSync } from '../../services/auth';
 import {
   createSession,
   rescheduleSession,
@@ -729,7 +729,7 @@ describe('services/persistence & workflows', () => {
     }
   });
 
-  it('preserves discipline topics, edits, and deletions across page reloads on Vercel even when server returns empty or stale topics', async () => {
+  it('loads newer server edits and deletions instead of restoring an acknowledged browser cache', async () => {
     const originalFetch = globalThis.fetch;
 
     try {
@@ -790,6 +790,16 @@ describe('services/persistence & workflows', () => {
           serverWorkspace = JSON.parse(String(init.body)) as Record<string, unknown[]>;
           return new Response(JSON.stringify({ ok: true, data: serverWorkspace }), { status: 200 });
         }
+        if (url.endsWith('/api/study-data/batch') && init?.method === 'POST') {
+          const { operations } = JSON.parse(String(init.body));
+          for (const op of operations) {
+            if (op.action === 'upsert') {
+              const rows = new Map((serverWorkspace[op.table] as { id: string }[]).map((r) => [r.id, r]));
+              for (const row of op.records) rows.set(row.id, row);
+              serverWorkspace[op.table] = [...rows.values()];
+            }
+          }
+        }
         return new Response(JSON.stringify({ ok: true, data: serverWorkspace }), { status: 200 });
       }) as typeof fetch;
 
@@ -801,7 +811,7 @@ describe('services/persistence & workflows', () => {
       expect(initialTopics.length).toBe(148);
       expect(await db.sessions.count()).toBe(1);
 
-      // 2. User marks a topic as concluido and adds a custom topic, then server cold-starts (returns 0 topics on reload)
+      // 2. Acknowledge local edits, then simulate newer edits/deletions from another device.
       await db.topics.update(initialTopics[0].id, { status: 'concluido' });
       const customTopic = await createTopic('arquitetura', null, {
         title: 'Event Sourcing Avançado',
@@ -810,22 +820,19 @@ describe('services/persistence & workflows', () => {
       });
       expect(await db.topics.count()).toBe(149);
 
-      // Simulate server cold start losing all topics while keeping only 1 session
-      serverWorkspace = {
-        ...serverWorkspace,
-        topics: [],
-      };
+      await waitForPendingSync();
+      serverWorkspace.topics = (serverWorkspace.topics as { id: string; status: string }[])
+        .filter((topic) => topic.id !== customTopic.id)
+        .map((topic) => topic.id === initialTopics[0].id ? { ...topic, status: 'em-andamento' } : topic);
 
       db.clearMemory();
       await ensureSeed(db);
 
       const topicsAfterReload = await db.topics.toArray();
-      expect(topicsAfterReload.length).toBe(149);
-      expect(topicsAfterReload.find((t) => t.id === initialTopics[0].id)?.status).toBe('concluido');
-      expect(topicsAfterReload.find((t) => t.id === customTopic.id)?.title).toBe(
-        'Event Sourcing Avançado',
-      );
-      expect(serverWorkspace.topics.length).toBe(149);
+      expect(topicsAfterReload.length).toBe(148);
+      expect(topicsAfterReload.find((t) => t.id === initialTopics[0].id)?.status).toBe('em-andamento');
+      expect(topicsAfterReload.find((t) => t.id === customTopic.id)).toBeUndefined();
+      expect(serverWorkspace.topics.length).toBe(148);
     } finally {
       setAuthSession(null);
       globalThis.fetch = originalFetch;
