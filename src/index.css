@@ -428,14 +428,14 @@ input[type='number']::-webkit-outer-spin-button {
   color: var(--fg);
 }
 
-/* Gradientes azuis difusos e sutis na seleção de concursos. */
+/* Gradientes azuis visíveis na seleção de concursos. */
 .contest-selector-screen::before {
   content: '';
   position: absolute;
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  background: linear-gradient(145deg, #e8efff 0%, #f8fafc 43%, #ffffff 72%, #edf3ff 100%);
+  background: linear-gradient(135deg, #bfdbfe 0%, #dbeafe 26%, #eff6ff 55%, #ffffff 78%, #dbeafe 100%);
   background-size: 180% 180%;
   animation: contest-gradient-drift 24s ease-in-out infinite alternate;
 }
@@ -452,13 +452,13 @@ input[type='number']::-webkit-outer-spin-button {
 .contest-selector-glow-primary {
   top: -18rem;
   left: 50%;
-  background: rgb(37 99 235 / 0.17);
+  background: rgb(37 99 235 / 0.38);
   animation: contest-glow-float 30s ease-in-out infinite alternate;
 }
 .contest-selector-glow-secondary {
   right: -22rem;
   bottom: -24rem;
-  background: rgb(96 165 250 / 0.15);
+  background: rgb(59 130 246 / 0.32);
   animation: contest-glow-float 36s ease-in-out -12s infinite alternate-reverse;
 }
 @keyframes contest-gradient-drift {
