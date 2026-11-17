@@ -127,14 +127,14 @@ export function AppLayout({ onSwitchContestScreen }: AppLayoutProps) {
         onOpenNewContest={() => setNewContestModalOpen(true)}
         onSwitchContestScreen={onSwitchContestScreen}
       />
-      <div className="flex flex-1 flex-col overflow-hidden min-w-0">
+      <div className="flex flex-1 flex-col overflow-hidden min-w-0 lg:bg-[#1e3a8a]">
         <Header
           onToggleMobileMenu={() => setMobileMenuOpen((prev) => !prev)}
           activeContest={activeContest}
         />
         <main
           id="main-content"
-          className="flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:pb-[calc(6rem+env(safe-area-inset-bottom))] lg:pb-20 focus:outline-hidden"
+          className="flex-1 bg-canvas lg:rounded-tl-xl overflow-y-auto overflow-x-hidden overscroll-y-contain px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:pb-[calc(6rem+env(safe-area-inset-bottom))] lg:pb-20 focus:outline-hidden"
           tabIndex={-1}
         >
           <div className="mx-auto w-full min-w-0 max-w-7xl">

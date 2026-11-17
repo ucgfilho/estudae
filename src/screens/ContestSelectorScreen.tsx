@@ -163,7 +163,7 @@ export function ContestSelectorScreen({ onSelectContest, initializing = false }:
         )}
 
         {/* Grade de Perfis de Concursos (Estilo Netflix) */}
-        <div aria-busy={initializing} className="grid grid-cols-1 min-[440px]:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 sm:gap-6 w-full max-w-4xl justify-center justify-items-center">
+        <div aria-busy={initializing} className="flex flex-wrap items-stretch justify-center gap-4 sm:gap-6 w-full max-w-5xl">
           {contests.map((contest) => {
             const isLoading = loadingId === contest.id || pendingContest?.id === contest.id;
             const isCurrent = contest.id === activeScopeId;
@@ -181,7 +181,7 @@ export function ContestSelectorScreen({ onSelectContest, initializing = false }:
                   }
                 }}
                 className={cn(
-                  'group relative w-full max-w-[260px] min-[440px]:max-w-[240px] rounded-xl border bg-surface p-5 flex flex-col items-center text-center transition-colors duration-150 cursor-pointer select-none',
+                  'group relative w-full max-w-[260px] min-[440px]:w-[calc(50%_-_0.5rem)] min-[440px]:max-w-[208px] sm:w-52 rounded-xl border bg-surface p-5 flex flex-col items-center text-center transition-colors duration-150 cursor-pointer select-none',
                   'hover:border-primary hover:bg-surface-muted/20',
                   isCurrent
                     ? 'border-primary ring-2 ring-primary/20'
@@ -248,7 +248,7 @@ export function ContestSelectorScreen({ onSelectContest, initializing = false }:
             data-testid="new-contest-card-button"
             disabled={initializing}
             onClick={() => setShowNewModal(true)}
-            className="group w-full max-w-[260px] min-[440px]:max-w-[240px] rounded-xl border border-dashed border-border-strong hover:border-primary bg-surface/50 hover:bg-primary-soft/15 p-5 flex flex-col items-center justify-center text-center transition-colors duration-150 cursor-pointer min-h-[210px]"
+            className="group w-full max-w-[260px] min-[440px]:w-[calc(50%_-_0.5rem)] min-[440px]:max-w-[208px] sm:w-52 rounded-xl border border-dashed border-border-strong hover:border-primary bg-surface/50 hover:bg-primary-soft/15 p-5 flex flex-col items-center justify-center text-center transition-colors duration-150 cursor-pointer min-h-[210px]"
           >
             <div className="size-20 sm:size-24 rounded-xl bg-surface-muted group-hover:bg-primary/15 text-fg-muted group-hover:text-primary flex items-center justify-center mb-3.5 transition-colors duration-150">
               <Plus className="size-9 stroke-[2]" />

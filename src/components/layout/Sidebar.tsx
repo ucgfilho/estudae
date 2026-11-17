@@ -87,13 +87,13 @@ export function Sidebar({
       {/* Sidebar container */}
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-40 flex w-60 xl:w-64 max-lg:w-72 max-lg:max-w-[85vw] max-lg:shadow-2xl max-lg:pb-[env(safe-area-inset-bottom)] flex-col navigation-chrome border-r border-border bg-surface transition-transform duration-200 ease-in-out lg:static lg:translate-x-0',
+          'fixed inset-y-0 left-0 z-40 flex w-60 xl:w-64 max-lg:w-72 max-lg:max-w-[85vw] max-lg:shadow-2xl max-lg:pb-[env(safe-area-inset-bottom)] flex-col navigation-chrome bg-surface transition-transform duration-200 ease-in-out lg:static lg:translate-x-0',
           mobileOpen ? 'translate-x-0' : '-translate-x-full max-lg:invisible',
         )}
         aria-label="Navegação principal"
       >
         {/* Branding header: estudaê */}
-        <div className="flex h-14 items-center justify-between border-b border-border px-4">
+        <div className="flex h-14 items-center justify-between px-4">
           <div className="flex items-center gap-2.5 min-w-0">
             <BnbLogo className="size-7 shrink-0 rounded-md" />
             <div className="min-w-0">
