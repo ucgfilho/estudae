@@ -710,7 +710,7 @@ export async function executeAssistantAction(
     }
 
     case 'OPEN_CYCLE': {
-      return { summary: 'Seu ciclo de estudos é contínuo e se adapta ao desempenho. Continue de onde parou.', navigateTo: '/cronograma' };
+      return { summary: 'Seu ciclo de estudos é contínuo e distribui as sessões entre específicos (80%) e básicos (20%). Continue de onde parou.', navigateTo: '/cronograma' };
     }
 
     case 'UPDATE_SETTINGS': {
@@ -866,7 +866,7 @@ export async function buildAssistantGroundingContext(today: DateKey = todayKey()
   );
   lines.push(`- Meta diária: ${settings.dailyGoalMinutes} min/dia (${(settings.dailyGoalMinutes / 60).toFixed(1)}h/dia)`);
   lines.push(`- Intervalos de revisão espaçada: ${(settings.reviewIntervals ?? [1, 7, 30]).join(', ')} dias`);
-  lines.push('- Planejamento: ciclo contínuo adaptativo, sem datas obrigatórias.');
+  lines.push('- Planejamento: ciclo contínuo por área do edital, sem datas obrigatórias.');
   lines.push(`- Tema visual: ${settings.theme}`);
 
   if (nextCycle) lines.push(`- Próxima atividade do ciclo: ${nextCycle.discipline.name} — ${nextCycle.topic?.title ?? 'Sem assunto disponível'} (${nextCycle.minutes} min). Motivo: ${nextCycle.reason}`);

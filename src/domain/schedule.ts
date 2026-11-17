@@ -37,56 +37,24 @@ export function availableTopics(topics: readonly Topic[], disciplineId: string):
     return false;
   }).filter(t => ![...map.values()].some(child => child.active && child.parentTopicId === t.id));
 }
-function evidence(input: CycleInput, disciplineId: string, topicId?: string) {
-  const logs = input.questionLogs.filter(q => q.disciplineId === disciplineId && (!topicId || q.topicId === topicId));
-  const total = logs.reduce((n, q) => n + q.total, 0);
-  const correct = logs.reduce((n, q) => n + q.correct, 0);
-  // Dez questões equivalentes a 70% de acertos evitam conclusões com amostras pequenas.
-  const difficulty = 1 - (correct + 7) / (total + 10);
-  const errors = input.errorNotes.filter(e => e.disciplineId === disciplineId && (!topicId || e.topicId === topicId) && e.status !== 'dominado').length;
-  return { total, difficulty, errors };
-}
+/** Quatro sessões de específicos e uma de básicos a cada cinco conclusões. */
 export function nextCycleActivity(input: CycleInput): CycleActivity | null {
   const done = cycleCompletions(input.sessions);
   const ordered = input.disciplines.filter(d => d.active).sort((a, b) => a.order - b.order || a.id.localeCompare(b.id));
   if (!ordered.length) return null;
-  const weights = ordered.map(d => Math.max(1, input.settings.distribution[d.id] ?? 1));
-  const average = weights.reduce((a, b) => a + b, 0) / weights.length;
-  const minutesByDiscipline = new Map(ordered.map(d => [d.id, input.sessions
-    .filter(s => s.disciplineId === d.id && s.status === 'concluida')
-    .reduce((sum, s) => sum + s.actualSeconds / 60, 0)]));
-  const averageMinutes = [...minutesByDiscipline.values()].reduce((a, b) => a + b, 0) / ordered.length;
-  const candidates = ordered.map((discipline, i) => {
-    const data = evidence(input, discipline.id);
-    const timeBalance = Math.max(0.75, Math.min(1.25,
-      (averageMinutes + 60) / ((minutesByDiscipline.get(discipline.id) ?? 0) + 60)));
-    const weight = Math.max(0.5, Math.min(3, weights[i] / average))
-      * (1 + data.difficulty + Math.min(1, data.errors * 0.15)) * timeBalance;
-    const served = done.filter(s => s.disciplineId === discipline.id).length;
-    return { discipline, priority: served / weight };
-  });
-  // Primeiro cobre todas as disciplinas; depois distribui frequências por peso e dificuldade.
-  // Empates respeitam a ordem configurada e nenhuma disciplina ativa desaparece.
-  candidates.sort((a, b) => a.priority - b.priority || a.discipline.order - b.discipline.order);
-  const discipline = candidates[0].discipline;
-  const pool = availableTopics(input.topics, discipline.id);
-  const ranked = pool.map(topic => {
-    const data = evidence(input, discipline.id, topic.id);
-    const studied = input.sessions.filter(s => s.topicId === topic.id && s.status === 'concluida');
-    const minutes = studied.reduce((n, s) => n + s.actualSeconds / 60, 0);
-    const last = done.map(s => s.topicId).lastIndexOf(topic.id);
-    const gap = last < 0 ? done.length + 1 : done.length - last;
-    const status = { 'nao-iniciado': 2, 'em-andamento': 1.5, concluido: 0.75, dominado: 0.25 }[topic.status];
-    const score = (status + data.difficulty * 2 + Math.min(2, data.errors * 0.3) + gap * 0.15) / (1 + minutes / 120);
-    return { topic, data, score };
-  }).sort((a, b) => b.score - a.score || a.topic.order - b.topic.order || a.topic.id.localeCompare(b.topic.id));
-  const selected = ranked[0];
-  const reason = !selected ? 'Disciplina sem assuntos disponíveis; estude com seu material cadastrado.'
-    : selected.data.errors > 0 ? 'Erros registrados indicam necessidade de consolidação.'
-    : selected.data.total < 10 ? 'Conteúdo a explorar; ainda há poucas questões para avaliar o desempenho.'
-    : selected.data.difficulty > 0.3 ? 'Desempenho indica necessidade de reforço.'
-    : 'Consolidação do conteúdo, respeitando a ordem e o tempo já dedicado.';
-  return { discipline, topic: selected?.topic ?? null, minutes: Math.max(1, Math.min(60, input.settings.dailyGoalMinutes)), reason };
+  const kind = done.length % 5 === 2 ? 'general' : 'technical';
+  const group = ordered.filter(d => d.kind === kind);
+  // Se o edital só tem uma área ativa, ela ocupa todas as sessões.
+  const candidates = group.length ? group : ordered;
+  const count = (id: string) => done.filter(s => s.disciplineId === id).length;
+  const discipline = [...candidates].sort((a, b) => count(a.id) - count(b.id) || a.order - b.order || a.id.localeCompare(b.id))[0];
+  const pool = availableTopics(input.topics, discipline.id).sort((a, b) => a.order - b.order || a.id.localeCompare(b.id));
+  const topicCount = (id: string) => done.filter(s => s.topicId === id).length;
+  const topic = [...pool].sort((a, b) => topicCount(a.id) - topicCount(b.id) || a.order - b.order || a.id.localeCompare(b.id))[0] ?? null;
+  const reason = discipline.kind === 'technical'
+    ? 'Conhecimentos específicos: 80% das sessões do ciclo.'
+    : 'Conhecimentos básicos: 20% das sessões do ciclo.';
+  return { discipline, topic, minutes: Math.max(1, Math.min(60, input.settings.dailyGoalMinutes)), reason };
 }
 /** Prévia recalculada a cada conclusão; não cria sessões nem compromissos no calendário. */
 export function previewCycle(input: CycleInput, count = 7): CycleActivity[] {

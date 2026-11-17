@@ -14,8 +14,8 @@ personalizados com edital verticalizado.
   de disciplinas e tópicos para o ciclo de estudos.
 - Visão geral com metas, progresso, sequência de estudos e desempenho.
 - Calendário mensal, semanal e diário para planejar e reagendar sessões.
-- Ciclo contínuo de estudos: frequência adaptativa por peso, questões, erros e
-  tempo dedicado, com posição preservada pelo histórico de sessões concluídas.
+- Ciclo contínuo de estudos: 80% de sessões para conhecimentos específicos e
+  20% para conhecimentos básicos, com posição preservada pelo histórico de sessões concluídas.
 - Cronômetro de estudo com pausa, retomada, modo foco e anotações.
 - Registro de questões, métricas de acerto e identificação de questões não
   classificadas.

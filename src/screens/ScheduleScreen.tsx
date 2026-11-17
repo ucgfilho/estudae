@@ -3,7 +3,7 @@ import { CycleRecommendation } from '../components/CycleRecommendation';
 
 export function ScheduleScreen() {
   return <div className="space-y-6">
-    <PageHeader title="Ciclo de Estudos" description="Uma fila contínua que acompanha seu desempenho. Estude no seu ritmo e retome de onde parou." />
+    <PageHeader title="Ciclo de Estudos" description="Seu próximo passo, na ordem certa. Estude no seu ritmo e continue de onde parou." />
     <CycleRecommendation showQueue />
   </div>;
 }

@@ -263,7 +263,7 @@ export function EditalUploadBox({
             <span className="font-semibold text-fg">Resumo do edital:</span> As{' '}
             <strong className="text-fg">{parsedPreview.disciplineCount} disciplinas</strong> e{' '}
             <strong className="text-fg">{parsedPreview.topicCount} tópicos</strong> serão
-            recomendados no ciclo contínuo conforme seu desempenho.
+            recomendados no ciclo contínuo conforme a divisão de 80% para específicos e 20% para básicos.
           </div>
         </div>
       )}

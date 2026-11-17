@@ -4,7 +4,7 @@ import { DEFAULT_DISCIPLINES, DEFAULT_SETTINGS, DEFAULT_TOPICS } from '../../db/
 import type { QuestionLog, StudySession, ErrorNote } from '../../db/types';
 
 function input(): CycleInput {
-  return { disciplines: DEFAULT_DISCIPLINES.slice(0, 3).map(d => ({ ...d })), topics: DEFAULT_TOPICS,
+  return { disciplines: DEFAULT_DISCIPLINES.slice(0, 3).map(d => ({ ...d, kind: 'technical' as const })), topics: DEFAULT_TOPICS,
     sessions: [], questionLogs: [], errorNotes: [], settings: { ...DEFAULT_SETTINGS, distribution: {} } };
 }
 function completion(disciplineId: string, id: string): StudySession {
@@ -14,7 +14,7 @@ function completion(disciplineId: string, id: string): StudySession {
 function log(disciplineId: string, total: number, correct: number, topicId: string | null = null): QuestionLog {
   return { disciplineId, total, correct, incorrect: total - correct, blank: 0, topicId } as QuestionLog;
 }
-describe('ciclo contínuo adaptativo', () => {
+describe('ciclo contínuo por área do edital', () => {
   it('cria fila determinística com disciplinas ativas, sem datas nem geração de sessões', () => {
     const data = input();
     expect(nextCycleActivity(data)?.discipline.id).toBe(data.disciplines[0].id);
@@ -44,37 +44,33 @@ describe('ciclo contínuo adaptativo', () => {
     expect(data.sessions).toHaveLength(1);
     expect(nextCycleActivity({ ...data, disciplines: [] })).toBeNull();
   });
-  it('usa peso e desempenho com amostra suficiente sem excluir disciplinas fortes', () => {
+  it('reserva 80% para específicos e 20% para básicos, independentemente do desempenho', () => {
     const data = input();
-    data.sessions = data.disciplines.map((d, i) => completion(d.id, String(i)));
-    data.questionLogs = data.disciplines.map((d, i) => log(d.id, 100, i === 2 ? 45 : 92));
-    expect(nextCycleActivity(data)?.discipline.id).toBe(data.disciplines[2].id);
-    const queue = previewCycle(data, 90);
-    const counts = data.disciplines.map(d => queue.filter(a => a.discipline.id === d.id).length);
-    expect(counts[2]).toBeGreaterThan(counts[0]);
-    expect(counts.every(n => n > 0)).toBe(true);
-    data.settings.distribution = { [data.disciplines[1].id]: 3, [data.disciplines[0].id]: 1, [data.disciplines[2].id]: 1 };
-    expect(nextCycleActivity(data)?.discipline.id).toBe(data.disciplines[1].id);
+    data.disciplines = DEFAULT_DISCIPLINES;
+    const queue = previewCycle(data, 100);
+    expect(queue.filter(a => a.discipline.kind === 'technical')).toHaveLength(80);
+    expect(queue.filter(a => a.discipline.kind === 'general')).toHaveLength(20);
+    data.questionLogs = data.disciplines.map(d => log(d.id, 100, 0));
+    data.errorNotes = [{ disciplineId: data.disciplines[0].id, status: 'revisar' } as ErrorNote];
+    data.settings.distribution = { portugues: 9999 };
+    expect(previewCycle(data, 100)).toEqual(queue);
+    expect(new Set(queue.map(a => a.discipline.id)).size).toBe(DEFAULT_DISCIPLINES.length);
   });
-  it('seleciona tópicos com baixo desempenho e erros recorrentes; aceita ausência de questões', () => {
+  it('usa toda a fila quando só uma área está ativa', () => {
+    const data = input();
+    for (const kind of ['general', 'technical'] as const) {
+      data.disciplines = DEFAULT_DISCIPLINES.filter(d => d.kind === kind);
+      expect(previewCycle(data, 10).every(a => a.discipline.kind === kind)).toBe(true);
+    }
+  });
+  it('seleciona assuntos pela ordem e alterna após a conclusão, sem usar questões ou erros', () => {
     const data = input();
     data.disciplines = data.disciplines.slice(0, 1);
-    const pool = availableTopics(data.topics, data.disciplines[0].id).slice(0, 2);
-    data.topics = pool;
-    expect(nextCycleActivity(data)?.reason).toContain('poucas questões');
-    data.questionLogs = [log(pool[0].disciplineId, 100, 95, pool[0].id), log(pool[1].disciplineId, 100, 30, pool[1].id)];
-    expect(nextCycleActivity(data)?.topic?.id).toBe(pool[1].id);
-    data.errorNotes = [{ disciplineId: pool[0].disciplineId, topicId: pool[0].id, status: 'revisar' } as ErrorNote];
-    data.questionLogs = [];
-    expect(nextCycleActivity(data)?.topic?.id).toBe(pool[0].id);
-    expect(nextCycleActivity(data)?.reason).toContain('Erros');
-  });
-  it('não interpreta uma única questão errada como desempenho confiável', () => {
-    const data = input();
-    data.disciplines = data.disciplines.slice(0, 2);
-    data.sessions = data.disciplines.map((d, i) => completion(d.id, String(i)));
-    data.questionLogs = [log(data.disciplines[0].id, 1, 0), log(data.disciplines[1].id, 100, 45)];
-    expect(nextCycleActivity(data)?.discipline.id).toBe(data.disciplines[1].id);
+    const first = nextCycleActivity(data)!;
+    data.questionLogs = [log(first.discipline.id, 100, 0, first.topic!.id)];
+    expect(nextCycleActivity(data)).toEqual(first);
+    data.sessions = [{ ...completion(first.discipline.id, '1'), topicId: first.topic!.id }];
+    expect(nextCycleActivity(data)?.topic?.id).not.toBe(first.topic?.id);
   });
   it('respeita hierarquia e ignora tópicos inativos, órfãos e ciclos', () => {
     const base = DEFAULT_TOPICS[0];
