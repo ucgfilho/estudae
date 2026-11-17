@@ -1,3 +1,13 @@
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
+import { SqliteDatabaseClient } from '../../../server/database/SqliteDatabaseClient';
+import { RELATIONAL_SCHEMA_SQL } from '../../../server/database/schema';
+import { CYCLE_COMPLETION, cycleCompletions, nextCycleActivity } from '../../domain/schedule';
+import type { StudySession, TimerState } from '../../db/types';
+import type { IStudyDataRepository } from '../../../server/interfaces/IStudyDataRepository';
+import { SqlStudyDataRepository } from '../../../server/repositories/SqlStudyDataRepository';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { Db } from 'mongodb';
 import { createAppContainer, type AppContainer } from '../../../server/container';
@@ -28,6 +38,34 @@ const TEST_USER = {
   password: 'SenhaSegura!2026#Test',
 };
 
+const cycleTimer: TimerState = {
+  id: 'active', sessionId: null, cycleStudy: true, status: 'paused', startedAt: null,
+  firstStartedAt: 1000, accumulatedSeconds: 60, plannedSeconds: 1800,
+  disciplineId: 'portugues', topicId: null, objective: 'Estudo', notes: 'Retomar', updatedAt: 61000,
+};
+const cycleSession: StudySession = {
+  id: 'cycle-completed', date: '2026-11-17', disciplineId: 'portugues', topicId: null,
+  plannedStart: null, plannedMinutes: 30, actualSeconds: 120, status: 'concluida',
+  objective: 'Estudo', notes: '', origin: 'avulsa', startedAt: '2026-11-17T10:00:00Z',
+  endedAt: '2026-11-17T10:02:00Z', recoveredFromId: null,
+  history: [{ type: 'executada', at: '2026-11-17T10:02:00Z', description: CYCLE_COMPLETION }],
+  createdAt: '2026-11-17T10:02:00Z', updatedAt: '2026-11-17T10:02:00Z',
+};
+async function assertCyclePersistence(repository: IStudyDataRepository, ownerId: string) {
+  await repository.upsertTable(ownerId, 'timer', [cycleTimer]);
+  await repository.upsertTable(ownerId, 'sessions', [cycleSession]);
+  const workspace = await repository.getWorkspace(ownerId);
+  expect(workspace.timer).toEqual([cycleTimer]);
+  expect(cycleCompletions(workspace.sessions)).toHaveLength(1);
+  const next = nextCycleActivity({ ...workspace, settings: workspace.settings[0] });
+  const secondContest = await repository.getWorkspace(`${ownerId}::contest::outro`);
+  expect(secondContest.timer).toHaveLength(0);
+  expect(cycleCompletions(secondContest.sessions)).toHaveLength(0);
+  expect(next?.discipline.id).not.toBe('portugues');
+  // Nova instância de repositório lê o mesmo histórico persistido sem estado em memória.
+  return workspace;
+}
+
 describe('Backend SOLID Architecture, DTOs, JWT Bearer & LGPD Compliance', () => {
   let container: AppContainer;
 
@@ -46,6 +84,34 @@ describe('Backend SOLID Architecture, DTOs, JWT Bearer & LGPD Compliance', () =>
 
   afterEach(() => {
     container.dbClient?.close();
+  });
+
+  it('persiste o ciclo e cronômetro no SQLite, isolados por usuário e concurso', async () => {
+    const user = await container.userRepository.findByEmail(TEST_USER.email);
+    const saved = await assertCyclePersistence(container.studyDataRepository, user!.id);
+    const repository = new SqlStudyDataRepository(container.dbClient!);
+    expect((await repository.getWorkspace(user!.id)).sessions).toEqual(saved.sessions);
+    expect((await repository.getWorkspace(user!.id)).timer).toEqual(saved.timer);
+    expect(() => repository.upsertTable(user!.id, 'timer', [{ ...cycleTimer, cycleStudy: 'sim' }])).toThrow(DtoValidationError);
+  });
+
+  it('migra SQLite antigo e preserva ciclo após fechar e reabrir o banco', async () => {
+    const directory = mkdtempSync(join(tmpdir(), 'estudae-cycle-'));
+    const file = join(directory, 'study.sqlite');
+    let client: SqliteDatabaseClient | undefined;
+    try {
+      const legacy = new DatabaseSync(file);
+      legacy.exec(RELATIONAL_SCHEMA_SQL.replace('  cycle_study INTEGER NULL CHECK (cycle_study IN (0, 1)),\n', ''));
+      legacy.exec("INSERT INTO users (id, name, email, password_hash, created_at, updated_at) VALUES ('cycle-user', 'Teste', 'cycle@test.local', 'hash', '2026-11-17', '2026-11-17')");
+      legacy.close();
+      client = new SqliteDatabaseClient(file);
+      await assertCyclePersistence(new SqlStudyDataRepository(client), 'cycle-user');
+      client.close();
+      client = new SqliteDatabaseClient(file);
+      const restored = new SqlStudyDataRepository(client).getWorkspace('cycle-user');
+      expect(restored.timer).toEqual([cycleTimer]);
+      expect(cycleCompletions(restored.sessions)).toHaveLength(1);
+    } finally { client?.close(); rmSync(directory, { recursive: true, force: true }); }
   });
 
   it('provisions user with Scrypt-hashed password and authenticates via JWT Bearer', async () => {
@@ -458,6 +524,17 @@ function createInMemoryMongoDbMock(): {
 
 describe('MongoDB Row-Level Security (RLS) & Zero Explicit Data at Rest', () => {
   const cipher = new SensitiveDataCipher('test-master-secret-for-mongodb-rls-2026-suite');
+
+  it('persiste ciclo e cronômetro em payload MongoDB cifrado, com isolamento de concursos e usuários', async () => {
+    const { db } = createInMemoryMongoDbMock();
+    const repository = new MongoStudyDataRepository(db, cipher);
+    await repository.initIndexes();
+    const saved = await assertCyclePersistence(repository, 'user-cycle');
+    const reopened = new MongoStudyDataRepository(db, cipher);
+    expect((await reopened.getWorkspace('user-cycle')).timer).toEqual(saved.timer);
+    expect((await reopened.getWorkspace('user-cycle')).sessions).toEqual(saved.sessions);
+    expect((await reopened.getWorkspace('another-user')).sessions).toHaveLength(0);
+  });
 
   it('enforces zero explicit PII in MongoDB users collection with Blind Indexing and AAD tenant encryption', async () => {
     const { db, rawCollections, validators } = createInMemoryMongoDbMock();

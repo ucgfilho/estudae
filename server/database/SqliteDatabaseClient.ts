@@ -25,6 +25,9 @@ export class SqliteDatabaseClient implements IDatabaseClient {
     }
     this.db.exec(RELATIONAL_SCHEMA_SQL);
     try {
+      this.db.exec('ALTER TABLE timer_states ADD COLUMN cycle_study INTEGER NULL;');
+    } catch { /* Coluna já presente em bancos novos ou migrados. */ }
+    try {
       this.db.exec('ALTER TABLE users ADD COLUMN avatar_url TEXT NULL;');
     } catch {
       // Coluna já existente

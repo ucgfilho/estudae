@@ -72,7 +72,6 @@ export function AuthScreen({ onAuthenticated }: AuthScreenProps) {
             customRole: customContestRole.trim() || undefined,
             editalText: editalText.trim() || undefined,
             editalFileName,
-            generateScheduleNow: true,
           },
           { isInitialRegistration: true },
         );
@@ -102,7 +101,7 @@ export function AuthScreen({ onAuthenticated }: AuthScreenProps) {
         <div className="my-4 sm:my-8 lg:my-0 space-y-3 sm:space-y-5 max-w-lg relative z-10">
           <div className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3.5 py-1 text-xs font-medium backdrop-blur-xs">
             <ShieldCheck className="size-4 text-[#f68b1f] shrink-0" />
-            <span>Cronograma de 24 semanas feito a partir do seu edital</span>
+            <span>Ciclo contínuo de estudos feito a partir do seu edital</span>
           </div>
 
           <h1 className="text-xl sm:text-3xl lg:text-4xl font-bold leading-tight">
@@ -110,8 +109,8 @@ export function AuthScreen({ onAuthenticated }: AuthScreenProps) {
           </h1>
 
           <p className="text-xs sm:text-sm text-white/85 leading-relaxed">
-            Escolha o concurso, envie o edital verticalizado e receba 24 semanas de estudo
-            baseadas nos tópicos dele. Dá para ter vários concursos na mesma conta, cada um
+            Escolha o concurso, envie o edital verticalizado e receba um ciclo contínuo de estudos
+            baseado nos tópicos dele. Dá para ter vários concursos na mesma conta, cada um
             com o seu painel.
           </p>
 
@@ -125,7 +124,7 @@ export function AuthScreen({ onAuthenticated }: AuthScreenProps) {
             <li className="flex items-center gap-2.5">
               <CheckCircle2 className="size-4 text-[#f68b1f] shrink-0" />
               <span>
-                O cronograma segue os tópicos do seu edital
+                O ciclo segue os tópicos do seu edital
               </span>
             </li>
             <li className="flex items-center gap-2.5">
@@ -307,7 +306,7 @@ export function AuthScreen({ onAuthenticated }: AuthScreenProps) {
             >
               {mode === 'login'
                 ? 'Entrar na plataforma'
-                : 'Criar conta e gerar meu cronograma'}
+                : 'Criar conta e iniciar meu ciclo'}
             </Button>
           </form>
         </div>

@@ -130,7 +130,7 @@ export function OverviewScreen() {
         description={
           settings?.contestName
             ? `Acompanhe sua rotina diária para ${settings.contestName}${settings.contestRole ? ` (${settings.contestRole})` : ''}.`
-            : 'Veja sua próxima tarefa, acompanhe a meta de hoje e avance no cronograma.'
+            : 'Veja sua próxima tarefa, acompanhe a meta de hoje e avance no ciclo de estudos.'
         }
         actions={
           <div className="flex flex-wrap items-center gap-2">
@@ -174,7 +174,7 @@ export function OverviewScreen() {
         onOpenSettings={() => navigate('/configuracoes')}
       />
 
-      {/* Prioridades #4 e #5: Revisões realmente pendentes e Pendências importantes do cronograma */}
+      {/* Prioridades #4 e #5: Revisões realmente pendentes e Pendências importantes do calendário */}
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         {/* Revisões realmente pendentes (vencidas + hoje) */}
         <Card
@@ -262,9 +262,9 @@ export function OverviewScreen() {
           )}
         </Card>
 
-        {/* Pendências importantes do cronograma */}
+        {/* Pendências importantes do calendário */}
         <Card
-          title="Pendências do cronograma"
+          title="Sessões planejadas no calendário"
           description={
             overdueSessionsInWeek.length > 0
               ? overdueSessionsInWeek.length === 1
@@ -275,10 +275,10 @@ export function OverviewScreen() {
           actions={
             <button
               type="button"
-              onClick={() => navigate('/cronograma')}
+              onClick={() => navigate('/calendario')}
               className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline max-lg:min-h-9 max-lg:px-2"
             >
-              Abrir cronograma <ArrowRight className="size-3" aria-hidden="true" />
+              Abrir calendário <ArrowRight className="size-3" aria-hidden="true" />
             </button>
           }
         >

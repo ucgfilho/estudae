@@ -34,7 +34,7 @@ export interface DailyProgress {
   goalMinutes: number;
   /** 0..n (pode ultrapassar 1). */
   ratio: number;
-  /** Blocos do cronograma planejados para hoje (sem substituídos). */
+  /** Blocos do calendário planejados para hoje (sem substituídos). */
   scheduled: StudySession[];
   scheduledDone: number;
   questionsToday: number;
@@ -269,7 +269,7 @@ export function formatAchievementMessage(
     }
     case 'schedule-complete': {
       return {
-        title: 'Cronograma do dia completo',
+        title: 'Sessões planejadas do dia completas',
         body: 'Todos os blocos planejados para hoje foram executados.',
       };
     }
@@ -324,7 +324,7 @@ export function comparedToYesterday(sessions: readonly StudySession[], today: Da
   return `+${Math.round(t - y)} min a mais que ontem`;
 }
 
-/** Próximo bloco pendente do cronograma de hoje (combate o "reset pós-recompensa"). */
+/** Próximo bloco pendente do planejamento manual de hoje (combate o "reset pós-recompensa"). */
 export function nextPendingToday(sessions: readonly StudySession[], today: DateKey): StudySession | null {
   return (
     plannedSessions(sessions)

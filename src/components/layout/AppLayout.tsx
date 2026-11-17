@@ -109,7 +109,7 @@ export function AppLayout({ onSwitchContestScreen }: AppLayoutProps) {
   const mobileQuickLinks = [
     { to: '/', label: 'Início', icon: LayoutDashboard },
     { to: '/estudar-agora', label: 'Foco', icon: Timer },
-    { to: '/cronograma', label: '24 sem.', icon: CalendarClock },
+    { to: '/cronograma', label: 'Ciclo', icon: CalendarClock },
     { to: '/calendario', label: 'Agenda', icon: Calendar },
     { to: '/disciplinas', label: 'Edital', icon: BookMarked },
   ];

@@ -62,7 +62,6 @@ export function NewContestModal({ open, onClose, onCreated }: NewContestModalPro
         editalText: editalText.trim() || undefined,
         editalFileName,
         examDate: examDate || null,
-        generateScheduleNow: true,
       });
       resetForm();
       onCreated(created);
@@ -91,7 +90,7 @@ export function NewContestModal({ open, onClose, onCreated }: NewContestModalPro
             disabled={!contestId}
             icon={contestId ? <Sparkles className="size-4" /> : <Plus className="size-4" />}
           >
-            Criar Concurso e Gerar Cronograma
+            Criar Concurso e Iniciar Ciclo
           </Button>
         </>
       }
@@ -99,7 +98,7 @@ export function NewContestModal({ open, onClose, onCreated }: NewContestModalPro
       <form onSubmit={handleSubmit} className="space-y-4">
         <p className="text-xs text-fg-muted leading-relaxed">
           Adicione outro concurso à sua conta. As disciplinas, o edital verticalizado, as questões
-          e o cronograma de 24 semanas ficam separados dos demais.
+          e o ciclo contínuo de estudos ficam separados dos demais.
         </p>
 
         {error && (

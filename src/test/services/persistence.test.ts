@@ -1,17 +1,14 @@
+import { startCycleTimer } from '../../services/timer';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { db, ensureSeed, resetDatabase } from '../../db/db';
 import { setAuthSession } from '../../services/auth';
 import {
   createSession,
-  updateSession,
-  deleteSession,
   rescheduleSession,
   recoverSession,
-  setSessionStatus,
   moveSession,
   compareSessionsInDay,
 } from '../../services/sessions';
-import { weekScheduleMetrics } from '../../domain/metrics';
 import {
   startPlannedTimer,
   pauseTimer,
@@ -24,7 +21,6 @@ import {
   validateBackup,
   restoreBackup,
 } from '../../services/backup';
-import { generateSchedule, clearSchedule } from '../../services/schedule';
 import { completeReview, reconcileReviewsAndErrorNotes, saveErrorNote, saveQuestionLog, scheduleTopicReviews } from '../../services/performance';
 import { buildAssistantGroundingContext, clearGeminiModelsCache, processAssistantMessage } from '../../services/aiAssistant';
 import { updateSettings } from '../../services/settings';
@@ -174,158 +170,6 @@ describe('services/persistence & workflows', () => {
     }
   });
 
-  it('generates 24-week schedule from the specified start date even if start date is in the past', async () => {
-    await ensureSeed(db);
-
-    // Specify a Monday in the past compared to today (today is 2026-10-14, Monday was 2026-10-05)
-    await generateSchedule('2026-10-05', '2026-10-14');
-
-    const weeklyPlans = await db.weeklyPlans.orderBy('weekIndex').toArray();
-    expect(weeklyPlans.length).toBe(24);
-    expect(weeklyPlans[0].weekIndex).toBe(1);
-    expect(weeklyPlans[0].weekStart).toBe('2026-10-04'); // Sunday
-
-    const sessions = await db.sessions.toArray();
-    expect(sessions.length).toBeGreaterThan(0);
-
-    // Verify sessions were created starting on 2026-10-05 (and not dropped just because they are < today)
-    const weekOneSessions = sessions.filter((s) => s.date >= '2026-10-05' && s.date <= '2026-10-10');
-    expect(weekOneSessions.length).toBeGreaterThan(0);
-
-    // Check setting was updated
-    const settings = await db.settings.get('settings');
-    expect(settings?.scheduleStartDate).toBe('2026-10-05');
-  });
-
-  it('preserves executed sessions when regenerating schedule with a new start date', async () => {
-    await ensureSeed(db);
-
-    // Create an executed session
-    const executed = await createSession({
-      date: '2026-10-08',
-      disciplineId: 'arquitetura',
-      topicId: null,
-      plannedStart: '10:00',
-      plannedMinutes: 60,
-      objective: 'Arquitetura Hexagonal',
-      notes: '',
-    });
-    await db.sessions.update(executed.id, {
-      actualSeconds: 3600,
-      status: 'concluida',
-    });
-
-    // Generate schedule starting from 2026-10-05
-    await generateSchedule('2026-10-05', '2026-10-14');
-
-    // Executed session must still exist
-    const preserved = await db.sessions.get(executed.id);
-    expect(preserved).toBeDefined();
-    expect(preserved?.actualSeconds).toBe(3600);
-    expect(preserved?.status).toBe('concluida');
-  });
-
-  it('generates schedule aligning weeks always from Sunday to Saturday while respecting user startDate', async () => {
-    await ensureSeed(db);
-
-    // User explicitly selects Thursday 2026-10-15
-    await generateSchedule('2026-10-15');
-
-    const weeklyPlans = await db.weeklyPlans.orderBy('weekIndex').toArray();
-    expect(weeklyPlans.length).toBe(24);
-    expect(weeklyPlans[0].weekIndex).toBe(1);
-    expect(weeklyPlans[0].weekStart).toBe('2026-10-11'); // Starts on Sunday
-
-    const sessions = await db.sessions.toArray();
-    // Verify no sessions were created prior to 2026-10-15
-    const sessionsBeforeStart = sessions.filter((s) => s.date < '2026-10-15');
-    expect(sessionsBeforeStart.length).toBe(0);
-
-    // Verify Week 1 sessions start on 2026-10-15 (Thu) and end on 2026-10-17 (Sat)
-    const weekOneSessions = sessions.filter((s) => s.date >= '2026-10-11' && s.date <= '2026-10-17');
-    expect(weekOneSessions.length).toBeGreaterThan(0);
-    expect(weekOneSessions.every((s) => s.date >= '2026-10-15')).toBe(true);
-
-    // Week 2 starts on the next Sunday (2026-10-18)
-    expect(weeklyPlans[1].weekStart).toBe('2026-10-18');
-
-    // Check setting saved exact date
-    const settings = await db.settings.get('settings');
-    expect(settings?.scheduleStartDate).toBe('2026-10-15');
-  });
-
-  it('clears schedule: deletes weekly plans and unexecuted planned sessions while preserving completed ones and resetting scheduleStartDate', async () => {
-    await ensureSeed(db);
-
-    // 1. Generate schedule
-    await generateSchedule('2026-10-12');
-    expect((await db.weeklyPlans.toArray()).length).toBe(24);
-    expect((await db.sessions.toArray()).length).toBeGreaterThan(0);
-
-    // 2. Mark one session as completed
-    const firstSession = await db.sessions.toCollection().first();
-    expect(firstSession).toBeDefined();
-    await setSessionStatus(firstSession!.id, 'concluida', 60);
-
-    // 3. Clear schedule
-    await clearSchedule();
-
-    // Weekly plans must be empty
-    expect(await db.weeklyPlans.count()).toBe(0);
-
-    // Only the completed session must remain
-    const remainingSessions = await db.sessions.toArray();
-    expect(remainingSessions).toHaveLength(1);
-    expect(remainingSessions[0].id).toBe(firstSession!.id);
-    expect(remainingSessions[0].status).toBe('concluida');
-    expect(remainingSessions[0].actualSeconds).toBe(3600);
-
-    // scheduleStartDate in settings must be null
-    const settings = await db.settings.get('settings');
-    expect(settings?.scheduleStartDate).toBeNull();
-  });
-
-  it('preserves pre-created manual sessions when generating 24 weeks schedule and when clearing schedule', async () => {
-    await ensureSeed(db);
-
-    // 1. User pre-creates a manual session via createSession (like in SessionModal)
-    const manualSession = await createSession({
-      date: '2026-10-14',
-      disciplineId: 'arquitetura',
-      topicId: null,
-      plannedStart: '14:00',
-      plannedMinutes: 60,
-      objective: 'Estudo manual prévio de Arquitetura',
-      notes: 'Minhas anotações',
-    });
-
-    expect(manualSession.isManual).toBe(true);
-
-    // 2. User generates 24 weeks schedule
-    await generateSchedule('2026-10-12');
-
-    // 3. The pre-created session must still exist intact!
-    const found = await db.sessions.get(manualSession.id);
-    expect(found).toBeDefined();
-    expect(found?.id).toBe(manualSession.id);
-    expect(found?.disciplineId).toBe('arquitetura');
-    expect(found?.plannedMinutes).toBe(60);
-    expect(found?.objective).toBe('Estudo manual prévio de Arquitetura');
-    expect(found?.isManual).toBe(true);
-
-    // 4. On Wednesday (2026-10-14), there should not be another duplicate 'arquitetura' session generated
-    const wednesdaySessions = await db.sessions.where('date').equals('2026-10-14').toArray();
-    const wednesdayArq = wednesdaySessions.filter((s) => s.disciplineId === 'arquitetura');
-    expect(wednesdayArq).toHaveLength(1);
-    expect(wednesdayArq[0].id).toBe(manualSession.id);
-
-    // 5. When clearing schedule, manual session should still be preserved
-    await clearSchedule();
-    const afterClear = await db.sessions.get(manualSession.id);
-    expect(afterClear).toBeDefined();
-    expect(afterClear?.id).toBe(manualSession.id);
-  });
-
   it('saves an error note with scheduled reviews and persists in database linked to question log', async () => {
     await ensureSeed(db);
 
@@ -416,11 +260,12 @@ describe('services/persistence & workflows', () => {
     reviews = await db.reviews.where('disciplineId').equals('logica-programacao').toArray();
     expect(reviews.map((r) => r.intervalDays).sort((a, b) => a - b)).toEqual([1, 7, 30]);
 
-    // Completing 30d does not create any further review
+    // O último intervalo continua sendo repetido conforme a regra existente.
     const review30d = reviews.find((r) => r.intervalDays === 30)!;
     await completeReview(review30d.id);
     reviews = await db.reviews.where('disciplineId').equals('logica-programacao').toArray();
-    expect(reviews.length).toBe(3);
+    expect(reviews.length).toBe(4);
+    expect(reviews.filter(r => r.status === 'pendente').map(r => r.intervalDays)).toEqual([30]);
   });
 
   it('synchronizes review dueDate when nextReviewDate is changed on an ErrorNote and prunes legacy future reviews', async () => {
@@ -797,197 +642,6 @@ describe('services/persistence & workflows', () => {
     expect(allTopics).toHaveLength(0);
   });
 
-  it('correctly calculates week 1 metrics when schedule is generated on a Thursday (2026-10-22) aligning Sunday to Saturday', async () => {
-    await ensureSeed(db);
-
-    // Geração no dia 22/10/2026 (Quinta-feira)
-    await generateSchedule('2026-10-22');
-
-    const weeklyPlans = await db.weeklyPlans.orderBy('weekIndex').toArray();
-    expect(weeklyPlans[0].weekStart).toBe('2026-10-18'); // Domingo anterior
-
-    const sessions = await db.sessions.toArray();
-
-    // Sessões da Semana 1 (18/10 a 24/10): somente Quinta (22/10), Sexta (23/10) e Sábado (24/10)
-    const weekOneSessions = sessions.filter((s) => s.date >= '2026-10-18' && s.date <= '2026-10-24');
-    expect(weekOneSessions.length).toBe(5); // 2 na qui, 2 na sex, 1 simulado no sáb
-    expect(weekOneSessions.every((s) => s.date >= '2026-10-22' && s.date <= '2026-10-24')).toBe(true);
-
-    // Sessões da Semana 2 (25/10 a 31/10): Segunda (26/10), Terça (27/10), Quarta (28/10), etc.
-    const weekTwoSessions = sessions.filter((s) => s.date >= '2026-10-25' && s.date <= '2026-10-31');
-    expect(weekTwoSessions.length).toBe(11);
-    expect(weekTwoSessions.some((s) => s.date === '2026-10-26')).toBe(true);
-    expect(weekTwoSessions.some((s) => s.date === '2026-10-27')).toBe(true);
-    expect(weekTwoSessions.some((s) => s.date === '2026-10-28')).toBe(true);
-
-    // Conclusão de 1 sessão na quinta-feira de 57 min
-    const firstThuSession = weekOneSessions.find((s) => s.date === '2026-10-22')!;
-    await setSessionStatus(firstThuSession.id, 'concluida', 57);
-
-    const updatedSessions = await db.sessions.toArray();
-    const updatedWeekOne = updatedSessions.filter((s) => s.date >= '2026-10-18' && s.date <= '2026-10-24');
-    const doneCount = updatedWeekOne.filter((s) => s.status === 'concluida').length;
-    expect(doneCount).toBe(1);
-    expect(updatedWeekOne.length).toBe(5); // 1 de 5 sessões (e não 1 de 11!)
-  });
-
-  it('synchronizes WeeklyPlan plannedMinutes, status, and weekScheduleMetrics when deleting, editing, or completing sessions', async () => {
-    await ensureSeed(db);
-    await generateSchedule('2026-10-18');
-
-    const initialSessions = (await db.sessions.toArray()).filter(
-      (s) => s.date >= '2026-10-18' && s.date <= '2026-10-24'
-    );
-    expect(initialSessions.length).toBeGreaterThan(2);
-
-    // Delete 2 generated sessions that could not be performed
-    await deleteSession(initialSessions[0].id);
-    await deleteSession(initialSessions[1].id);
-
-    // Edit one session's plannedMinutes
-    const targetToEdit = initialSessions[2];
-    await updateSession(targetToEdit.id, {
-      date: targetToEdit.date,
-      disciplineId: targetToEdit.disciplineId,
-      topicId: targetToEdit.topicId,
-      plannedStart: targetToEdit.plannedStart,
-      plannedMinutes: 90,
-      objective: targetToEdit.objective,
-      notes: targetToEdit.notes,
-    });
-
-    const afterAdjustSessions = (await db.sessions.toArray()).filter(
-      (s) => s.date >= '2026-10-18' && s.date <= '2026-10-24'
-    );
-    const expectedTotalMinutes = afterAdjustSessions.reduce((acc, s) => acc + s.plannedMinutes, 0);
-
-    const planAfterAdjust = (await db.weeklyPlans.orderBy('weekIndex').toArray())[0];
-    expect(planAfterAdjust.plannedMinutes).toBe(expectedTotalMinutes);
-    expect(planAfterAdjust.status).toBe('pendente');
-
-    // Complete all remaining sessions in Week 1
-    for (const s of afterAdjustSessions) {
-      await setSessionStatus(s.id, 'concluida');
-    }
-
-    const finalSessions = await db.sessions.toArray();
-    const metrics = weekScheduleMetrics(finalSessions, '2026-10-18', '2026-10-24');
-    expect(metrics.totalSessions).toBe(afterAdjustSessions.length);
-    expect(metrics.completedSessions).toBe(afterAdjustSessions.length);
-    expect(metrics.plannedMinutes).toBe(expectedTotalMinutes);
-    expect(metrics.doneMinutes).toBe(expectedTotalMinutes);
-    expect(metrics.completionRate).toBe(100);
-
-    const planFinal = (await db.weeklyPlans.orderBy('weekIndex').toArray())[0];
-    expect(planFinal.plannedMinutes).toBe(expectedTotalMinutes);
-    expect(planFinal.status).toBe('concluida');
-  });
-
-  it('preserves all 24-week schedule sessions across page reload on Vercel even when serverless instance has only partial sessions on 03/11', async () => {
-    const originalFetch = globalThis.fetch;
-    const putWorkspacePayloads: Record<string, unknown[]>[] = [];
-
-    try {
-      setAuthSession({
-        token: 'real-vercel-jwt-token',
-        tokenType: 'Bearer',
-        expiresIn: 604800,
-        user: {
-          id: 'user-vercel-1',
-          name: 'Usuário BNB',
-          email: 'usuario.bnb@exemplo.com',
-          createdAt: '2026-11-02T00:00:00.000Z',
-        },
-      });
-
-      // Mock fetch during schedule generation
-      globalThis.fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-        const url = String(input);
-        if (url.endsWith('/api/study-data/workspace') && init?.method === 'PUT') {
-          const payload = JSON.parse(String(init.body)) as Record<string, unknown[]>;
-          putWorkspacePayloads.push(payload);
-          return new Response(JSON.stringify({ ok: true, data: payload }), { status: 200 });
-        }
-        if (url.endsWith('/api/study-data/batch') && init?.method === 'POST') {
-          return new Response(JSON.stringify({ ok: true, data: db.exportWorkspaceSnapshot() }), {
-            status: 200,
-          });
-        }
-        return new Response(JSON.stringify({ data: db.exportWorkspaceSnapshot() }), { status: 200 });
-      }) as typeof fetch;
-
-      // 1. Pre-existing manual sessions on Tuesday 03/11 (as in the screenshot)
-      const sArq = await createSession({
-        date: '2026-11-03',
-        disciplineId: 'arquitetura',
-        topicId: null,
-        plannedStart: null,
-        plannedMinutes: 60,
-        objective: 'Arquitetura de software.',
-        notes: '',
-      });
-      const sLog = await createSession({
-        date: '2026-11-03',
-        disciplineId: 'logica-programacao',
-        topicId: null,
-        plannedStart: null,
-        plannedMinutes: 60,
-        objective: 'Construção de algoritmos.',
-        notes: '',
-      });
-
-      // 2. Generate 24-week schedule starting on 2026-11-03
-      await generateSchedule('2026-11-03', '2026-11-02');
-
-      const allBeforeReload = await db.sessions.toArray();
-      expect(allBeforeReload.length).toBeGreaterThan(200);
-      const subsequentDaysBefore = allBeforeReload.filter((s) => s.date > '2026-11-03');
-      expect(subsequentDaysBefore.length).toBeGreaterThan(200);
-
-      // 3. Simulate Vercel page reload hitting a serverless instance that only has the 2 sessions on 03/11
-      const partialRemoteWorkspace = {
-        ...db.exportWorkspaceSnapshot(),
-        sessions: [sArq, sLog],
-      };
-
-      globalThis.fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-        const url = String(input);
-        if (url.endsWith('/api/study-data') && (!init?.method || init.method === 'GET')) {
-          return new Response(JSON.stringify({ data: partialRemoteWorkspace }), { status: 200 });
-        }
-        if (url.endsWith('/api/study-data/workspace') && init?.method === 'PUT') {
-          const payload = JSON.parse(String(init.body)) as Record<string, unknown[]>;
-          putWorkspacePayloads.push(payload);
-          return new Response(JSON.stringify({ ok: true, data: payload }), { status: 200 });
-        }
-        return new Response(JSON.stringify({ ok: true }), { status: 200 });
-      }) as typeof fetch;
-
-      // Clear in-memory DB to simulate fresh browser reload reading from localStorage + API
-      db.clearMemory();
-      await ensureSeed(db);
-
-      const allAfterReload = await db.sessions.toArray();
-      expect(allAfterReload.length).toBe(allBeforeReload.length);
-      const subsequentDaysAfter = allAfterReload.filter((s) => s.date > '2026-11-03');
-      expect(subsequentDaysAfter.length).toBe(subsequentDaysBefore.length);
-
-      // Verify Wednesday 04/11, Thursday 05/11, Friday 06/11, Saturday 07/11 all have their sessions intact
-      expect(allAfterReload.some((s) => s.date === '2026-11-04')).toBe(true);
-      expect(allAfterReload.some((s) => s.date === '2026-11-05')).toBe(true);
-      expect(allAfterReload.some((s) => s.date === '2026-11-06')).toBe(true);
-      expect(allAfterReload.some((s) => s.date === '2026-11-07')).toBe(true);
-
-      // Verify server was healed with the full session list
-      const lastPut = putWorkspacePayloads[putWorkspacePayloads.length - 1];
-      expect(lastPut).toBeDefined();
-      expect(lastPut.sessions.length).toBe(allBeforeReload.length);
-    } finally {
-      setAuthSession(null);
-      globalThis.fetch = originalFetch;
-    }
-  });
-
   it('restores JSON backup preserving all schedule sessions, isManual, and order without being overwritten on Vercel', async () => {
     const originalFetch = globalThis.fetch;
 
@@ -1003,12 +657,13 @@ describe('services/persistence & workflows', () => {
         notes: '',
       });
       await moveSession(manual.id, '2026-11-03', 0);
-      await generateSchedule('2026-11-03', '2026-11-02');
+      await startCycleTimer(30, 1000);
+      await finishTimer(61000);
 
       const backup = await createBackup();
       const backupJson = JSON.stringify(backup);
       const expectedSessionCount = backup.data.sessions.length;
-      expect(expectedSessionCount).toBeGreaterThan(200);
+      expect(expectedSessionCount).toBe(2);
 
       // 2. Validate backup keeps isManual and order fields
       const validated = validateBackup(backupJson);
@@ -1067,7 +722,7 @@ describe('services/persistence & workflows', () => {
       const afterReloadSessions = await db.sessions.toArray();
       expect(afterReloadSessions.length).toBe(expectedSessionCount);
       const afterReloadPlans = await db.weeklyPlans.toArray();
-      expect(afterReloadPlans.length).toBe(24);
+      expect(afterReloadPlans.length).toBe(0);
     } finally {
       setAuthSession(null);
       globalThis.fetch = originalFetch;

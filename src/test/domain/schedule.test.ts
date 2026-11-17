@@ -1,235 +1,96 @@
 import { describe, it, expect } from 'vitest';
-import {
-  splitIntoBlocks,
-  distributeWeek,
-  buildWeeklyPlans,
-  detectOverload,
-  isManualSession,
-} from '../../domain/schedule';
-import { DEFAULT_DISCIPLINES } from '../../db/seed';
-import { addDays } from '../../lib/dates';
-import type { StudySession } from '../../db/types';
+import { availableTopics, nextCycleActivity, previewCycle, cycleCompletions, CYCLE_COMPLETION, isRetiredPlannedSession, type CycleInput } from '../../domain/schedule';
+import { DEFAULT_DISCIPLINES, DEFAULT_SETTINGS, DEFAULT_TOPICS } from '../../db/seed';
+import type { QuestionLog, StudySession, ErrorNote } from '../../db/types';
 
-describe('domain/schedule - blocks and 24-week distribution', () => {
-  it('splits minutes into blocks of at most 60 minutes in multiples of 5', () => {
-    // 120 minutes -> 2 blocks of 60
-    expect(splitIntoBlocks(120)).toEqual([60, 60]);
-
-    // 100 minutes -> 2 blocks of 50
-    expect(splitIntoBlocks(100)).toEqual([50, 50]);
-
-    // 45 minutes -> 1 block of 45
-    expect(splitIntoBlocks(45)).toEqual([45]);
-
-    // 0 minutes -> empty
-    expect(splitIntoBlocks(0)).toEqual([]);
+function input(): CycleInput {
+  return { disciplines: DEFAULT_DISCIPLINES.slice(0, 3).map(d => ({ ...d })), topics: DEFAULT_TOPICS,
+    sessions: [], questionLogs: [], errorNotes: [], settings: { ...DEFAULT_SETTINGS, distribution: {} } };
+}
+function completion(disciplineId: string, id: string): StudySession {
+  return { id, disciplineId, actualSeconds: 3600, topicId: null, status: 'concluida', createdAt: id, endedAt: id,
+    history: [{ type: 'executada', at: id, description: CYCLE_COMPLETION }] } as StudySession;
+}
+function log(disciplineId: string, total: number, correct: number, topicId: string | null = null): QuestionLog {
+  return { disciplineId, total, correct, incorrect: total - correct, blank: 0, topicId } as QuestionLog;
+}
+describe('ciclo contínuo adaptativo', () => {
+  it('cria fila determinística com disciplinas ativas, sem datas nem geração de sessões', () => {
+    const data = input();
+    expect(nextCycleActivity(data)?.discipline.id).toBe(data.disciplines[0].id);
+    const preview = previewCycle(data, 12);
+    expect(preview).toHaveLength(12);
+    expect(new Set(preview.map(a => a.discipline.id)).size).toBe(3);
+    expect(data.sessions).toEqual([]);
+    expect(previewCycle(data, 12)).toEqual(preview);
   });
-
-  it('distributes 840 minutes across Mon-Sat and places exclusively a 4h mock exam on Sunday', () => {
-    const distribution: Record<string, number> = {
-      portugues: 120,
-      raciocinio: 120,
-      'logica-programacao': 100,
-      arquitetura: 100,
-      engenharia: 100,
-      linguagens: 100,
-      'banco-dados': 100,
-      nuvem: 100,
-    };
-
-    // 2026-10-12 is Monday, 2026-10-18 is Sunday
-    const blocks = distributeWeek('2026-10-12', distribution, DEFAULT_DISCIPLINES);
-    const totalMinutes = blocks.reduce((acc, b) => acc + b.minutes, 0);
-    // 840 min regular disciplines + 240 min Sunday mock exam = 1080 min
-    expect(totalMinutes).toBe(1080);
-
-    // Checks that all 7 days have scheduled sessions
-    const daysWithStudy = new Set(blocks.map((b) => b.date));
-    expect(daysWithStudy.size).toBe(7);
-
-    // Sunday (2026-10-18) must have ONLY the 4h mock exam
-    const sundayBlocks = blocks.filter((b) => b.date === '2026-10-18');
-    expect(sundayBlocks).toHaveLength(1);
-    expect(sundayBlocks[0].disciplineId).toBe('simulado');
-    expect(sundayBlocks[0].minutes).toBe(240);
-
-    // Monday to Saturday must only have regular disciplines (840m total)
-    const monToSatBlocks = blocks.filter((b) => b.date !== '2026-10-18');
-    expect(monToSatBlocks.reduce((acc, b) => acc + b.minutes, 0)).toBe(840);
-    expect(monToSatBlocks.every((b) => b.disciplineId !== 'simulado')).toBe(true);
+  it('avança apenas com execução do ciclo e respeita mudança de ordem', () => {
+    const data = input();
+    const first = data.disciplines[0].id;
+    data.sessions = [completion(first, '1')];
+    expect(nextCycleActivity(data)?.discipline.id).toBe(data.disciplines[1].id);
+    data.disciplines = data.disciplines.map((d, i) => ({ ...d, order: -i }));
+    expect(nextCycleActivity(data)?.discipline.id).toBe(data.disciplines[0 + 2].id);
   });
-
-  it('generates 24 weekly plans with proper week indices and consecutive week starts starting on Sunday', () => {
-    const plans = buildWeeklyPlans('2026-10-12', 24, 840);
-    expect(plans.length).toBe(24);
-    expect(plans[0].weekIndex).toBe(1);
-    expect(plans[0].weekStart).toBe('2026-10-11');
-    expect(plans[23].weekIndex).toBe(24);
-    expect(plans[23].weekStart).toBe(addDays('2026-10-11', 23 * 7));
+  it('não conta sessões incompletas ou sem tempo, mesmo com histórico inconsistente', () => {
+    const saved = completion('portugues', '1');
+    expect(cycleCompletions([{ ...saved, status: 'planejada' }, { ...saved, actualSeconds: 0 }])).toHaveLength(0);
   });
-
-  it('detects overload when day or week exceeds goal', () => {
-    const sessions: StudySession[] = [
-      {
-        id: 's1',
-        date: '2026-10-12',
-        disciplineId: 'arquitetura',
-        topicId: null,
-        plannedStart: null,
-        plannedMinutes: 150, // exceeds daily goal of 120
-        actualSeconds: 0,
-        status: 'planejada',
-        objective: '',
-        notes: '',
-        origin: 'planejada',
-        startedAt: null,
-        endedAt: null,
-        recoveredFromId: null,
-        history: [],
-        createdAt: '',
-        updatedAt: '',
-      },
-    ];
-
-    const overload = detectOverload(sessions, '2026-10-12', 120, 840);
-    expect(overload.overloadedDays.length).toBe(1);
-    expect(overload.overloadedDays[0].date).toBe('2026-10-12');
-    expect(overload.overloadedDays[0].minutes).toBe(150);
-    expect(overload.weekOverloaded).toBe(false);
+  it('ignora disciplinas desativadas ou excluídas sem perder histórico', () => {
+    const data = input();
+    data.sessions = [completion(data.disciplines[0].id, '1')];
+    data.disciplines = data.disciplines.slice(1).map((d, i) => ({ ...d, active: i === 1 }));
+    expect(nextCycleActivity(data)?.discipline.id).toBe(data.disciplines[1].id);
+    expect(data.sessions).toHaveLength(1);
+    expect(nextCycleActivity({ ...data, disciplines: [] })).toBeNull();
   });
-
-  it('correctly identifies manual sessions vs auto-generated sessions', () => {
-    const autoSession: StudySession = {
-      id: 'auto-1',
-      date: '2026-10-12',
-      disciplineId: 'arquitetura',
-      topicId: null,
-      plannedStart: null,
-      plannedMinutes: 60,
-      actualSeconds: 0,
-      status: 'planejada',
-      objective: '',
-      notes: '',
-      origin: 'planejada',
-      startedAt: null,
-      endedAt: null,
-      recoveredFromId: null,
-      history: [{ at: '2026-10-12T08:00:00Z', type: 'criada', description: 'Criada pelo cronograma semanal.' }],
-      createdAt: '',
-      updatedAt: '',
-    };
-    expect(isManualSession(autoSession)).toBe(false);
-
-    // Manual session with isManual: true
-    const manual1: StudySession = { ...autoSession, isManual: true };
-    expect(isManualSession(manual1)).toBe(true);
-
-    // Session created by user (history description does not contain "pelo cronograma")
-    const manual2: StudySession = {
-      ...autoSession,
-      history: [{ at: '2026-10-12T08:00:00Z', type: 'criada', description: 'Sessão planejada criada pelo usuário.' }],
-    };
-    expect(isManualSession(manual2)).toBe(true);
-
-    // Session edited by user
-    const edited: StudySession = {
-      ...autoSession,
-      history: [
-        { at: '2026-10-12T08:00:00Z', type: 'criada', description: 'Criada pelo cronograma semanal.' },
-        { at: '2026-10-12T09:00:00Z', type: 'editada', description: 'Alterada pelo usuário.' },
-      ],
-    };
-    expect(isManualSession(edited)).toBe(true);
+  it('usa peso e desempenho com amostra suficiente sem excluir disciplinas fortes', () => {
+    const data = input();
+    data.sessions = data.disciplines.map((d, i) => completion(d.id, String(i)));
+    data.questionLogs = data.disciplines.map((d, i) => log(d.id, 100, i === 2 ? 45 : 92));
+    expect(nextCycleActivity(data)?.discipline.id).toBe(data.disciplines[2].id);
+    const queue = previewCycle(data, 90);
+    const counts = data.disciplines.map(d => queue.filter(a => a.discipline.id === d.id).length);
+    expect(counts[2]).toBeGreaterThan(counts[0]);
+    expect(counts.every(n => n > 0)).toBe(true);
+    data.settings.distribution = { [data.disciplines[1].id]: 3, [data.disciplines[0].id]: 1, [data.disciplines[2].id]: 1 };
+    expect(nextCycleActivity(data)?.discipline.id).toBe(data.disciplines[1].id);
   });
-
-  it('distributeWeek respects pre-existing sessions, deduces minutes, and avoids same-day collisions', () => {
-    const distribution: Record<string, number> = {
-      portugues: 120,
-      arquitetura: 100, // 100 minutes total target for arquitetura
-    };
-
-    // Pre-created session: 60m of arquitetura on Monday (2026-10-12)
-    const existingArqSession: StudySession = {
-      id: 'manual-arq',
-      date: '2026-10-12',
-      disciplineId: 'arquitetura',
-      topicId: null,
-      plannedStart: '10:00',
-      plannedMinutes: 60,
-      actualSeconds: 0,
-      status: 'planejada',
-      objective: 'Arquitetura Manual',
-      notes: '',
-      origin: 'planejada',
-      isManual: true,
-      startedAt: null,
-      endedAt: null,
-      recoveredFromId: null,
-      history: [{ at: '2026-10-12T08:00:00Z', type: 'criada', description: 'Sessão planejada criada pelo usuário.' }],
-      createdAt: '',
-      updatedAt: '',
-    };
-
-    const disciplines = DEFAULT_DISCIPLINES.filter((d) => d.id === 'portugues' || d.id === 'arquitetura');
-
-    const blocks = distributeWeek(
-      '2026-10-12',
-      distribution,
-      disciplines,
-      false, // no sunday mock exam for this test
-      [existingArqSession],
-    );
-
-    // Total target was: portugues 120 + arquitetura 100 = 220m
-    // Since 60m of arquitetura already exists, remaining generated should be 220 - 60 = 160m
-    const totalMinutesGenerated = blocks.reduce((acc, b) => acc + b.minutes, 0);
-    expect(totalMinutesGenerated).toBe(160);
-
-    // Arquitetura generated minutes should be 100 - 60 = 40m
-    const arqBlocks = blocks.filter((b) => b.disciplineId === 'arquitetura');
-    const arqMinutes = arqBlocks.reduce((acc, b) => acc + b.minutes, 0);
-    expect(arqMinutes).toBe(40);
-
-    // Arquitetura should NOT be scheduled on Monday (2026-10-12) where it already exists!
-    expect(arqBlocks.some((b) => b.date === '2026-10-12')).toBe(false);
+  it('seleciona tópicos com baixo desempenho e erros recorrentes; aceita ausência de questões', () => {
+    const data = input();
+    data.disciplines = data.disciplines.slice(0, 1);
+    const pool = availableTopics(data.topics, data.disciplines[0].id).slice(0, 2);
+    data.topics = pool;
+    expect(nextCycleActivity(data)?.reason).toContain('poucas questões');
+    data.questionLogs = [log(pool[0].disciplineId, 100, 95, pool[0].id), log(pool[1].disciplineId, 100, 30, pool[1].id)];
+    expect(nextCycleActivity(data)?.topic?.id).toBe(pool[1].id);
+    data.errorNotes = [{ disciplineId: pool[0].disciplineId, topicId: pool[0].id, status: 'revisar' } as ErrorNote];
+    data.questionLogs = [];
+    expect(nextCycleActivity(data)?.topic?.id).toBe(pool[0].id);
+    expect(nextCycleActivity(data)?.reason).toContain('Erros');
   });
-
-  it('distributeWeek does not duplicate Sunday mock exam if one already exists', () => {
-    const distribution: Record<string, number> = {
-      portugues: 60,
-    };
-    const sundayMockSession: StudySession = {
-      id: 'existing-mock',
-      date: '2026-10-18', // Sunday
-      disciplineId: 'simulado',
-      topicId: null,
-      plannedStart: '08:00',
-      plannedMinutes: 240,
-      actualSeconds: 0,
-      status: 'planejada',
-      objective: 'Simulado',
-      notes: '',
-      origin: 'planejada',
-      isManual: true,
-      startedAt: null,
-      endedAt: null,
-      recoveredFromId: null,
-      history: [],
-      createdAt: '',
-      updatedAt: '',
-    };
-
-    const disciplines = DEFAULT_DISCIPLINES.filter((d) => d.id === 'portugues');
-    const blocks = distributeWeek(
-      '2026-10-12',
-      distribution,
-      disciplines,
-      true,
-      [sundayMockSession],
-    );
-
-    // Should NOT have added another simulado on Sunday
-    const sundayBlocks = blocks.filter((b) => b.date === '2026-10-18' && b.disciplineId === 'simulado');
-    expect(sundayBlocks).toHaveLength(0);
+  it('não interpreta uma única questão errada como desempenho confiável', () => {
+    const data = input();
+    data.disciplines = data.disciplines.slice(0, 2);
+    data.sessions = data.disciplines.map((d, i) => completion(d.id, String(i)));
+    data.questionLogs = [log(data.disciplines[0].id, 1, 0), log(data.disciplines[1].id, 100, 45)];
+    expect(nextCycleActivity(data)?.discipline.id).toBe(data.disciplines[1].id);
+  });
+  it('respeita hierarquia e ignora tópicos inativos, órfãos e ciclos', () => {
+    const base = DEFAULT_TOPICS[0];
+    const topics = [{ ...base, id: 'parent', parentTopicId: null, active: false },
+      { ...base, id: 'child', parentTopicId: 'parent', active: true },
+      { ...base, id: 'orphan', parentTopicId: 'missing' },
+      { ...base, id: 'loop', parentTopicId: 'loop' },
+      { ...base, id: 'valid', parentTopicId: null, active: true }];
+    expect(availableTopics(topics, base.disciplineId).map(t => t.id)).toEqual(['valid']);
+    expect(nextCycleActivity({ ...input(), topics: [] })?.topic).toBeNull();
+  });
+  it('arquiva apenas planejamento automático intocado e preserva histórico e sessões manuais', () => {
+    const session = { status: 'planejada', actualSeconds: 0, origin: 'planejada', recoveredFromId: null,
+      history: [{ type: 'criada', description: 'Criada pelo cronograma semanal.' }] } as StudySession;
+    expect(isRetiredPlannedSession(session)).toBe(true);
+    expect(isRetiredPlannedSession({ ...session, isManual: true })).toBe(false);
+    expect(isRetiredPlannedSession({ ...session, status: 'concluida' })).toBe(false);
   });
 });

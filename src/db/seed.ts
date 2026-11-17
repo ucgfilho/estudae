@@ -207,7 +207,7 @@ export const DEFAULT_TOPICS: Topic[] = Object.entries(EDITAL_VERTICALIZADO_BNB_2
 /**
  * Distribuição inicial sugerida: 600 min (10 h) para as 6 disciplinas técnicas
  * (100 min cada) e 240 min (4 h) para Português e Raciocínio (120 min cada).
- * Totaliza a meta semanal de 840 min. Editável nas telas de cronograma.
+ * Totaliza a meta semanal de 840 min. Usada como peso relativo pelo ciclo de estudos.
  */
 export const DEFAULT_DISTRIBUTION: Record<string, number> = {
   portugues: 120,
@@ -230,8 +230,6 @@ export const DEFAULT_SETTINGS: Settings = {
   reviewIntervals: [1, 7, 30],
   theme: 'system',
   examDate: null,
-  scheduleStartDate: null,
-  scheduleWeeks: 24,
   distribution: { ...DEFAULT_DISTRIBUTION },
   geminiApiKey: '',
   aiProvider: 'builtin',

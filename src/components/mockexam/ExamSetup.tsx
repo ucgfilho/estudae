@@ -164,7 +164,7 @@ export function ExamSetup({ disciplines, onCreated }: ExamSetupProps) {
           <Field label="Nome do simulado" required>
             <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex.: Simulado BNB 01" />
           </Field>
-          <Field label="Data do simulado" hint="Adiciona 3h no seu cronograma" required>
+          <Field label="Data do simulado" hint="Adiciona 3h no seu calendário" required>
             <DateInput value={date} onChange={(e) => setDate(e.target.value)} />
           </Field>
           <Field label="Alternativas por questão">

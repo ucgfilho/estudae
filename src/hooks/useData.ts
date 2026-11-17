@@ -1,3 +1,4 @@
+import { isRetiredPlannedSession } from '../domain/schedule';
 import { useEffect, useState } from 'react';
 import { db } from '../db/db';
 import { ACTIVE_TIMER_ID, SETTINGS_ID } from '../db/types';
@@ -32,7 +33,7 @@ export function useTopics() {
 }
 
 export function useSessions() {
-  return useReactiveQuery(() => db.sessions.toArraySync());
+  return useReactiveQuery(() => db.sessions.toArraySync().filter(s => !isRetiredPlannedSession(s)));
 }
 
 export function useQuestionLogs() {
@@ -45,12 +46,6 @@ export function useErrorNotes() {
 
 export function useReviews() {
   return useReactiveQuery(() => db.reviews.toArraySync());
-}
-
-export function useWeeklyPlans() {
-  return useReactiveQuery(() =>
-    db.weeklyPlans.toArraySync().sort((a, b) => a.weekIndex - b.weekIndex),
-  );
 }
 
 export function useMockExams() {

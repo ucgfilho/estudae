@@ -9,10 +9,8 @@ import {
   type AuthSessionDto,
 } from "../../services/auth";
 import { parseEditalVerticalizado } from "../../domain/contests";
-import {
-  buildBuiltinAiSchedule,
-  buildContestSystemInstruction,
-} from "../../services/aiSchedule";
+import { previewCycle } from '../../domain/schedule';
+import { DEFAULT_SETTINGS } from '../../db/seed';
 import {
   createAndActivateContest,
   getUserContests,
@@ -81,7 +79,7 @@ describe("estudaê — Multi-Concursos, Edital Verticalizado e Perfis Estilo Net
     ).toBeInTheDocument();
   });
 
-  it("adapta o prompt da IA e gera cronograma de 24 semanas específico para o Edital Verticalizado enviado pelo usuário", () => {
+  it("cria ciclo contínuo com assuntos do edital verticalizado enviado pelo usuário", () => {
     const customEditalText = `
 Direito Constitucional:
 1. Direitos e Garantias Fundamentais
@@ -101,33 +99,10 @@ Tecnologia da Informação e Ciência de Dados:
     expect(parsed.disciplines.length).toBe(3);
     expect(parsed.topics.length).toBe(7);
 
-    const prompt = buildContestSystemInstruction(
-      "2025-05-05",
-      parsed.disciplines,
-      parsed.topics,
-      "Receita Federal — Auditor-Fiscal",
-    );
-
-    expect(prompt).toContain("Receita Federal — Auditor-Fiscal");
-    expect(prompt).toContain("Direito Constitucional");
-    expect(prompt).toContain("Demonstração do Resultado do Exercício (DRE)");
-    expect(prompt).toContain("Aprendizado de Máquina e Redes Neurais");
-
-    const schedule = buildBuiltinAiSchedule(
-      "2025-05-05",
-      parsed.disciplines,
-      parsed.topics,
-      undefined,
-      "Receita Federal — Auditor-Fiscal",
-    );
-
-    expect(schedule.weeklyPlans).toHaveLength(24);
-    expect(schedule.sessions.length).toBeGreaterThan(200);
-    expect(
-      schedule.sessions.some((s) =>
-        s.objective.includes("Aprendizado de Máquina e Redes Neurais"),
-      ),
-    ).toBe(true);
+    const cycle = previewCycle({ ...parsed, sessions: [], questionLogs: [], errorNotes: [], settings: DEFAULT_SETTINGS }, 20);
+    expect(cycle.length).toBe(20);
+    expect(cycle.every(activity => parsed.topics.some(t => t.id === activity.topic?.id))).toBe(true);
+    expect(cycle.some(activity => activity.topic?.title.includes('Aprendizado de Máquina'))).toBe(true);
   });
 
   it("exibe a tela de seleção de concursos estilo Netflix ao logar e redireciona para o dashboard ao escolher um concurso", async () => {
@@ -179,7 +154,6 @@ Tecnologia da Informação e Ciência de Dados:
       editalText:
         "Língua Portuguesa:\n1. Interpretação de textos\nConhecimentos Bancários:\n1. Sistema Financeiro Nacional",
       editalFileName: "edital-bb.txt",
-      generateScheduleNow: true,
     });
 
     const allContests = getUserContests();

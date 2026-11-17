@@ -33,7 +33,7 @@ const ICONS: Record<AchievementKind, LucideIcon> = {
 
 const SHORT_LABEL: Partial<Record<AchievementKind, string>> = {
   'daily-goal': 'Meta diária batida',
-  'schedule-complete': 'Cronograma do dia completo',
+  'schedule-complete': 'Sessões planejadas do dia completo',
   'question-goal': 'Meta de questões batida',
   'personal-best': 'Recorde pessoal',
   'questions-perfect': '100% de acerto',
@@ -64,7 +64,7 @@ interface Celebration {
 
 /**
  * Camada global de reforço positivo. Observa os dados (Dexie) e detecta
- * transições — sessão concluída, meta diária, cronograma do dia completo,
+ * transições — sessão concluída, meta diária, planejamento do dia completo,
  * bom desempenho/recorde em questões, marcos de sequência — exibindo um
  * aviso breve com recompensa visual proporcional à raridade do evento.
  */

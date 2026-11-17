@@ -1,46 +1,8 @@
 import { db } from '../db/db';
-import type { SessionHistoryEntry, SessionStatus, StudySession, WeeklyPlan } from '../db/types';
+import type { SessionHistoryEntry, SessionStatus, StudySession } from '../db/types';
 import { SESSION_STATUS_LABELS } from '../db/types';
-import { weekScheduleMetrics } from '../domain/metrics';
-import { addDays, formatDate, isValidDateKey, isValidTime, type DateKey } from '../lib/dates';
+import { formatDate, isValidDateKey, isValidTime, type DateKey } from '../lib/dates';
 import { createId, nowIso } from '../lib/utils';
-
-/**
- * Sincroniza `plannedMinutes` e `status` dos planos semanais (`weeklyPlans`)
- * com as sessões reais presentes em cada semana no banco de dados.
- */
-export async function syncWeeklyPlansWithSessions(): Promise<void> {
-  const [plans, allSessions] = await Promise.all([
-    db.weeklyPlans.toArray(),
-    db.sessions.toArray(),
-  ]);
-  if (plans.length === 0) return;
-
-  const updates: WeeklyPlan[] = [];
-  for (const wp of plans) {
-    const weekEnd = addDays(wp.weekStart, 6);
-    const metrics = weekScheduleMetrics(allSessions, wp.weekStart, weekEnd);
-    const nextPlannedMinutes = metrics.plannedMinutes;
-    const nextStatus: WeeklyPlan['status'] =
-      metrics.totalSessions > 0 && metrics.completedSessions === metrics.totalSessions
-        ? 'concluida'
-        : metrics.completedSessions > 0 || metrics.doneMinutes > 0
-        ? 'em-andamento'
-        : 'pendente';
-
-    if (wp.plannedMinutes !== nextPlannedMinutes || wp.status !== nextStatus) {
-      updates.push({
-        ...wp,
-        plannedMinutes: nextPlannedMinutes,
-        status: nextStatus,
-      });
-    }
-  }
-
-  if (updates.length > 0) {
-    await db.weeklyPlans.bulkPut(updates);
-  }
-}
 
 export class ValidationError extends Error {
   constructor(message: string) {
@@ -85,7 +47,7 @@ export async function createSession(input: SessionInput): Promise<StudySession> 
   const error = validateSessionInput(input);
   if (error) throw new ValidationError(error);
   const now = nowIso();
-  return db.transaction('rw', db.sessions, db.weeklyPlans, async () => {
+  return db.transaction('rw', db.sessions, async () => {
     const count = await db.sessions.where('date').equals(input.date).count();
     const session: StudySession = {
       id: createId(),
@@ -105,7 +67,6 @@ export async function createSession(input: SessionInput): Promise<StudySession> 
       updatedAt: now,
     };
     await db.sessions.add(session);
-    await syncWeeklyPlansWithSessions();
     return session;
   });
 }
@@ -113,7 +74,7 @@ export async function createSession(input: SessionInput): Promise<StudySession> 
 export async function updateSession(id: string, input: SessionInput): Promise<void> {
   const error = validateSessionInput(input);
   if (error) throw new ValidationError(error);
-  await db.transaction('rw', db.sessions, db.weeklyPlans, async () => {
+  await db.transaction('rw', db.sessions, async () => {
     const current = await requireSession(id);
     const history = [...current.history];
     if (current.date !== input.date || current.plannedStart !== input.plannedStart) {
@@ -139,7 +100,6 @@ export async function updateSession(id: string, input: SessionInput): Promise<vo
       history,
       updatedAt: nowIso(),
     });
-    await syncWeeklyPlansWithSessions();
   });
 }
 
@@ -160,7 +120,7 @@ export function compareSessionsInDay(a: StudySession, b: StudySession): number {
 }
 
 /**
- * Move a sessão para outra data ou reordena dentro do mesmo dia (drag-and-drop no cronograma).
+ * Move a sessão para outra data ou reordena dentro do mesmo dia (drag-and-drop no calendário).
  */
 export async function moveSession(
   id: string,
@@ -168,7 +128,7 @@ export async function moveSession(
   targetIndex?: number,
 ): Promise<StudySession> {
   if (!isValidDateKey(newDate)) throw new ValidationError('Informe uma data válida.');
-  return db.transaction('rw', db.sessions, db.weeklyPlans, async () => {
+  return db.transaction('rw', db.sessions, async () => {
     const current = await requireSession(id);
     if (current.date === newDate && targetIndex === undefined) return current;
 
@@ -210,7 +170,6 @@ export async function moveSession(
     );
 
     await db.sessions.bulkPut(toPut);
-    await syncWeeklyPlansWithSessions();
     return { ...updated, order: insertAt };
   });
 }
@@ -226,7 +185,7 @@ export async function rescheduleSession(id: string, date: DateKey, plannedStart?
   if (plannedStart !== undefined && plannedStart !== null && !isValidTime(plannedStart)) {
     throw new ValidationError('Informe um horário válido (HH:mm).');
   }
-  return db.transaction('rw', db.sessions, db.weeklyPlans, async () => {
+  return db.transaction('rw', db.sessions, async () => {
     const current = await requireSession(id);
     const time = plannedStart === undefined ? current.plannedStart : plannedStart;
     if (current.status === 'planejada' && current.actualSeconds === 0) {
@@ -239,11 +198,9 @@ export async function rescheduleSession(id: string, date: DateKey, plannedStart?
         updatedAt: nowIso(),
       };
       await db.sessions.put(updated);
-      await syncWeeklyPlansWithSessions();
       return updated;
     }
     const copy = await createRecoveryCopy(current, date, time);
-    await syncWeeklyPlansWithSessions();
     return copy;
   });
 }
@@ -279,11 +236,10 @@ async function createRecoveryCopy(original: StudySession, date: DateKey, planned
 /** Recupera uma sessão não concluída: marca a original como perdida e cria uma nova planejada. */
 export async function recoverSession(id: string, date: DateKey): Promise<StudySession> {
   if (!isValidDateKey(date)) throw new ValidationError('Informe uma data válida.');
-  return db.transaction('rw', db.sessions, db.weeklyPlans, async () => {
+  return db.transaction('rw', db.sessions, async () => {
     const current = await requireSession(id);
     if (current.status === 'concluida') throw new ValidationError('Sessões concluídas não precisam de recuperação.');
     const copy = await createRecoveryCopy(current, date, current.plannedStart);
-    await syncWeeklyPlansWithSessions();
     return copy;
   });
 }
@@ -312,7 +268,7 @@ export async function setSessionStatus(id: string, status: SessionStatus, actual
   if (actualMinutes !== undefined && (!Number.isInteger(actualMinutes) || actualMinutes < 0 || actualMinutes > MAX_SESSION_MINUTES)) {
     throw new ValidationError(`O tempo realizado deve ser um número inteiro entre 0 e ${MAX_SESSION_MINUTES} minutos.`);
   }
-  await db.transaction('rw', db.sessions, db.weeklyPlans, db.topics, async () => {
+  await db.transaction('rw', db.sessions, db.topics, async () => {
     const current = await requireSession(id);
     const history = [...current.history, entry('status', `Status alterado para ${SESSION_STATUS_LABELS[status]}.`)];
     const nextActualSeconds =
@@ -331,18 +287,16 @@ export async function setSessionStatus(id: string, status: SessionStatus, actual
       updatedAt: nowIso(),
     });
     if (status === 'concluida') await syncTopicStatusAfterSession(current.topicId);
-    await syncWeeklyPlansWithSessions();
   });
 }
 
 export async function deleteSession(id: string): Promise<void> {
-  await db.transaction('rw', db.sessions, db.questionLogs, db.timer, db.weeklyPlans, async () => {
+  await db.transaction('rw', db.sessions, db.questionLogs, db.timer, async () => {
     const timer = await db.timer.get('active');
     if (timer?.sessionId === id) {
       throw new ValidationError('Esta sessão está com o cronômetro em andamento. Finalize ou descarte o cronômetro antes de excluí-la.');
     }
     await db.questionLogs.filter((l) => l.sessionId === id).modify({ sessionId: null });
     await db.sessions.delete(id);
-    await syncWeeklyPlansWithSessions();
   });
 }

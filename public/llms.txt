@@ -1,13 +1,13 @@
 # estudaê
 
-> Ambiente de execução e gestão de estudos para concursos públicos, com planejamento de ciclos, cronograma, banco de questões, caderno de erros, revisões espaçadas, simulados e relatórios de desempenho.
+> Ambiente de execução e gestão de estudos para concursos públicos, com planejamento de ciclos contínuos, banco de questões, caderno de erros, revisões espaçadas, simulados e relatórios de desempenho.
 
 ## Páginas Principais
 
 - [Plataforma estudaê](https://estudaeconcursos.vercel.app/): Página inicial e seleção de concurso ativo.
 - [Visão Geral](https://estudaeconcursos.vercel.app/#/): Painel principal com métricas e metas de estudo.
 - [Estudar Agora](https://estudaeconcursos.vercel.app/#/estudar-agora): Cronômetro e registro de sessões de estudo em tempo real.
-- [Cronograma](https://estudaeconcursos.vercel.app/#/cronograma): Planejamento semanal e distribuição de carga horária por disciplina.
+- [Ciclo de Estudos](https://estudaeconcursos.vercel.app/#/cronograma): Fila contínua adaptativa por disciplina e assunto, com continuidade pelo histórico de execução.
 - [Calendário](https://estudaeconcursos.vercel.app/#/calendario): Visão mensal de sessões, revisões e simulados.
 - [Questões](https://estudaeconcursos.vercel.app/#/questoes): Registro e acompanhamento de desempenho em questões.
 - [Caderno de Erros](https://estudaeconcursos.vercel.app/#/erros): Catalogação e revisão de erros recorrentes.

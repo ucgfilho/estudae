@@ -92,6 +92,7 @@ CREATE TABLE IF NOT EXISTS timer_states (
   user_id TEXT NOT NULL,
   id TEXT NOT NULL DEFAULT 'active',
   session_id TEXT NULL,
+  cycle_study INTEGER NULL CHECK (cycle_study IN (0, 1)),
   status TEXT NOT NULL CHECK (status IN ('running', 'paused')),
   started_at INTEGER NULL,
   first_started_at INTEGER NOT NULL,

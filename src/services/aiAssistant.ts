@@ -1,3 +1,4 @@
+import { isRetiredPlannedSession, nextCycleActivity } from '../domain/schedule';
 import { PRIMARY_GEMINI_MODEL, orderGeminiModels } from './geminiModels';
 import { db } from '../db/db';
 import type {
@@ -24,7 +25,6 @@ import {
   scheduleTopicReviews,
   setErrorStatus,
 } from './performance';
-import { generateSchedule } from './schedule';
 import {
   createSession,
   deleteSession,
@@ -65,7 +65,7 @@ export interface AssistantAction {
     | 'LOG_QUESTIONS'
     | 'ADD_TOPIC'
     | 'UPDATE_TOPIC_STATUS'
-    | 'GENERATE_SCHEDULE'
+    | 'OPEN_CYCLE'
     | 'UPDATE_SETTINGS'
     | 'NAVIGATE'
     | 'STATUS_SUMMARY';
@@ -513,7 +513,7 @@ export async function executeAssistantAction(
       const actualMinutes =
         typeof params.actualMinutes === 'number' ? params.actualMinutes : undefined;
 
-      const sessions = await db.sessions.toArray();
+      const sessions = await db.sessions.filter(s => !isRetiredPlannedSession(s)).toArray();
       const target =
         sessions.find(
           (s) =>
@@ -549,7 +549,7 @@ export async function executeAssistantAction(
           ? params.newDate
           : addDays(today, 1);
 
-      const sessions = await db.sessions.toArray();
+      const sessions = await db.sessions.filter(s => !isRetiredPlannedSession(s)).toArray();
       const target =
         sessions.find(
           (s) =>
@@ -573,7 +573,7 @@ export async function executeAssistantAction(
 
     case 'DELETE_SESSION': {
       const disciplineId = params.disciplineId as string | undefined;
-      const sessions = await db.sessions.toArray();
+      const sessions = await db.sessions.filter(s => !isRetiredPlannedSession(s)).toArray();
       const target =
         sessions.find(
           (s) => s.status !== 'concluida' && (!disciplineId || s.disciplineId === disciplineId),
@@ -709,16 +709,8 @@ export async function executeAssistantAction(
       };
     }
 
-    case 'GENERATE_SCHEDULE': {
-      const startDate =
-        typeof params.startDate === 'string' && isValidDateKey(params.startDate)
-          ? params.startDate
-          : today;
-      const res = await generateSchedule(startDate);
-      return {
-        summary: `Cronograma gerado a partir de ${formatDate(startDate)}: ${res.sessionCount} sessões distribuídas em ${res.weekCount} semanas.`,
-        navigateTo: '/cronograma',
-      };
+    case 'OPEN_CYCLE': {
+      return { summary: 'Seu ciclo de estudos é contínuo e se adapta ao desempenho. Continue de onde parou.', navigateTo: '/cronograma' };
     }
 
     case 'UPDATE_SETTINGS': {
@@ -769,7 +761,7 @@ export async function executeAssistantAction(
     default: {
       await reconcileReviewsAndErrorNotes();
       const [sessions, reviews, errorNotes, questionLogs, settings] = await Promise.all([
-        db.sessions.toArray(),
+        db.sessions.filter(s => !isRetiredPlannedSession(s)).toArray(),
         db.reviews.toArray(),
         db.errorNotes.toArray(),
         db.questionLogs.toArray(),
@@ -809,22 +801,21 @@ export async function buildAssistantGroundingContext(today: DateKey = todayKey()
     errorNotes,
     questionLogs,
     mockExams,
-    weeklyPlans,
     settings,
     activeTimer,
   ] = await Promise.all([
     db.disciplines.toArray(),
     db.topics.toArray(),
-    db.sessions.toArray(),
+    db.sessions.filter(s => !isRetiredPlannedSession(s)).toArray(),
     db.reviews.toArray(),
     db.errorNotes.toArray(),
     db.questionLogs.toArray(),
     db.mockExams.toArray(),
-    db.weeklyPlans.toArray(),
     getSettings(),
     getActiveTimer(),
   ]);
 
+  const nextCycle = nextCycleActivity({ disciplines, topics, sessions, questionLogs, errorNotes, settings });
   const discMap = new Map(disciplines.map((d) => [d.id, d]));
   const topicMap = new Map(topics.map((t) => [t.id, t]));
 
@@ -875,14 +866,10 @@ export async function buildAssistantGroundingContext(today: DateKey = todayKey()
   );
   lines.push(`- Meta diária: ${settings.dailyGoalMinutes} min/dia (${(settings.dailyGoalMinutes / 60).toFixed(1)}h/dia)`);
   lines.push(`- Intervalos de revisão espaçada: ${(settings.reviewIntervals ?? [1, 7, 30]).join(', ')} dias`);
-  lines.push(
-    `- Início do cronograma: ${
-      settings.scheduleStartDate
-        ? `${settings.scheduleStartDate} (${formatDate(settings.scheduleStartDate)})`
-        : 'Não definido'
-    }`,
-  );
+  lines.push('- Planejamento: ciclo contínuo adaptativo, sem datas obrigatórias.');
   lines.push(`- Tema visual: ${settings.theme}`);
+
+  if (nextCycle) lines.push(`- Próxima atividade do ciclo: ${nextCycle.discipline.name} — ${nextCycle.topic?.title ?? 'Sem assunto disponível'} (${nextCycle.minutes} min). Motivo: ${nextCycle.reason}`);
 
   // 2. Gamificação, Patente, XP, Ofensiva e Escudos
   lines.push('\n[2. PATENTE, XP, OFENSIVA E ESCUDOS]');
@@ -1112,17 +1099,6 @@ export async function buildAssistantGroundingContext(today: DateKey = todayKey()
     lines.push('* Nenhum simulado registrado até o momento.');
   }
 
-  // 10. Planos Semanais (Cronograma Macro)
-  if (weeklyPlans.length > 0) {
-    const sortedWeeks = [...weeklyPlans].sort((a, b) => a.weekIndex - b.weekIndex);
-    lines.push(`\n[10. PLANO SEMANAL DE ESTUDOS (${sortedWeeks.length} semanas)]`);
-    for (const w of sortedWeeks.slice(0, 12)) {
-      lines.push(
-        `  - Semana ${w.weekIndex} (início ${w.weekStart} — ${formatDate(w.weekStart)}, status: ${w.status}): ${w.objectives}`,
-      );
-    }
-  }
-
   return lines.join('\n');
 }
 
@@ -1236,7 +1212,7 @@ AÇÕES DISPONÍVEIS:
 - LOG_QUESTIONS: { disciplineId: string, topicId?: string | null, total: number, correct: number, date?: "YYYY-MM-DD", source?: string }
 - ADD_TOPIC: { disciplineId: string, title: string }
 - UPDATE_TOPIC_STATUS: { topicId: string, status: "nao-iniciado" | "em-andamento" | "concluido" | "dominado" }
-- GENERATE_SCHEDULE: { startDate?: "YYYY-MM-DD" }
+- OPEN_CYCLE: {} (abre o ciclo contínuo; não gera semanas ou datas fixas)
 - UPDATE_SETTINGS: { dailyGoalMinutes?: number, reviewIntervals?: number[], examDate?: "YYYY-MM-DD", theme?: "light" | "dark" | "system" }
 - NAVIGATE: { route: "/" | "/calendario" | "/cronograma" | "/estudar-agora" | "/questoes" | "/erros" | "/revisoes" | "/simulados" | "/disciplinas" | "/relatorios" | "/configuracoes" }
 

@@ -134,7 +134,7 @@ export function ExamErrorNotebooks({ exam, disciplines }: { exam: MockExam; disc
         </Button>
       }
       title="Cadernos de erros desta prova"
-      description="Cadernos de erros associados a este simulado com revisões espaçadas automáticas no cronograma."
+      description="Cadernos de erros associados a este simulado com revisões espaçadas independentes."
     >
       <div className="flex flex-col gap-5">
         {error && (

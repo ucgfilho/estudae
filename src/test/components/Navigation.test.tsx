@@ -1,13 +1,12 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from '../../App';
 import { db, ensureSeed } from '../../db/db';
 import { setAuthSession } from '../../services/auth';
-import { generateSchedule } from '../../services/schedule';
 import { createSession } from '../../services/sessions';
 import { startPlannedTimer } from '../../services/timer';
-import { addDays, startOfWeek, todayKey } from '../../lib/dates';
+import { todayKey } from '../../lib/dates';
 
 const TEST_SESSION = {
   token: 'test-jwt-token',
@@ -52,7 +51,7 @@ describe('App Navigation, Auth Gate and Screen Integration', () => {
     // Check sidebar navigation items
     expect(screen.getByRole('link', { name: /visão geral/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /calendário/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /cronograma/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /ciclo de estudos/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /estudar agora/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /questões/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /caderno de erros/i })).toBeInTheDocument();
@@ -82,9 +81,9 @@ describe('App Navigation, Auth Gate and Screen Integration', () => {
     });
 
     // 2. Cronograma
-    await user.click(screen.getByRole('link', { name: /cronograma/i }));
+    await user.click(screen.getByRole('link', { name: /ciclo de estudos/i }));
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: /cronograma/i })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /ciclo de estudos/i })).toBeInTheDocument();
     });
 
     // 3. Estudar agora
@@ -138,18 +137,34 @@ describe('App Navigation, Auth Gate and Screen Integration', () => {
     });
   });
 
-  it('automatically selects the current calendar week (Semana 2) when opening Cronograma', async () => {
+  it('opens the continuous cycle without numbered weeks', async () => {
     setAuthSession(TEST_SESSION);
-    const today = todayKey();
-    const previousWeekStart = addDays(startOfWeek(today), -7);
-    await generateSchedule(previousWeekStart, today);
-
     window.location.hash = '#/cronograma';
     render(<App />);
+    expect(await screen.findByRole('heading', { name: /ciclo de estudos/i })).toBeInTheDocument();
+    expect(screen.getByText('Próxima atividade do ciclo')).toBeInTheDocument();
+    expect(screen.queryByText(/Semana 2/)).not.toBeInTheDocument();
+  });
 
-    await waitFor(() => {
-      expect(screen.getByText(/Semana 2 —/i)).toBeInTheDocument();
-    });
+  it('inicia o ciclo pela interface, retoma o cronômetro e salva no histórico', async () => {
+    setAuthSession(TEST_SESSION);
+    window.location.hash = '#/cronograma';
+    const user = userEvent.setup();
+    render(<App />);
+    const start = await screen.findByRole('button', { name: /iniciar estudo do ciclo/i });
+    const clock = vi.spyOn(Date, 'now');
+    try {
+      const now = Date.now();
+      clock.mockReturnValue(now - 60000);
+      await user.click(start);
+      clock.mockReturnValue(now);
+      await user.click(await screen.findByRole('button', { name: /^pausar$/i }));
+      await user.click(await screen.findByRole('button', { name: /^continuar$/i }));
+      await user.click(screen.getByRole('button', { name: /finalizar e salvar/i }));
+      await waitFor(() => expect(db.sessions.toArraySync().filter(s => s.status === 'concluida')).toHaveLength(1));
+      expect(await screen.findByRole('button', { name: /iniciar estudo do ciclo/i })).toBeInTheDocument();
+      expect(db.timer.toArraySync()).toHaveLength(0);
+    } finally { clock.mockRestore(); }
   });
 
   it('updates document.title with elapsed time and discipline name during an active timer session', async () => {

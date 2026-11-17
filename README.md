@@ -11,11 +11,11 @@ personalizados com edital verticalizado.
 - Seleção de concurso a partir de modelos predefinidos ou de um concurso
   personalizado.
 - Importação de edital verticalizado em texto ou arquivo e geração automática
-  de disciplinas, tópicos e cronograma.
+  de disciplinas e tópicos para o ciclo de estudos.
 - Visão geral com metas, progresso, sequência de estudos e desempenho.
 - Calendário mensal, semanal e diário para planejar e reagendar sessões.
-- Cronograma de 24 semanas com distribuição de carga e recuperação de sessões
-  atrasadas.
+- Ciclo contínuo de estudos: frequência adaptativa por peso, questões, erros e
+  tempo dedicado, com posição preservada pelo histórico de sessões concluídas.
 - Cronômetro de estudo com pausa, retomada, modo foco e anotações.
 - Registro de questões, métricas de acerto e identificação de questões não
   classificadas.
@@ -26,8 +26,12 @@ personalizados com edital verticalizado.
 - Relatórios por dia, semana ou mês e exportação de sessões e questões em CSV.
 - Configuração de metas, tema, data da prova, intervalos de revisão e backup
   ou restauração dos dados em JSON.
-- Geração de cronograma por motor integrado ou Google Gemini, quando uma chave
-  for configurada.
+- Assistente de estudos com Google Gemini, quando uma chave for configurada.
+
+O ciclo avança somente ao concluir uma sessão iniciada pelo botão do ciclo.
+Revisões espaçadas e sessões manuais do calendário continuam independentes.
+Planos semanais e metadados antigos são mantidos para compatibilidade de backups;
+sessões automáticas antigas sem execução ou edição deixam de gerar obrigações.
 
 ## Stack
 

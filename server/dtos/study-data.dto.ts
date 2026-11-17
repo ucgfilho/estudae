@@ -73,6 +73,7 @@ export const sessionDtoSchema = z.object({
 
 export const timerDtoSchema = z.object({
   id: z.literal('active'),
+  cycleStudy: z.boolean().optional(),
   sessionId: z.string().nullable(),
   status: z.enum(['running', 'paused']),
   startedAt: z.number().nullable(),
@@ -167,8 +168,8 @@ export const settingsDtoSchema = z.object({
   reviewIntervals: z.array(z.number().int().min(1).max(365)).min(1),
   theme: z.enum(['light', 'dark', 'system']),
   examDate: nullableDateKey,
-  scheduleStartDate: nullableDateKey,
-  scheduleWeeks: z.number().int().positive(),
+  scheduleStartDate: nullableDateKey.optional(),
+  scheduleWeeks: z.number().int().positive().optional(),
   distribution: z.record(z.string(), nonNegInt),
   geminiApiKey: z.string().optional(),
   aiProvider: z.enum(['builtin', 'gemini']).optional(),

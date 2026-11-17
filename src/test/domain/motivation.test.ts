@@ -66,7 +66,7 @@ describe('domain/motivation - daily progress', () => {
     const p = dailyProgress(sessions, [log('l1', 8, 2)], settings, TODAY);
     expect(p.studiedMinutes).toBe(40);
     expect(p.ratio).toBeCloseTo(40 / 60);
-    expect(p.scheduled.map((s) => s.id)).toEqual(['a', 'b']); // avulsa não entra no cronograma
+    expect(p.scheduled.map((s) => s.id)).toEqual(['a', 'b']); // avulsa não entra no calendário
     expect(p.scheduledDone).toBe(1);
     expect(p.questionsToday).toBe(10);
   });
@@ -151,7 +151,7 @@ describe('domain/motivation - deterministic messages', () => {
 
   it('generates consistent messages for schedule-complete', () => {
     const msg = formatAchievementMessage('schedule-complete');
-    expect(msg.title).toBe('Cronograma do dia completo');
+    expect(msg.title).toBe('Sessões planejadas do dia completas');
     expect(msg.body).toBe('Todos os blocos planejados para hoje foram executados.');
   });
 

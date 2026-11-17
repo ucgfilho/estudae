@@ -7,9 +7,7 @@ import {
   parseEditalVerticalizado,
   type ContestCatalogItem,
 } from '../domain/contests';
-import { startOfWeek, todayKey } from '../lib/dates';
 import { createId } from '../lib/utils';
-import { buildBuiltinAiSchedule } from './aiSchedule';
 import {
   getActiveContestScopeId,
   getAuthSession,
@@ -58,7 +56,6 @@ export interface CreateContestInput {
   editalFileName?: string | null;
   examDate?: string | null;
   weeklyGoalMinutes?: number;
-  generateScheduleNow?: boolean;
 }
 
 const CONTEST_LIST_KEY_PREFIX = 'estudae_user_contests_v1:';
@@ -220,7 +217,7 @@ export async function switchActiveContest(contestId: string): Promise<UserContes
 
 /**
  * Inicializa ou cria um concurso (no momento do cadastro ou pelo botão "+ Novo concurso"),
- * adaptando disciplinas, tópicos do Edital Verticalizado e gerando o cronograma de 24 semanas.
+ * adaptando disciplinas e tópicos do Edital Verticalizado para o ciclo contínuo.
  */
 export async function createAndActivateContest(
   input: CreateContestInput,
@@ -273,15 +270,12 @@ export async function createAndActivateContest(
 
   setActiveContestScopeId(contestScopeId);
 
-  const startMonday = startOfWeek(todayKey());
   const newSettings: Settings = {
     ...DEFAULT_SETTINGS,
     id: SETTINGS_ID,
     weeklyGoalMinutes,
     dailyGoalMinutes: Math.max(30, Math.round(weeklyGoalMinutes / 7)),
     examDate: input.examDate ?? null,
-    scheduleStartDate: input.generateScheduleNow !== false ? startMonday : null,
-    scheduleWeeks: 24,
     distribution,
     contestId: input.templateId,
     contestName,
@@ -289,30 +283,15 @@ export async function createAndActivateContest(
     editalFileName: input.editalFileName ?? null,
   };
 
-  let sessions = [] as ReturnType<typeof buildBuiltinAiSchedule>['sessions'];
-  let weeklyPlans = [] as ReturnType<typeof buildBuiltinAiSchedule>['weeklyPlans'];
-
-  if (input.generateScheduleNow !== false) {
-    const generated = buildBuiltinAiSchedule(
-      startMonday,
-      disciplines,
-      topics,
-      undefined,
-      `${contestName} — ${contestRole}`,
-    );
-    sessions = generated.sessions;
-    weeklyPlans = generated.weeklyPlans;
-  }
-
   const workspacePayload = {
     disciplines,
     topics,
-    sessions,
+    sessions: [],
     timer: [],
     questionLogs: [],
     errorNotes: [],
     reviews: [],
-    weeklyPlans,
+    weeklyPlans: [],
     settings: [newSettings],
     mockExams: [],
   };

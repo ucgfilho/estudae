@@ -239,7 +239,7 @@ export function ErrorNoteModal({
       description={
         selectedExam
           ? `Vinculado à prova "${selectedExam.title}".`
-          : 'Registre o erro para agendar revisões espaçadas no seu cronograma.'
+          : 'Registre o erro para agendar revisões espaçadas na tela de revisões.'
       }
       size="md"
       footer={

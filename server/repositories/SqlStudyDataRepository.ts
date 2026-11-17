@@ -355,8 +355,8 @@ export class SqlStudyDataRepository implements IStudyDataRepository {
         `INSERT INTO timer_states (
            user_id, id, session_id, status, started_at, first_started_at,
            accumulated_seconds, planned_seconds, discipline_id, topic_id,
-           objective, notes, updated_at
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           objective, notes, updated_at, cycle_study
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(user_id, id) DO UPDATE SET
            session_id = excluded.session_id,
            status = excluded.status,
@@ -368,7 +368,8 @@ export class SqlStudyDataRepository implements IStudyDataRepository {
            topic_id = excluded.topic_id,
            objective = excluded.objective,
            notes = excluded.notes,
-           updated_at = excluded.updated_at`,
+           updated_at = excluded.updated_at,
+           cycle_study = excluded.cycle_study`,
         [
           userId,
           t.id,
@@ -383,6 +384,7 @@ export class SqlStudyDataRepository implements IStudyDataRepository {
           t.objective,
           t.notes,
           t.updatedAt,
+          t.cycleStudy === undefined ? null : Number(t.cycleStudy),
         ],
       );
     }
@@ -587,8 +589,8 @@ export class SqlStudyDataRepository implements IStudyDataRepository {
           JSON.stringify(s.reviewIntervals),
           s.theme,
           s.examDate,
-          s.scheduleStartDate,
-          s.scheduleWeeks,
+          s.scheduleStartDate ?? null,
+          s.scheduleWeeks ?? 24, // Coluna legada NOT NULL; não participa do planejamento.
           JSON.stringify(s.distribution),
           this.cipher ? this.cipher.encrypt(s.geminiApiKey ?? '') : (s.geminiApiKey ?? ''),
           s.aiProvider ?? 'builtin',
@@ -804,9 +806,10 @@ export class SqlStudyDataRepository implements IStudyDataRepository {
       objective: string;
       notes: string;
       updated_at: number;
+      cycle_study: number | null;
     }>(
       `SELECT session_id, status, started_at, first_started_at, accumulated_seconds,
-              planned_seconds, discipline_id, topic_id, objective, notes, updated_at
+              planned_seconds, discipline_id, topic_id, objective, notes, updated_at, cycle_study
        FROM timer_states
        WHERE user_id = ?`,
       [userId],
@@ -824,6 +827,7 @@ export class SqlStudyDataRepository implements IStudyDataRepository {
       objective: r.objective,
       notes: r.notes,
       updatedAt: r.updated_at,
+      ...(r.cycle_study === null ? {} : { cycleStudy: Boolean(r.cycle_study) }),
     }));
   }
 

@@ -92,7 +92,7 @@ export function ContestSelectorScreen({ onSelectContest }: ContestSelectorScreen
               <span>estudaê</span>
             </div>
             <div className="text-[11px] text-fg-muted">
-              Seus concursos e cronogramas de estudo
+              Seus concursos e ciclos de estudo
             </div>
           </div>
         </div>
@@ -131,8 +131,7 @@ export function ContestSelectorScreen({ onSelectContest }: ContestSelectorScreen
             Qual concurso você vai estudar agora?
           </h1>
           <p className="text-xs sm:text-sm text-fg-muted max-w-xl mx-auto">
-            Escolha um concurso para abrir o edital verticalizado, as questões e o cronograma de
-            24 semanas, ou cadastre outro.
+            Escolha um concurso para abrir o edital verticalizado, as questões e o ciclo contínuo de estudos, ou cadastre outro.
           </p>
         </div>
 
@@ -207,7 +206,7 @@ export function ContestSelectorScreen({ onSelectContest }: ContestSelectorScreen
                   </span>
                   <span className="inline-flex items-center gap-1">
                     <CalendarRange className="size-3 text-accent" />
-                    24 sem.
+                    Ciclo
                   </span>
                 </div>
 
@@ -255,7 +254,7 @@ export function ContestSelectorScreen({ onSelectContest }: ContestSelectorScreen
       </main>
 
       <footer className="relative z-10 py-4 text-center text-[11px] text-fg-subtle">
-        estudaê · Cronogramas de 24 semanas a partir do seu edital verticalizado
+        estudaê · Ciclos contínuos de estudos a partir do seu edital verticalizado
       </footer>
 
       <NewContestModal

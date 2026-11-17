@@ -1,4 +1,3 @@
-import { addDays, startOfWeek, weekdayIndex } from '../lib/dates';
 import {
   fetchUserWorkspaceFromApi,
   getAuthSession,
@@ -650,11 +649,6 @@ export function shouldRecoverFromLocalCache(
       return true;
     }
   }
-  const localSettings = (local.settings?.[0] ?? null) as Partial<Settings> | null;
-  const remoteSettings = (remote.settings?.[0] ?? null) as Partial<Settings> | null;
-  if (localSettings?.scheduleStartDate && !remoteSettings?.scheduleStartDate) {
-    return true;
-  }
   return false;
 }
 
@@ -737,23 +731,6 @@ export async function ensureLocalDefaults(database: AppDatabase = db): Promise<v
         };
         if (JSON.stringify(merged) !== JSON.stringify(settings)) {
           await database.settings.put(merged);
-        }
-      }
-
-      const plans = await database.weeklyPlans.toArray();
-      if (plans.length > 0 && plans.some((p) => weekdayIndex(p.weekStart) !== 0)) {
-        plans.sort((a, b) => a.weekIndex - b.weekIndex);
-        const newFirstStart = startOfWeek(plans[0].weekStart);
-        const allSessions = await database.sessions.toArray();
-        for (const plan of plans) {
-          const newStart = addDays(newFirstStart, (plan.weekIndex - 1) * 7);
-          const newEnd = addDays(newStart, 6);
-          const weekSessions = allSessions.filter((s) => s.date >= newStart && s.date <= newEnd);
-          const weekPlanned = weekSessions.reduce((sum, s) => sum + s.plannedMinutes, 0);
-          await database.weeklyPlans.update(plan.id, {
-            weekStart: newStart,
-            plannedMinutes: weekPlanned || plan.plannedMinutes,
-          });
         }
       }
 

@@ -1,3 +1,4 @@
+import { CycleRecommendation } from '../components/CycleRecommendation';
 import { useState, useMemo, useEffect } from 'react';
 import {
   Play,
@@ -453,7 +454,7 @@ export function StudyNowScreen() {
                     />
                   </div>
                   <div className="rounded-lg bg-surface-muted/50 p-3">
-                    <p className="text-xs font-medium text-fg-muted">Cronograma do dia</p>
+                    <p className="text-xs font-medium text-fg-muted">Sessões planejadas do dia</p>
                     <p className="mt-1 text-lg font-semibold tabular-nums text-fg">
                       {dayProgress.scheduled.length > 0
                         ? `${dayProgress.scheduledDone} de ${dayProgress.scheduled.length} blocos`
@@ -463,7 +464,7 @@ export function StudyNowScreen() {
                       <ProgressBar
                         value={dayProgress.scheduledDone}
                         max={dayProgress.scheduled.length}
-                        label="Blocos do cronograma de hoje concluídos"
+                        label="Blocos do planejamento manual de hoje concluídos"
                         tone={dayProgress.scheduledDone === dayProgress.scheduled.length ? 'success' : 'primary'}
                         className="mt-2"
                       />
@@ -516,11 +517,12 @@ export function StudyNowScreen() {
             </Card>
           )}
 
+          <CycleRecommendation />
           <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
             {/* Option A: Start Planned Session (Prioritized when schedule exists — Decision Reduction) */}
             <Card
               title="Iniciar Sessão Planejada"
-              description="Execute o bloco recomendado do seu cronograma sem precisar escolher do zero."
+              description="Execute uma sessão planejada manualmente no calendário."
               className={cn(plannedCandidates.length > 0 && 'border-primary/40')}
             >
               {plannedCandidates.length > 0 ? (
@@ -587,7 +589,7 @@ export function StudyNowScreen() {
                   <Calendar className="mx-auto size-8 text-fg-subtle" />
                   <p className="text-sm font-medium text-fg">Nenhuma sessão planejada pendente</p>
                   <p className="text-xs text-fg-muted max-w-xs mx-auto">
-                    Você pode planejar novas sessões pelo Calendário ou Cronograma, ou iniciar uma sessão avulsa ao lado.
+                    Você pode planejar novas sessões pelo Calendário, ou iniciar uma sessão avulsa ao lado.
                   </p>
                 </div>
               )}
@@ -596,7 +598,7 @@ export function StudyNowScreen() {
             {/* Option B: Start Ad-Hoc Session */}
             <Card
               title="Iniciar Sessão Avulsa"
-              description="Estude livremente qualquer disciplina fora do cronograma do dia."
+              description="Estude livremente qualquer disciplina fora do planejamento do dia."
             >
               <div className="space-y-4">
                 <Field label="Disciplina" required>

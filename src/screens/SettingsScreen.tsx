@@ -48,7 +48,6 @@ export function SettingsScreen() {
   const [examDate, setExamDate] = useState('');
   const [theme, setTheme] = useState<ThemePreference>('system');
   const [geminiApiKey, setGeminiApiKey] = useState('');
-  const [aiProvider, setAiProvider] = useState<'builtin' | 'gemini'>('builtin');
 
   // Backup & Restore states
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -81,7 +80,6 @@ export function SettingsScreen() {
       setExamDate(settings.examDate ?? '');
       setTheme(settings.theme);
       setGeminiApiKey(settings.geminiApiKey ?? '');
-      setAiProvider(settings.aiProvider ?? 'builtin');
     }
   }, [settings]);
 
@@ -126,7 +124,6 @@ export function SettingsScreen() {
         examDate: examDate.trim() || null,
         theme,
         geminiApiKey: geminiApiKey.trim(),
-        aiProvider,
       });
       setActionSuccess('Configurações e metas salvas.');
     } catch (err) {
@@ -359,7 +356,7 @@ export function SettingsScreen() {
             checked={celebrationsEnabled}
             onChange={(e) => setCelebrationsEnabled(e.target.checked)}
             label="Animações de celebração ao concluir metas"
-            description="Confete ao finalizar sessões, bater a meta do dia, completar o cronograma ou ir bem nas questões. Os avisos de conquista continuam aparecendo mesmo desativado. Aplicado imediatamente."
+            description="Confete ao finalizar sessões, bater a meta do dia, completar as sessões planejadas ou ir bem nas questões. Os avisos de conquista continuam aparecendo mesmo desativado. Aplicado imediatamente."
           />
         </div>
       </Card>
@@ -372,27 +369,14 @@ export function SettingsScreen() {
             <span>Inteligência Artificial (IA) e Modelos</span>
           </div>
         }
-        description="Configure o motor de IA para geração do cronograma de 24 semanas e assistente de estudos BNB"
+        description="Configure a chave de API para o assistente de estudos"
       >
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Field
-            label="Motor de IA Padrão"
-            hint="Escolha entre o motor especialista integrado no navegador ou a API do Google Gemini."
-          >
-            <Select
-              value={aiProvider}
-              onChange={(e) => setAiProvider(e.target.value as 'builtin' | 'gemini')}
-            >
-              <option value="builtin">IA Integrada Especialista BNB (Local e Imediato)</option>
-              <option value="gemini">Google Gemini AI (API Key do Google AI Studio)</option>
-            </Select>
-          </Field>
-
           <Field
             label="Chave de API do Google Gemini (API Key)"
             hint={
               <span className="inline-flex flex-wrap items-center gap-1">
-                <span>Opcional se usar IA Integrada.</span>
+                <span>Opcional para o assistente de estudos.</span>
                 <a
                   href="https://aistudio.google.com/app/apikey"
                   target="_blank"

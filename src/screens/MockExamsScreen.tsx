@@ -46,7 +46,7 @@ export function MockExamsScreen() {
           <Card title={selected.title} description={[selected.examFileName, selected.keyFileName].filter(Boolean).join(' · ') || undefined}>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <p className="text-sm text-fg-muted">
-                {selected.questionCount} questões · {isTrueFalseExam(selected.optionCount) ? 'Certo ou Errado' : `${selected.optionCount} alternativas`} · 3h alocadas no cronograma
+                {selected.questionCount} questões · {isTrueFalseExam(selected.optionCount) ? 'Certo ou Errado' : `${selected.optionCount} alternativas`} · 3h alocadas no calendário
               </p>
               <Field label="Data do simulado" className="w-full sm:w-48">
                 <DateInput

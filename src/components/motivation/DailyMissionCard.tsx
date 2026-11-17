@@ -103,7 +103,7 @@ export function DailyMissionCard({
                 <p className="text-sm text-fg-muted">
                   {goalDone
                     ? 'Meta do dia atingida. Inicie uma sessão extra se quiser aprofundar.'
-                    : 'Nenhuma sessão pendente agendada. Inicie um estudo avulso com cronômetro.'}
+                    : 'Continue pela próxima atividade do seu ciclo de estudos.'}
                 </p>
               </>
             )}
@@ -155,7 +155,7 @@ export function DailyMissionCard({
             </div>
           </div>
 
-          {/* Checklist do cronograma de hoje */}
+          {/* Checklist do planejamento manual de hoje */}
           <div className="min-w-0 space-y-2">
             <div className="flex items-baseline justify-between gap-2">
               <h3 className="text-xs font-semibold text-fg-muted">Blocos de hoje</h3>
@@ -170,7 +170,7 @@ export function DailyMissionCard({
                 <ProgressBar
                   value={p.scheduledDone}
                   max={p.scheduled.length}
-                  label="Blocos do cronograma de hoje concluídos"
+                  label="Blocos do planejamento manual de hoje concluídos"
                   tone={scheduleDone ? 'success' : 'primary'}
                 />
                 <ul className="space-y-1 pt-1">

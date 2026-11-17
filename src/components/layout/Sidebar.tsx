@@ -35,7 +35,7 @@ interface SidebarProps {
 export const NAV_ITEMS = [
   { to: '/', label: 'Visão geral', shortLabel: 'Início', icon: LayoutDashboard, section: 'Execução e agenda' },
   { to: '/calendario', label: 'Calendário', shortLabel: 'Agenda', icon: Calendar },
-  { to: '/cronograma', label: 'Cronograma', shortLabel: '24 sem.', icon: CalendarClock },
+  { to: '/cronograma', label: 'Ciclo de Estudos', shortLabel: 'Ciclo', icon: CalendarClock },
   { to: '/estudar-agora', label: 'Estudar agora', shortLabel: 'Estudar', icon: Timer },
   { to: '/questoes', label: 'Questões', icon: CheckSquare, section: 'Prática e retenção' },
   { to: '/erros', label: 'Caderno de erros', icon: AlertOctagon },

@@ -14,7 +14,7 @@ import { buildReviewTasks, nextPendingDate } from '../domain/reviews';
 import { SIMULADO_DISCIPLINE_ID } from '../domain/schedule';
 import { formatDate, isValidDateKey, todayKey, type DateKey } from '../lib/dates';
 import { createId, nowIso } from '../lib/utils';
-import { ValidationError, syncWeeklyPlansWithSessions } from './sessions';
+import { ValidationError } from './sessions';
 import { getSettings } from './settings';
 
 export const MOCK_EXAM_SESSION_MINUTES = 180; // 3 horas
@@ -93,7 +93,7 @@ export async function createMockExam(input: CreateMockExamInput): Promise<MockEx
   const questionCount = Math.min(Math.max(Math.round(input.questionCount), 0), 500);
   const optionCount = Math.min(Math.max(Math.round(input.optionCount), 2), 5);
 
-  return db.transaction('rw', db.mockExams, db.sessions, db.weeklyPlans, async () => {
+  return db.transaction('rw', db.mockExams, db.sessions, async () => {
     const count = await db.sessions.where('date').equals(date).count();
     const session: StudySession = {
       id: sessionId,
@@ -136,7 +136,6 @@ export async function createMockExam(input: CreateMockExamInput): Promise<MockEx
 
     await db.sessions.add(session);
     await db.mockExams.add(exam);
-    await syncWeeklyPlansWithSessions();
     return exam;
   });
 }
@@ -147,10 +146,10 @@ async function getEditableExam(id: string): Promise<MockExam> {
   return exam;
 }
 
-/** Atualiza a data em que o simulado foi realizado e move/cria a sessão de 3h no cronograma. */
+/** Atualiza a data em que o simulado foi realizado e move/cria a sessão de 3h no calendário. */
 export async function updateMockExamDate(id: string, date: DateKey): Promise<MockExam> {
   if (!isValidDateKey(date)) throw new ValidationError('Informe uma data válida para o simulado.');
-  return db.transaction('rw', db.mockExams, db.sessions, db.weeklyPlans, async () => {
+  return db.transaction('rw', db.mockExams, db.sessions, async () => {
     const exam = await getEditableExam(id);
     const now = nowIso();
     let sessionId = exam.sessionId ?? null;
@@ -204,7 +203,6 @@ export async function updateMockExamDate(id: string, date: DateKey): Promise<Moc
 
     const updated: MockExam = { ...exam, date, sessionId, updatedAt: now };
     await db.mockExams.put(updated);
-    await syncWeeklyPlansWithSessions();
     return updated;
   });
 }
@@ -228,9 +226,9 @@ export async function setMockExamAnswer(id: string, question: number, letter: st
   return updated;
 }
 
-/** Envia as respostas: após isso o simulado fica travado, o resultado é calculado e a sessão de 3h é concluída no cronograma. */
+/** Envia as respostas: após isso o simulado fica travado, o resultado é calculado e a sessão de 3h é concluída no calendário. */
 export async function submitMockExam(id: string): Promise<{ exam: MockExam; graded: GradedExam }> {
-  return db.transaction('rw', db.mockExams, db.sessions, db.weeklyPlans, async () => {
+  return db.transaction('rw', db.mockExams, db.sessions, async () => {
     const exam = await getEditableExam(id);
     if (exam.submittedAt) throw new ValidationError('Este simulado já foi enviado.');
     const now = nowIso();
@@ -281,14 +279,13 @@ export async function submitMockExam(id: string): Promise<{ exam: MockExam; grad
 
     const updated: MockExam = { ...exam, date: examDate, sessionId, submittedAt: now, updatedAt: now };
     await db.mockExams.put(updated);
-    await syncWeeklyPlansWithSessions();
     return { exam: updated, graded };
   });
 }
 
 /** Reabre o simulado para novas marcações (descarta o resultado, mantém as respostas e retorna a sessão para planejada). */
 export async function reopenMockExam(id: string): Promise<MockExam> {
-  return db.transaction('rw', db.mockExams, db.sessions, db.weeklyPlans, async () => {
+  return db.transaction('rw', db.mockExams, db.sessions, async () => {
     const exam = await getEditableExam(id);
     const now = nowIso();
     if (exam.sessionId) {
@@ -309,13 +306,12 @@ export async function reopenMockExam(id: string): Promise<MockExam> {
     }
     const updated = { ...exam, submittedAt: null, updatedAt: now };
     await db.mockExams.put(updated);
-    await syncWeeklyPlansWithSessions();
     return updated;
   });
 }
 
 export async function deleteMockExam(id: string): Promise<void> {
-  await db.transaction('rw', db.mockExams, db.sessions, db.timer, db.weeklyPlans, async () => {
+  await db.transaction('rw', db.mockExams, db.sessions, db.timer, async () => {
     const exam = await db.mockExams.get(id);
     if (exam?.sessionId) {
       const timer = await db.timer.get('active');
@@ -324,7 +320,6 @@ export async function deleteMockExam(id: string): Promise<void> {
       }
     }
     await db.mockExams.delete(id);
-    await syncWeeklyPlansWithSessions();
   });
 }
 
@@ -341,7 +336,7 @@ export function wrongQuestionsByDiscipline(exam: MockExam): Map<string, Question
 /**
  * Cria um caderno de erros por disciplina escolhida a partir de um simulado corrigido.
  * Cada caderno entra no Caderno de Erros e já recebe as revisões espaçadas padrão
- * (que aparecem em Revisões e no cronograma). Disciplinas que já têm caderno desta prova são ignoradas.
+ * (que aparecem em Revisões). Disciplinas que já têm caderno desta prova são ignoradas.
  */
 export async function createExamErrorNotebooks(examId: string, disciplineIds: string[]): Promise<ErrorNote[]> {
   const settings = await getSettings();

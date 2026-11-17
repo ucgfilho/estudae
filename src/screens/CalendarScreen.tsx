@@ -619,7 +619,7 @@ export function CalendarScreen() {
               <CalendarIcon className="mx-auto size-8 text-fg-subtle mb-2" />
               <p className="font-medium text-fg">Nenhuma sessão agendada para este dia</p>
               <p className="text-xs text-fg-subtle mt-1">
-                Adicione uma sessão avulsa ou planeje no cronograma.
+                Adicione ou planeje uma sessão neste calendário.
               </p>
             </div>
           )}

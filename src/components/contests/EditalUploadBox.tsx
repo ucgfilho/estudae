@@ -142,7 +142,7 @@ export function EditalUploadBox({
               Edital Verticalizado — {effectiveContestName}
             </div>
             <div className="text-[11px] text-fg-muted">
-              Envie seu PDF/TXT/CSV ou cole os tópicos para gerar seu cronograma de 24 semanas
+              Envie seu PDF/TXT/CSV ou cole os tópicos para gerar seu ciclo contínuo de estudos
             </div>
           </div>
         </div>
@@ -188,7 +188,7 @@ export function EditalUploadBox({
               <div className="font-semibold text-fg truncate">{editalFileName}</div>
               <div className="text-[11px] text-fg-muted">
                 Edital processado: {parsedPreview?.disciplineCount ?? 0} disciplinas e{' '}
-                {parsedPreview?.topicCount ?? 0} tópicos mapeados para as 24 semanas
+                {parsedPreview?.topicCount ?? 0} tópicos disponíveis no ciclo
               </div>
             </div>
           </div>
@@ -263,7 +263,7 @@ export function EditalUploadBox({
             <span className="font-semibold text-fg">Resumo do edital:</span> As{' '}
             <strong className="text-fg">{parsedPreview.disciplineCount} disciplinas</strong> e{' '}
             <strong className="text-fg">{parsedPreview.topicCount} tópicos</strong> serão
-            distribuídos nas 24 semanas, com revisões e simulados aos sábados.
+            recomendados no ciclo contínuo conforme seu desempenho.
           </div>
         </div>
       )}

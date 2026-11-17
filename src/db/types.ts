@@ -7,7 +7,7 @@ import type { DateKey } from '../lib/dates';
  * - `kind` em disciplinas para separar técnicas/gerais na distribuição;
  * - `objective`, `origin`, `history` e `recoveredFromId` em sessões para
  *   reagendamento/recuperação sem perda do histórico de execução;
- * - `weekIndex`/`plannedContent` no plano semanal do cronograma de 24 semanas.
+ * - Planos semanais legados são preservados exclusivamente para compatibilidade.
  */
 
 export type DisciplineKind = 'technical' | 'general';
@@ -97,6 +97,8 @@ export interface TimerState {
   id: typeof ACTIVE_TIMER_ID;
   /** Sessão planejada vinculada; `null` para sessão avulsa. */
   sessionId: string | null;
+  /** Identifica execução do ciclo; somente a conclusão gera avanço. */
+  cycleStudy?: boolean;
   status: TimerStatus;
   /** Instante (epoch ms) de início do trecho em execução; `null` se pausado. */
   startedAt: number | null;
@@ -226,12 +228,13 @@ export interface Settings {
   reviewIntervals: number[];
   theme: ThemePreference;
   examDate: DateKey | null;
-  /** Início do cronograma de 24 semanas (`null` = ainda não gerado). */
-  scheduleStartDate: DateKey | null;
-  scheduleWeeks: number;
+  /** @deprecated Metadado de backups antigos; não controla o ciclo. */
+  scheduleStartDate?: DateKey | null;
+  /** @deprecated Mantido para leitura e exportação de backups antigos. */
+  scheduleWeeks?: number;
   /** Minutos semanais planejados por disciplina. */
   distribution: Record<string, number>;
-  /** Chave de API do Google Gemini para geração de cronograma via IA. */
+  /** Chave de API do Google Gemini para uso do assistente de estudos. */
   geminiApiKey?: string;
   /** Provedor preferido de IA ('builtin' | 'gemini'). */
   aiProvider?: 'builtin' | 'gemini';
@@ -261,7 +264,7 @@ export interface MockExam {
   title: string;
   /** Data em que o simulado foi realizado / agendado (AAAA-MM-DD). */
   date?: DateKey;
-  /** ID da sessão de estudo de 3h vinculada no cronograma. */
+  /** ID da sessão de estudo de 3h vinculada no calendário. */
   sessionId?: string | null;
   examFileName: string | null;
   keyFileName: string | null;
