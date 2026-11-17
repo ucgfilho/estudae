@@ -587,7 +587,7 @@ export class SqlStudyDataRepository implements IStudyDataRepository {
           s.accuracyGoal,
           s.topicCompletionGoal,
           JSON.stringify(s.reviewIntervals),
-          s.theme,
+          'light',
           s.examDate,
           s.scheduleStartDate ?? null,
           s.scheduleWeeks ?? 24, // Coluna legada NOT NULL; não participa do planejamento.
@@ -1023,7 +1023,7 @@ export class SqlStudyDataRepository implements IStudyDataRepository {
       accuracyGoal: row.accuracy_goal,
       topicCompletionGoal: row.topic_completion_goal,
       reviewIntervals: JSON.parse(row.review_intervals_json) as number[],
-      theme: row.theme,
+      theme: 'light',
       examDate: row.exam_date,
       scheduleStartDate: row.schedule_start_date,
       scheduleWeeks: row.schedule_weeks,

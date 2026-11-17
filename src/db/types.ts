@@ -212,8 +212,6 @@ export interface WeeklyPlan {
   notes: string;
 }
 
-export type ThemePreference = 'light' | 'dark' | 'system';
-
 export const SETTINGS_ID = 'settings';
 
 export interface Settings {
@@ -226,7 +224,8 @@ export interface Settings {
   /** Meta de conclusão de tópicos em % (`null` = não definida). */
   topicCompletionGoal: number | null;
   reviewIntervals: number[];
-  theme: ThemePreference;
+  /** Campo legado de persistência; a interface usa apenas o tema claro. */
+  theme: 'light';
   examDate: DateKey | null;
   /** @deprecated Metadado de backups antigos; não controla o ciclo. */
   scheduleStartDate?: DateKey | null;

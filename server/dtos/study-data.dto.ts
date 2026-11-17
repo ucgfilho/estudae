@@ -166,7 +166,8 @@ export const settingsDtoSchema = z.object({
   accuracyGoal: z.number().int().min(1).max(100),
   topicCompletionGoal: z.number().int().min(1).max(100).nullable(),
   reviewIntervals: z.array(z.number().int().min(1).max(365)).min(1),
-  theme: z.enum(['light', 'dark', 'system']),
+  // Aceita preferências legadas sem restaurar a alternância de temas.
+  theme: z.enum(['light', 'dark', 'system']).optional().transform(() => 'light' as const),
   examDate: nullableDateKey,
   scheduleStartDate: nullableDateKey.optional(),
   scheduleWeeks: z.number().int().positive().optional(),

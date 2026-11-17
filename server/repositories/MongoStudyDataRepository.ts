@@ -152,7 +152,7 @@ export class MongoStudyDataRepository implements IStudyDataRepository {
               key = this.cipher.decrypt(key);
             }
           }
-          return { ...s, id: SETTINGS_ID as 'settings', geminiApiKey: key };
+          return { ...s, id: SETTINGS_ID as 'settings', theme: 'light', geminiApiKey: key };
         });
 
         workspace = {
@@ -245,7 +245,7 @@ export class MongoStudyDataRepository implements IStudyDataRepository {
           key = this.cipher.decrypt(key);
         }
       }
-      return { ...s, id: SETTINGS_ID as 'settings', geminiApiKey: key };
+      return { ...s, id: SETTINGS_ID as 'settings', theme: 'light', geminiApiKey: key };
     });
 
     return {

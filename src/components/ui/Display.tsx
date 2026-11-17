@@ -226,7 +226,7 @@ export function Alert({
       <button
         type="button"
         onClick={handleClose}
-        className="absolute top-2 right-2 inline-flex size-8 max-lg:size-11 shrink-0 items-center justify-center rounded-lg text-current/80 hover:text-current hover:bg-black/10 dark:hover:bg-white/15 transition-colors focus-visible:ring-2 focus-visible:ring-current"
+        className="absolute top-2 right-2 inline-flex size-8 max-lg:size-11 shrink-0 items-center justify-center rounded-lg text-current/80 hover:text-current hover:bg-black/10 transition-colors focus-visible:ring-2 focus-visible:ring-current"
         aria-label="Fechar mensagem"
         title="Fechar mensagem"
       >

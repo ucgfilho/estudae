@@ -2,9 +2,6 @@ import { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Menu,
-  Sun,
-  Moon,
-  Monitor,
   Settings as SettingsIcon,
   Timer as TimerIcon,
   CalendarDays,
@@ -17,7 +14,6 @@ import { Avatar } from '../ui/Avatar';
 import { ProfileModal } from '../profile/ProfileModal';
 import { tierOf } from '../motivation/RankCard';
 import { useSettings, useActiveTimer, useNow, useSessions, useReviews } from '../../hooks/useData';
-import { updateSettings } from '../../services/settings';
 import { getAuthSession, setAuthSession, subscribeAuth } from '../../services/auth';
 import { db } from '../../db/db';
 import { todayKey, formatLongDate } from '../../lib/dates';
@@ -27,7 +23,6 @@ import { elapsedSeconds } from '../../domain/timer';
 import { formatClock } from '../../lib/format';
 import { cn } from '../../lib/utils';
 import { BnbLogo } from '../ui/BnbLogo';
-import type { ThemePreference } from '../../db/types';
 import type { UserContestProfile } from '../../services/contests';
 
 interface HeaderProps {
@@ -67,42 +62,10 @@ export function Header({
     });
   }, []);
 
-  const themePreference = settings?.theme;
-
-  // Apply theme class to documentElement
-  useEffect(() => {
-    if (!themePreference) return;
-    const isDark =
-      themePreference === 'dark' ||
-      (themePreference === 'system' &&
-        window.matchMedia('(prefers-color-scheme: dark)').matches);
-    if (isDark) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [themePreference]);
-
-  const cycleTheme = async () => {
-    const next: Record<ThemePreference, ThemePreference> = {
-      light: 'dark',
-      dark: 'system',
-      system: 'light',
-    };
-    const current = settings?.theme ?? 'system';
-    await updateSettings({ theme: next[current] });
-  };
-
   const handleLogout = () => {
     db.clearMemory();
     setAuthSession(null);
   };
-
-  const themeIcon = {
-    light: <Sun className="size-4" />,
-    dark: <Moon className="size-4" />,
-    system: <Monitor className="size-4" />,
-  }[settings?.theme ?? 'system'];
 
   const examDaysLeft = daysUntil(settings?.examDate ?? null, today);
 
@@ -184,12 +147,6 @@ export function Header({
               <Pencil className="hidden sm:block size-3 text-fg-subtle shrink-0" aria-hidden="true" />
             </button>
           )}
-
-          <IconButton
-            label={`Alterar tema (atual: ${{ light: 'claro', dark: 'escuro', system: 'sistema' }[settings?.theme ?? 'system']})`}
-            icon={themeIcon}
-            onClick={cycleTheme}
-          />
 
           <Link to="/configuracoes" aria-label="Configurações" title="Configurações" className="hidden size-10 items-center justify-center rounded-lg text-fg-muted transition-colors hover:bg-surface-muted hover:text-fg lg:inline-flex">
             <SettingsIcon className="size-4" aria-hidden="true" />

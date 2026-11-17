@@ -28,5 +28,5 @@ export async function updateSettings(patch: Partial<Omit<Settings, 'id'>>): Prom
   const error = validateSettingsPatch(patch);
   if (error) throw new ValidationError(error);
   const current = await getSettings();
-  await db.settings.put({ ...current, ...patch, id: SETTINGS_ID });
+  await db.settings.put({ ...current, ...patch, theme: 'light', id: SETTINGS_ID });
 }

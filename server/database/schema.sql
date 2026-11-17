@@ -196,7 +196,7 @@ CREATE TABLE IF NOT EXISTS user_settings (
   accuracy_goal INTEGER NOT NULL DEFAULT 80,
   topic_completion_goal INTEGER NULL,
   review_intervals_json TEXT NOT NULL,
-  theme TEXT NOT NULL DEFAULT 'system' CHECK (theme IN ('light', 'dark', 'system')),
+  theme TEXT NOT NULL DEFAULT 'light' CHECK (theme = 'light'),
   exam_date TEXT NULL,
   schedule_start_date TEXT NULL,
   schedule_weeks INTEGER NOT NULL DEFAULT 24,

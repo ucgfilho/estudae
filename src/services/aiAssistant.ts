@@ -5,7 +5,6 @@ import type {
   Discipline,
   ErrorStatus,
   ErrorType,
-  ThemePreference,
   TopicStatus,
 } from '../db/types';
 import { reviewBuckets } from '../domain/metrics';
@@ -738,10 +737,6 @@ export async function executeAssistantAction(
         patch.examDate = params.examDate;
         parts.push(`data da prova para ${formatDate(String(params.examDate))}`);
       }
-      if (params.theme !== undefined) {
-        patch.theme = params.theme as ThemePreference;
-        parts.push(`tema para ${String(params.theme)}`);
-      }
       await updateSettings(patch);
       return {
         summary: `Configurações atualizadas: ${parts.join('; ') || 'preferências salvas'}.`,
@@ -867,7 +862,6 @@ export async function buildAssistantGroundingContext(today: DateKey = todayKey()
   lines.push(`- Meta diária: ${settings.dailyGoalMinutes} min/dia (${(settings.dailyGoalMinutes / 60).toFixed(1)}h/dia)`);
   lines.push(`- Intervalos de revisão espaçada: ${(settings.reviewIntervals ?? [1, 7, 30]).join(', ')} dias`);
   lines.push('- Planejamento: ciclo contínuo por área do edital, sem datas obrigatórias.');
-  lines.push(`- Tema visual: ${settings.theme}`);
 
   if (nextCycle) lines.push(`- Próxima atividade do ciclo: ${nextCycle.discipline.name} — ${nextCycle.topic?.title ?? 'Sem assunto disponível'} (${nextCycle.minutes} min). Motivo: ${nextCycle.reason}`);
 
@@ -1213,7 +1207,7 @@ AÇÕES DISPONÍVEIS:
 - ADD_TOPIC: { disciplineId: string, title: string }
 - UPDATE_TOPIC_STATUS: { topicId: string, status: "nao-iniciado" | "em-andamento" | "concluido" | "dominado" }
 - OPEN_CYCLE: {} (abre o ciclo contínuo; não gera semanas ou datas fixas)
-- UPDATE_SETTINGS: { dailyGoalMinutes?: number, reviewIntervals?: number[], examDate?: "YYYY-MM-DD", theme?: "light" | "dark" | "system" }
+- UPDATE_SETTINGS: { dailyGoalMinutes?: number, reviewIntervals?: number[], examDate?: "YYYY-MM-DD" }
 - NAVIGATE: { route: "/" | "/calendario" | "/cronograma" | "/estudar-agora" | "/questoes" | "/erros" | "/revisoes" | "/simulados" | "/disciplinas" | "/relatorios" | "/configuracoes" }
 
 ${groundingContext}`;

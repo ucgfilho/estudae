@@ -436,7 +436,10 @@ export class AppDatabase {
     for (const tableName of DATA_TABLES) {
       const rows = workspace[tableName];
       if (Array.isArray(rows)) {
-        this.table(tableName).replaceAllSilent(rows as { id: string }[]);
+        const records = rows as { id: string }[];
+        this.table(tableName).replaceAllSilent(tableName === 'settings'
+          ? records.map(row => ({ ...row, theme: 'light' }))
+          : records);
         if (rows.length > 0) {
           delete this.explicitlyClearedTables[tableName];
         }
@@ -455,7 +458,10 @@ export class AppDatabase {
     for (const tableName of DATA_TABLES) {
       const rows = workspace[tableName];
       if (Array.isArray(rows) && rows.length > 0) {
-        this.table(tableName).replaceAllSilent(rows as { id: string }[]);
+        const records = rows as { id: string }[];
+        this.table(tableName).replaceAllSilent(tableName === 'settings'
+          ? records.map(row => ({ ...row, theme: 'light' }))
+          : records);
       } else {
         this.table(tableName).clearSilent();
         this.explicitlyClearedTables[tableName] = true;
@@ -668,6 +674,7 @@ export async function ensureLocalDefaults(database: AppDatabase = db): Promise<v
         const merged: Settings = {
           ...DEFAULT_SETTINGS,
           ...settings,
+          theme: 'light',
           distribution: isCustomContest
             ? { ...settings.distribution }
             : { ...DEFAULT_SETTINGS.distribution, ...settings.distribution },

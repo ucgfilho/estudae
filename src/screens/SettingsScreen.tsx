@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Card, PageHeader, Alert } from '../components/ui/Display';
-import { Field, Input, Select, Checkbox } from '../components/ui/Form';
+import { Field, Input, Checkbox } from '../components/ui/Form';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { useSettings } from '../hooks/useData';
 import { useCelebrationsEnabled } from '../hooks/useCelebrationPrefs';
@@ -29,7 +29,6 @@ import {
 import { db, resetDatabase } from '../db/db';
 import { parseIntervals } from '../domain/reviews';
 import { todayKey, formatDate } from '../lib/dates';
-import type { ThemePreference } from '../db/types';
 import { errorMessage } from '../lib/utils';
 import { useSuccessToast } from '../components/ui/Toast';
 import { DateInput } from '../components/ui/DateInput';
@@ -46,7 +45,6 @@ export function SettingsScreen() {
   const [topicCompletionGoal, setTopicCompletionGoal] = useState('');
   const [reviewIntervalsText, setReviewIntervalsText] = useState('1, 7, 30');
   const [examDate, setExamDate] = useState('');
-  const [theme, setTheme] = useState<ThemePreference>('system');
   const [geminiApiKey, setGeminiApiKey] = useState('');
 
   // Backup & Restore states
@@ -78,7 +76,6 @@ export function SettingsScreen() {
       );
       setReviewIntervalsText(settings.reviewIntervals.join(', '));
       setExamDate(settings.examDate ?? '');
-      setTheme(settings.theme);
       setGeminiApiKey(settings.geminiApiKey ?? '');
     }
   }, [settings]);
@@ -122,7 +119,6 @@ export function SettingsScreen() {
         topicCompletionGoal: topicGoal,
         reviewIntervals: intervalsParsed.value,
         examDate: examDate.trim() || null,
-        theme,
         geminiApiKey: geminiApiKey.trim(),
       });
       setActionSuccess('Configurações e metas salvas.');
@@ -223,7 +219,7 @@ export function SettingsScreen() {
     <div className="page-stack">
       <PageHeader
         title="Configurações e metas"
-        description="Ajuste suas metas de estudo, intervalos de revisão, tema e cópias de segurança."
+        description="Ajuste suas metas de estudo, intervalos de revisão e cópias de segurança."
         actions={
           <Button
             variant="primary"
@@ -323,10 +319,10 @@ export function SettingsScreen() {
         title={
           <div className="flex items-center gap-2">
             <RotateCcw className="size-4 text-primary" />
-            <span>Revisões e aparência</span>
+            <span>Revisões e celebrações</span>
           </div>
         }
-        description="Escolha quando revisar e como visualizar a plataforma."
+        description="Escolha quando revisar e como celebrar suas conquistas."
       >
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field
@@ -341,14 +337,6 @@ export function SettingsScreen() {
               placeholder="1, 7, 30"
               required
             />
-          </Field>
-
-          <Field label="Tema da plataforma">
-            <Select value={theme} onChange={(e) => setTheme(e.target.value as ThemePreference)}>
-              <option value="system">Seguir o sistema</option>
-              <option value="light">Claro</option>
-              <option value="dark">Escuro</option>
-            </Select>
           </Field>
 
           <Checkbox

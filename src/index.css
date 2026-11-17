@@ -174,6 +174,7 @@
 
 @layer base {
   :root {
+    color-scheme: only light;
     /* Escala compartilhada por páginas, cards, formulários e diálogos. */
     --page-gap: 1.5rem;
     --panel-padding: 1rem;
@@ -208,37 +209,6 @@
     --info-soft: #e8efff;
 
     --ring: #1e40af;
-  }
-
-  .dark {
-    --canvas: #0f172a;
-    --surface: #17243a;
-    --surface-muted: #203149;
-    --surface-elevated: #283b55;
-    --border: #344762;
-    --border-strong: #506480;
-    --fg: #f1f5f9;
-    --fg-muted: #c1cee0;
-    --fg-subtle: #aebfd3;
-
-    --primary: #93b4ff;
-    --primary-hover: #b7ccff;
-    --primary-fg: #10265a;
-    --primary-soft: #203964;
-    --accent: #ffb454;
-    --accent-fg: #29200e;
-    --accent-soft: #49331a;
-
-    --success: #4ade80;
-    --success-soft: #153b30;
-    --warning: #fbbf24;
-    --warning-soft: #49351b;
-    --danger: #e54848;
-    --danger-soft: #361414;
-    --info: #93b4ff;
-    --info-soft: #203964;
-
-    --ring: #93b4ff;
   }
 
   html {
@@ -422,7 +392,7 @@ input[type='number']::-webkit-outer-spin-button {
   }
 }
 
-/* Tooltips do Recharts seguem o tema (claro/escuro) em todos os gráficos. */
+/* Tooltips do Recharts usam as cores da plataforma em todos os gráficos. */
 .recharts-default-tooltip {
   background-color: var(--surface-elevated) !important;
   border: 1px solid var(--border-strong) !important;
@@ -442,8 +412,8 @@ input[type='number']::-webkit-outer-spin-button {
   fill: var(--fg-subtle);
 }
 
-/* A navegação acompanha o tema escolhido na plataforma, independentemente do sistema. */
-:root:not(.dark) .navigation-chrome {
+/* Paleta azul da navegação, independente da preferência de cores do sistema. */
+.navigation-chrome {
   --surface: #1e3a8a;
   --surface-muted: #2b4b98;
   --surface-elevated: #294993;
@@ -463,7 +433,4 @@ input[type='number']::-webkit-outer-spin-button {
   background-color: var(--warning);
   border-color: var(--warning);
   color: #fff;
-}
-.dark .confirm-destructive {
-  color: #1e293b;
 }

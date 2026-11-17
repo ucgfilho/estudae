@@ -228,7 +228,7 @@ export const DEFAULT_SETTINGS: Settings = {
   accuracyGoal: 80,
   topicCompletionGoal: null,
   reviewIntervals: [1, 7, 30],
-  theme: 'system',
+  theme: 'light',
   examDate: null,
   distribution: { ...DEFAULT_DISTRIBUTION },
   geminiApiKey: '',

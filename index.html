@@ -6,7 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="description" content="estudaê — Ambiente de execução e gestão de estudos para concursos públicos" />
     <meta name="robots" content="index, follow" />
-    <meta name="theme-color" content="#0f172a" />
+    <meta name="theme-color" content="#1e3a8a" />
+    <meta name="color-scheme" content="only light" />
     <link rel="canonical" href="https://estudaeconcursos.vercel.app/" />
     <link rel="ai-catalog" href="/.well-known/ai-catalog.json" />
     <meta property="og:type" content="website" />
@@ -33,14 +34,8 @@
       }
     </script>
     <script>
-      // Aplica o tema salvo antes da renderização para evitar flash de tema incorreto.
-      (function () {
-        try {
-          var t = localStorage.getItem('bnb-theme') || 'system';
-          var dark = t === 'dark' || (t === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-          if (dark) document.documentElement.classList.add('dark');
-        } catch (e) {}
-      })();
+      // Descarta a preferência visual legada; a plataforma usa apenas o tema claro.
+      try { localStorage.removeItem('bnb-theme'); } catch (e) {}
     </script>
   </head>
   <body>

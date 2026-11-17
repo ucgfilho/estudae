@@ -48,6 +48,8 @@ describe('App Navigation, Auth Gate and Screen Integration', () => {
       expect(screen.getByRole('heading', { name: /visão geral/i })).toBeInTheDocument();
     });
 
+    expect(screen.queryByRole('button', { name: /alterar tema/i })).not.toBeInTheDocument();
+
     // Check sidebar navigation items
     expect(screen.getByRole('link', { name: /visão geral/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /calendário/i })).toBeInTheDocument();
@@ -135,6 +137,8 @@ describe('App Navigation, Auth Gate and Screen Integration', () => {
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: /configurações/i })).toBeInTheDocument();
     });
+    expect(screen.queryByLabelText('Tema da plataforma')).not.toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: /escuro|seguir o sistema/i })).not.toBeInTheDocument();
   });
 
   it('opens the continuous cycle without numbered weeks', async () => {

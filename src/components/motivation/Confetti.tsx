@@ -24,7 +24,7 @@ function prefersReducedMotion(): boolean {
   return typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
-/** Cores da identidade BNB lidas dos tokens (funciona em claro e escuro). */
+/** Cores da identidade BNB lidas dos tokens. */
 function paletteFromTokens(): string[] {
   const css = getComputedStyle(document.documentElement);
   const read = (name: string, fallback: string) => css.getPropertyValue(name).trim() || fallback;

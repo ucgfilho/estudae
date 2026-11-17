@@ -9,7 +9,7 @@ const variants: Record<Variant, string> = {
   secondary: 'bg-surface text-fg border border-border-strong hover:bg-surface-muted active:bg-surface-muted/80',
   ghost: 'bg-transparent text-fg-muted hover:bg-surface-muted hover:text-fg active:bg-surface-muted/80 border border-transparent',
   danger: 'bg-danger text-white hover:opacity-90 active:opacity-85 border border-transparent',
-  subtle: 'bg-primary-soft text-primary hover:brightness-95 active:brightness-90 border border-transparent dark:hover:brightness-115',
+  subtle: 'bg-primary-soft text-primary hover:brightness-95 active:brightness-90 border border-transparent',
 };
 
 // A mesma escala de altura é usada por campos, selects e botões.
