@@ -163,7 +163,7 @@ export function ContestSelectorScreen({ onSelectContest, initializing = false }:
         )}
 
         {/* Grade de Perfis de Concursos (Estilo Netflix) */}
-        <div aria-busy={initializing} className="grid grid-cols-1 min-[440px]:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 sm:gap-6 w-full max-w-4xl justify-items-center">
+        <div aria-busy={initializing} className="grid grid-cols-1 min-[440px]:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 sm:gap-6 w-full max-w-4xl justify-center justify-items-center">
           {contests.map((contest) => {
             const isLoading = loadingId === contest.id || pendingContest?.id === contest.id;
             const isCurrent = contest.id === activeScopeId;
