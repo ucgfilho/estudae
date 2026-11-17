@@ -1,12 +1,12 @@
 import { useMemo } from 'react';
-import { CheckCircle2, Circle, Flame, Play, Clock, ArrowRight } from 'lucide-react';
+import { Flame, Play, Clock, ArrowRight, Repeat2 } from 'lucide-react';
 import { Card, DisciplineDot, ProgressBar, Badge } from '../ui/Display';
 import { Button } from '../ui/Button';
 import { ProgressRing } from './ProgressRing';
-import { dailyProgress, nextPendingToday, progressFraming } from '../../domain/motivation';
-import type { Discipline, QuestionLog, Settings, StudySession } from '../../db/types';
+import { dailyProgress, progressFraming } from '../../domain/motivation';
+import { cycleCompletions, previewCycle } from '../../domain/schedule';
+import type { Discipline, QuestionLog, Settings, StudySession, Topic, TimerState } from '../../db/types';
 import { formatInteger, formatMinutes } from '../../lib/format';
-import { formatDate } from '../../lib/dates';
 import { cn } from '../../lib/utils';
 
 interface DailyMissionCardProps {
@@ -16,20 +16,17 @@ interface DailyMissionCardProps {
   disciplines: readonly Discipline[];
   today: string;
   streak: number;
-  nextPlanned?: StudySession | null;
-  onStartBlock: (sessionId: string) => void;
+  topics: readonly Topic[];
+  timer: TimerState | null;
+  starting: boolean;
+  onStartCycle: () => void;
+  onOpenCycle: () => void;
+  onConfigureDisciplines: () => void;
   onStudyNow: () => void;
   onOpenSettings: () => void;
 }
 
-const MAX_ITEMS = 5;
-
-/**
- * "Missão de Hoje": painel central de execução do dia (Regra dos 3 segundos).
- * - Destaca em primeiro plano a próxima tarefa de estudo com a única ação primária da tela;
- * - Anel de tempo estudado hoje em relação à meta diária;
- * - Checklist enxuto dos blocos programados para hoje.
- */
+/** Progresso diário e continuação do ciclo, sem compromissos por data. */
 export function DailyMissionCard({
   sessions,
   logs,
@@ -37,22 +34,28 @@ export function DailyMissionCard({
   disciplines,
   today,
   streak,
-  nextPlanned,
-  onStartBlock,
+  topics,
+  timer,
+  starting,
+  onStartCycle,
+  onOpenCycle,
+  onConfigureDisciplines,
   onStudyNow,
   onOpenSettings,
 }: DailyMissionCardProps) {
   const p = useMemo(() => dailyProgress(sessions, logs, settings, today), [sessions, logs, settings, today]);
-  const nextToday = useMemo(() => nextPendingToday(sessions, today), [sessions, today]);
-  const primaryTask = nextToday ?? nextPlanned ?? null;
+  const queue = useMemo(() => settings ? previewCycle({ disciplines, topics, sessions,
+    settings, questionLogs: logs, errorNotes: [] }, 4) : [], [disciplines, topics, sessions, settings, logs]);
+  const next = queue[0];
+  const queueOffset = timer && !timer.cycleStudy ? 0 : 1;
+  const completed = useMemo(() => cycleCompletions(sessions), [sessions]);
+  const completedToday = completed.filter(s => s.date === today).length;
+  const activeDiscipline = timer ? disciplines.find(d => d.id === timer.disciplineId) : null;
   const discMap = useMemo(() => new Map(disciplines.map((d) => [d.id, d])), [disciplines]);
 
   const pct = Math.round(p.ratio * 100);
   const goalDone = p.ratio >= 1;
-  const scheduleDone = p.scheduled.length > 0 && p.scheduledDone === p.scheduled.length;
-  const pendingBlocks = p.scheduled.length - p.scheduledDone;
   const nameOf = (id: string) => discMap.get(id)?.name ?? (id === 'simulado' ? 'Simulado Geral BNB' : 'Disciplina');
-  const colorOf = (id: string) => discMap.get(id)?.color ?? '#1E40AF';
 
   return (
     <Card
@@ -61,80 +64,43 @@ export function DailyMissionCard({
       className="border-border-strong shadow-2xs"
     >
       <div className="space-y-5">
-        {/* Prioridade #1: Próxima Tarefa de Estudo (Regra dos 3 segundos + Uma ação principal) */}
         <div className="flex flex-col justify-between gap-4 rounded-xl border border-primary/25 bg-primary-soft/35 p-4 sm:flex-row sm:items-center">
-          <div className="min-w-0 space-y-1">
+          <div className="min-w-0 space-y-2">
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs font-semibold text-primary">
-                {nextToday
-                  ? 'Vamos começar? Seu próximo bloco de hoje'
-                  : primaryTask
-                    ? `Próxima sessão (${formatDate(primaryTask.date)})`
-                    : 'Seu próximo passo'}
+                {timer ? 'Sessão em andamento' : 'Próxima atividade do ciclo'}
               </span>
-              {primaryTask && (
-                <Badge tone="neutral" className="tabular-nums">
-                  <Clock className="size-3" aria-hidden="true" />
-                  {primaryTask.plannedMinutes} min
-                </Badge>
-              )}
-              {primaryTask?.plannedStart && (
-                <Badge tone="neutral" className="tabular-nums">
-                  às {primaryTask.plannedStart}
-                </Badge>
-              )}
+              {(timer || next) && <Badge tone="neutral" className="tabular-nums">
+                <Clock className="size-3" aria-hidden="true" />
+                {timer ? timer.plannedSeconds / 60 : next.minutes} min
+              </Badge>}
+              {!timer && next && <Badge tone="primary">Sessão {completed.length + 1}</Badge>}
             </div>
-
-            {primaryTask ? (
-              <>
-                <div className="flex items-center gap-2 text-base sm:text-lg font-bold text-fg">
-                  <DisciplineDot color={colorOf(primaryTask.disciplineId)} className="size-3" />
-                  <span className="truncate">{nameOf(primaryTask.disciplineId)}</span>
-                </div>
-                <p className="text-sm text-fg-muted line-clamp-1">
-                  {primaryTask.objective || 'Bloco programado no seu plano de estudos.'}
-                </p>
-              </>
-            ) : (
-              <>
-                <div className="text-base sm:text-lg font-bold text-fg">
-                  {goalDone ? 'Meta diária cumprida' : 'Iniciar bloco de estudo'}
-                </div>
-                <p className="text-sm text-fg-muted">
-                  {goalDone
-                    ? 'Meta do dia atingida. Inicie uma sessão extra se quiser aprofundar.'
-                    : 'Continue pela próxima atividade do seu ciclo de estudos.'}
-                </p>
-              </>
-            )}
+            <div className="flex items-center gap-2 text-base font-bold text-fg sm:text-lg">
+              {(timer || next) && <DisciplineDot color={timer ? activeDiscipline?.color ?? '#1E40AF' : next.discipline.color} className="size-3" />}
+              <span>{timer ? nameOf(timer.disciplineId) : next?.discipline.name ?? 'Seu ciclo começa com uma disciplina'}</span>
+            </div>
+            <p className="text-sm text-fg-muted">
+              {timer ? timer.objective || 'Continue sua sessão de estudo.'
+                : next ? next.topic?.title ?? 'Estude a disciplina ou cadastre um assunto para orientar a sessão.'
+                  : 'Adicione ou ative as disciplinas do seu edital para começar.'}
+            </p>
+            {next && !timer && <p className="text-xs text-fg-muted">{next.reason}</p>}
           </div>
-
-          <div className="shrink-0">
-            {primaryTask ? (
-              <Button
-                variant="primary"
-                size="lg"
-                className="w-full sm:w-auto"
-                icon={<Play className="size-4" aria-hidden="true" />}
-                onClick={() => onStartBlock(primaryTask.id)}
-              >
-                Começar próximo bloco
-              </Button>
-            ) : (
-              <Button
-                variant="primary"
-                size="lg"
-                className="w-full sm:w-auto"
-                icon={<Play className="size-4" aria-hidden="true" />}
-                onClick={onStudyNow}
-              >
-                {goalDone ? 'Estudar mais' : 'Estudar agora'}
-              </Button>
-            )}
-          </div>
+          <Button
+            variant="primary"
+            size="lg"
+            className="w-full sm:w-auto"
+            loading={starting}
+            disabled={!settings && !timer}
+            icon={<Play className="size-4" aria-hidden="true" />}
+            onClick={timer ? onStudyNow : next ? onStartCycle : onConfigureDisciplines}
+          >
+            {timer ? 'Retomar sessão em andamento' : next ? 'Iniciar estudo do ciclo' : 'Configurar disciplinas'}
+          </Button>
         </div>
 
-        {/* Prioridades #2 e #3: Meta Diária, Tempo no Dia e Blocos do Dia */}
+        {/* Prioridades #2 e #3: Meta diária, tempo estudado e sequência do ciclo */}
         <div className="grid grid-cols-1 gap-6 pt-1 md:grid-cols-[auto_1fr_1fr] md:items-center">
           {/* Anel de tempo */}
           <div className="flex items-center gap-4 md:flex-col md:gap-2">
@@ -155,71 +121,33 @@ export function DailyMissionCard({
             </div>
           </div>
 
-          {/* Checklist do planejamento manual de hoje */}
-          <div className="min-w-0 space-y-2">
-            <div className="flex items-baseline justify-between gap-2">
-              <h3 className="text-xs font-semibold text-fg-muted">Blocos de hoje</h3>
-              {p.scheduled.length > 0 && (
-                <span className={cn('text-xs font-medium tabular-nums', scheduleDone ? 'text-success' : 'text-fg-muted')}>
-                  {p.scheduledDone} de {p.scheduled.length} concluídos
-                </span>
-              )}
+          <div className="min-w-0 space-y-3">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <h3 className="text-sm font-semibold text-fg">Seu ciclo contínuo</h3>
+              <span className="text-xs font-medium text-success">
+                {completedToday === 1 ? '1 sessão do ciclo concluída hoje' : `${completedToday} sessões do ciclo concluídas hoje`}
+              </span>
             </div>
-            {p.scheduled.length > 0 ? (
-              <>
-                <ProgressBar
-                  value={p.scheduledDone}
-                  max={p.scheduled.length}
-                  label="Blocos do planejamento manual de hoje concluídos"
-                  tone={scheduleDone ? 'success' : 'primary'}
-                />
-                <ul className="space-y-1 pt-1">
-                  {p.scheduled.slice(0, MAX_ITEMS).map((s) => {
-                    const done = s.status === 'concluida';
-                    return (
-                      <li key={s.id} className="flex items-center justify-between gap-2 rounded-md px-1.5 py-1 text-sm hover:bg-surface-muted/50">
-                        <div className="flex items-center gap-2 min-w-0 flex-1">
-                          {done ? (
-                            <CheckCircle2 className="size-4 shrink-0 text-success" aria-hidden="true" />
-                          ) : (
-                            <Circle className="size-4 shrink-0 text-fg-subtle" aria-hidden="true" />
-                          )}
-                          <DisciplineDot color={colorOf(s.disciplineId)} />
-                          <span className={cn('min-w-0 flex-1 truncate', done ? 'text-fg-muted line-through' : 'text-fg font-medium')}>
-                            {nameOf(s.disciplineId)}
-                          </span>
-                        </div>
-                        {done ? (
-                          <span className="shrink-0 text-xs font-medium text-success">Feito</span>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => onStartBlock(s.id)}
-                            className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-fg-muted hover:text-primary transition-colors tabular-nums max-lg:min-h-9 max-lg:px-2"
-                            title="Iniciar este bloco"
-                          >
-                            <span>{s.plannedMinutes} min</span>
-                            <ArrowRight className="size-3" aria-hidden="true" />
-                          </button>
-                        )}
-                      </li>
-                    );
-                  })}
-                </ul>
-                {p.scheduled.length > MAX_ITEMS && (
-                  <p className="text-xs text-fg-subtle">+{p.scheduled.length - MAX_ITEMS} blocos programados hoje</p>
-                )}
-                {pendingBlocks > 0 && (
-                  <p className="text-xs text-fg-muted">
-                    {pendingBlocks === 1 ? 'Falta 1 bloco para fechar o dia.' : `Faltam ${pendingBlocks} blocos para fechar o dia.`}
-                  </p>
-                )}
-              </>
-            ) : (
-              <p className="text-sm text-fg-muted">
-                Nenhum bloco agendado para hoje. Qualquer sessão estudada contabiliza na sua meta diária.
-              </p>
-            )}
+            <p className="flex items-start gap-2 text-xs leading-relaxed text-fg-muted">
+              <Repeat2 className="size-4 shrink-0" aria-hidden="true" />
+              Sua posição fica salva. A sequência avança a cada sessão do ciclo concluída, no seu ritmo.
+            </p>
+            {next && <>
+              <h4 className="text-xs font-semibold text-fg-muted">Na sequência</h4>
+              <ol className="space-y-2" aria-label="Próximas atividades do ciclo">
+                {queue.slice(queueOffset, queueOffset + 3).map((activity, index) => <li key={index} className="flex items-start gap-2 text-sm">
+                  <span className="text-xs tabular-nums text-fg-subtle pt-0.5">{completed.length + index + queueOffset + 1}.</span>
+                  <span className="mt-1.5"><DisciplineDot color={activity.discipline.color} /></span>
+                  <div className="min-w-0">
+                    <p className="font-medium text-fg">{activity.discipline.name}</p>
+                    {activity.topic && <p className="text-xs text-fg-muted">{activity.topic.title}</p>}
+                  </div>
+                </li>)}
+              </ol>
+            </>}
+            <button type="button" onClick={onOpenCycle} className="inline-flex min-h-11 items-center gap-1 text-xs font-medium text-primary hover:underline">
+              Ver ciclo de estudos <ArrowRight className="size-3" aria-hidden="true" />
+            </button>
           </div>
 
           {/* Questões hoje e constância */}

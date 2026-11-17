@@ -35,19 +35,19 @@ import {
   useErrorNotes,
   useSettings,
   useToday,
+  useActiveTimer,
 } from '../hooks/useData';
 import {
   weekScheduleMetrics,
   sumQuestions,
   studyStreak,
   topicProgress,
-  nextPlannedSession,
   reviewBuckets,
   supersededSessionIds,
 } from '../domain/metrics';
 import { formatMinutes, formatPercent, formatInteger } from '../lib/format';
 import { startOfWeek, endOfWeek, formatDate } from '../lib/dates';
-import { startPlannedTimer } from '../services/timer';
+import { startCycleTimer, startPlannedTimer } from '../services/timer';
 import { resolveReviewDisplayTitle } from '../services/performance';
 import { errorMessage } from '../lib/utils';
 import { useSuccessToast } from '../components/ui/Toast';
@@ -63,6 +63,8 @@ export function OverviewScreen() {
   const reviews = useReviews();
   const errorNotes = useErrorNotes();
   const settings = useSettings();
+  const timer = useActiveTimer();
+  const [startingCycle, setStartingCycle] = useState(false);
 
   const [sessionModalOpen, setSessionModalOpen] = useState(false);
   const [questionModalOpen, setQuestionModalOpen] = useState(false);
@@ -89,7 +91,6 @@ export function OverviewScreen() {
   const questionTotals = useMemo(() => sumQuestions(questionLogs), [questionLogs]);
   const streak = useMemo(() => studyStreak(sessions, today), [sessions, today]);
   const topicsProg = useMemo(() => topicProgress(topics), [topics]);
-  const nextSession = useMemo(() => nextPlannedSession(sessions), [sessions]);
   const revBuckets = useMemo(() => reviewBuckets(reviews, today), [reviews, today]);
 
   const superseded = useMemo(() => supersededSessionIds(sessions), [sessions]);
@@ -120,6 +121,19 @@ export function OverviewScreen() {
       navigate('/estudar-agora');
     } catch (err) {
       setActionError(errorMessage(err));
+    }
+  };
+
+  const handleStartCycle = async () => {
+    setActionError(null);
+    setStartingCycle(true);
+    try {
+      await startCycleTimer();
+      navigate('/estudar-agora');
+    } catch (err) {
+      setActionError(errorMessage(err));
+    } finally {
+      setStartingCycle(false);
     }
   };
 
@@ -168,8 +182,12 @@ export function OverviewScreen() {
         disciplines={disciplines}
         today={today}
         streak={streak}
-        nextPlanned={nextSession}
-        onStartBlock={handleStartBlock}
+        topics={topics}
+        timer={timer}
+        starting={startingCycle}
+        onStartCycle={() => void handleStartCycle()}
+        onOpenCycle={() => navigate('/cronograma')}
+        onConfigureDisciplines={() => navigate('/disciplinas')}
         onStudyNow={() => navigate('/estudar-agora')}
         onOpenSettings={() => navigate('/configuracoes')}
       />
