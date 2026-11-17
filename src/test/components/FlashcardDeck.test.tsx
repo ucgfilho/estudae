@@ -108,7 +108,7 @@ describe('FlashcardDeck progress bar', () => {
     localStorage.setItem(
       `flashcard-deck-progress-${today}:local:default`,
       JSON.stringify({
-        version: 2,
+        version: 3,
         completedReviewIds: reviews.slice(0, 13).map(r => r.id),
         missedFlashcards: [], redoQueue: [],
         cardIndex: 0,
@@ -223,7 +223,7 @@ describe('FlashcardDeck progress bar', () => {
     // Card 2: mark as correct (hit)
     await waitFor(() => expect(screen.getByText(/Revisão 2 de 2/i)).toBeInTheDocument());
     fireEvent.click(screen.getByRole('button', { name: /Certo/i }));
-    fireEvent.click(screen.getByRole('button', { name: /Próximo card/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^Finalizar$/i }));
     await waitFor(() => expect(onComplete).toHaveBeenCalledTimes(2));
 
     rerender(
@@ -286,7 +286,7 @@ describe('FlashcardDeck progress bar', () => {
     second.unmount();
     const third = render(<FlashcardDeck {...props} />);
     expect(screen.getByText('Você acertou!')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Próximo card' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Finalizar' }));
     expect(await screen.findByText('Primeira rodada concluída!')).toBeInTheDocument();
     expect(onComplete).toHaveBeenCalledWith(reviews[0], { hits: 1, misses: 1 });
     third.unmount();
@@ -298,7 +298,7 @@ describe('FlashcardDeck progress bar', () => {
     const onComplete = vi.fn().mockResolvedValue(undefined);
     render(<FlashcardDeck reviews={makeReviews(1)} notes={makeNotes(1)} disciplines={makeDisciplines()} onComplete={onComplete} />);
     fireEvent.click(screen.getByRole('button', { name: 'Errado' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Próximo card' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Finalizar' }));
     fireEvent.click(await screen.findByRole('button', { name: /Refazer os que errei/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Errado' }));
     fireEvent.click(screen.getByRole('button', { name: 'Finalizar revisão de erros' }));
@@ -314,7 +314,7 @@ describe('FlashcardDeck progress bar', () => {
   it('does not award mastery when the student declines retrying', async () => {
     render(<FlashcardDeck reviews={makeReviews(1)} notes={makeNotes(1)} disciplines={makeDisciplines()} onComplete={vi.fn().mockResolvedValue(undefined)} />);
     fireEvent.click(screen.getByRole('button', { name: 'Errado' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Próximo card' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Finalizar' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Finalizar mesmo assim' }));
     expect(screen.getByText('Sessão concluída!')).toBeInTheDocument();
     expect(screen.queryByText(/Conquista desbloqueada/)).not.toBeInTheDocument();
@@ -324,11 +324,11 @@ describe('FlashcardDeck progress bar', () => {
     const onComplete = vi.fn().mockRejectedValueOnce(new Error('offline')).mockResolvedValue(undefined);
     render(<FlashcardDeck reviews={makeReviews(1)} notes={makeNotes(1)} disciplines={makeDisciplines()} onComplete={onComplete} />);
     fireEvent.click(screen.getByRole('button', { name: 'Certo' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Próximo card' }));
-    expect(await screen.findByRole('button', { name: 'Próximo card' })).toBeEnabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Finalizar' }));
+    expect(await screen.findByRole('button', { name: 'Finalizar' })).toBeEnabled();
     expect(screen.getByText('Revisão 1 de 1')).toBeInTheDocument();
     expect(screen.queryByText(/Conquista desbloqueada/)).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Próximo card' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Finalizar' }));
     expect(await screen.findByText(/Conquista desbloqueada/)).toBeInTheDocument();
     expect(onComplete).toHaveBeenCalledTimes(2);
   });
@@ -342,7 +342,7 @@ describe('FlashcardDeck progress bar', () => {
     await db.reviews.put(review);
     render(<ToastProvider><ReviewsScreen /></ToastProvider>);
     fireEvent.click(await screen.findByRole('button', { name: 'Errado' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Próximo card' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Finalizar' }));
     expect(await screen.findByRole('button', { name: /Refazer os que errei/ })).toBeInTheDocument();
     expect((await db.reviews.get(review.id))?.status).toBe('concluida');
     fireEvent.click(screen.getByRole('button', { name: /Refazer os que errei/ }));
@@ -354,10 +354,78 @@ describe('FlashcardDeck progress bar', () => {
     expect(tasks.filter(r => r.status === 'pendente')).toHaveLength(1);
   });
 
-  it('counts reviews completed today from the database even without local session storage', () => {
-    render(<FlashcardDeck reviews={makeReviews(24).slice(13)} completedTodayIds={makeReviews(13).map(r => r.id)} notes={makeNotes(24)} disciplines={makeDisciplines()} onComplete={vi.fn()} />);
-    expect(screen.getByText('Revisão 14 de 24')).toBeInTheDocument();
-    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '54');
+  it('starts at one of one with thirty previously completed reviews in the database', async () => {
+    await resetDatabase(db);
+    await db.disciplines.put(makeDisciplines().get('disc-1')!);
+    await db.errorNotes.put({ ...makeNotes(1).get('note-1')!, nextReviewDate: todayKey() });
+    await db.reviews.bulkPut(makeReviews(31).map((r, i) => i === 30
+      ? { ...r, errorNoteId: 'note-1', dueDate: todayKey() }
+      : { ...r, errorNoteId: null, status: 'concluida', completedAt: new Date().toISOString() }));
+    render(<ToastProvider><ReviewsScreen /></ToastProvider>);
+    expect(await screen.findByText('Revisão 1 de 1')).toBeInTheDocument();
+    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '0');
+  });
+
+  it('does not import counters from a finished v2 session into a new pending review', () => {
+    localStorage.setItem(`flashcard-deck-progress-${todayKey()}:local:default`, JSON.stringify({
+      version: 2, activeReview: null, completedReviewIds: makeReviews(30).map(r => r.id),
+      missedFlashcards: [], redoQueue: [], totalCardsAnswered: 30, totalHits: 30, streak: 30,
+    }));
+    render(<FlashcardDeck reviews={makeReviews(31).slice(30)} notes={makeNotes(31)} disciplines={makeDisciplines()} onComplete={vi.fn()} />);
+    expect(screen.getByText('Revisão 1 de 1')).toBeInTheDocument();
+    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '0');
+    expect(screen.queryByText(/em sequência/)).not.toBeInTheDocument();
+  });
+
+  it('starts a fresh session after a completed round, both on reload and while mounted', async () => {
+    const props = { reviews: makeReviews(1), notes: makeNotes(2), disciplines: makeDisciplines(), onComplete: vi.fn().mockResolvedValue(undefined) };
+    const first = render(<FlashcardDeck {...props} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Certo' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Finalizar' }));
+    expect(await screen.findByText(/Conquista desbloqueada/)).toBeInTheDocument();
+    first.unmount();
+    // Reopen the very same task after finishing its prior round.
+    const second = render(<FlashcardDeck {...props} />);
+    expect(screen.getByText('Revisão 1 de 1')).toBeInTheDocument();
+    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '0');
+    expect(screen.queryByText(/em sequência/)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Certo' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Finalizar' }));
+    expect(await screen.findByText(/Conquista desbloqueada/)).toBeInTheDocument();
+    // A newly scheduled task also starts at zero without leaving the screen.
+    second.rerender(<FlashcardDeck {...props} reviews={makeReviews(2).slice(1)} />);
+    expect(screen.getByText('Revisão 1 de 1')).toBeInTheDocument();
+    expect(screen.getByText('Enunciado da questão 2')).toBeInTheDocument();
+    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '0');
+    expect(screen.queryByText(/em sequência/)).not.toBeInTheDocument();
+  });
+
+  it('shows the streak only after a hit and hides it immediately on a miss', async () => {
+    render(<FlashcardDeck reviews={makeReviews(2)} notes={makeNotes(2)} disciplines={makeDisciplines()} onComplete={vi.fn().mockResolvedValue(undefined)} />);
+    expect(screen.queryByText(/em sequência/)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Certo' }));
+    expect(screen.getByText('1 em sequência')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Próximo card' }));
+    expect(await screen.findByText('Revisão 2 de 2')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Errado' }));
+    expect(screen.queryByText(/em sequência/)).not.toBeInTheDocument();
+  });
+
+  it('labels only the last flashcard of the last review as Finalizar', async () => {
+    const notes = makeNotes(2);
+    notes.get('note-2')!.flashcards!.push({ ...notes.get('note-2')!.flashcards![0], id: 'last-card', statement: 'Último flashcard' });
+    render(<FlashcardDeck reviews={makeReviews(2)} notes={notes} disciplines={makeDisciplines()} onComplete={vi.fn().mockResolvedValue(undefined)} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Certo' }));
+    expect(screen.queryByRole('button', { name: 'Finalizar' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Próximo card' }));
+    expect(await screen.findByText('Revisão 2 de 2 · Flashcard 1 de 2')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Certo' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Próximo flashcard' }));
+    expect(await screen.findByText('Último flashcard')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Finalizar' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Certo' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Finalizar' }));
+    expect(await screen.findByText(/Conquista desbloqueada/)).toBeInTheDocument();
   });
 
 });

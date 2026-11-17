@@ -12,7 +12,6 @@ import {
 } from '../services/performance';
 import { reviewBuckets } from '../domain/metrics';
 import type { ReviewTask } from '../db/types';
-import { toDateKey } from '../lib/dates';
 import { errorMessage } from '../lib/utils';
 import { FlashcardDeck } from '../components/reviews/FlashcardDeck';
 import { useSuccessToast } from '../components/ui/Toast';
@@ -42,9 +41,6 @@ export function ReviewsScreen() {
   }, []);
 
   const buckets = useMemo(() => reviewBuckets(reviews, today), [reviews, today]);
-  const completedTodayIds = useMemo(() => reviews
-    .filter(r => r.status === 'concluida' && r.completedAt && toDateKey(r.completedAt) === today)
-    .map(r => r.id), [reviews, today]);
   const dueList = useMemo(() => [...buckets.overdue, ...buckets.today], [buckets]);
 
   const handleComplete = async (review: ReviewTask, stats?: { hits: number; misses: number }) => {
@@ -76,7 +72,6 @@ export function ReviewsScreen() {
           <FlashcardDeck
             key={today}
             reviews={dueList}
-            completedTodayIds={completedTodayIds}
             notes={errorNoteMap}
             disciplines={discMap}
             onComplete={handleComplete}

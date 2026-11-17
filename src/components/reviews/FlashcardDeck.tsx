@@ -13,7 +13,6 @@ import type { Discipline, ErrorFlashcard, ErrorNote, ReviewTask } from '../../db
 
 interface Props {
   reviews: ReviewTask[];
-  completedTodayIds?: string[];
   notes: Map<string, ErrorNote>;
   disciplines: Map<string, Discipline>;
   onComplete: (review: ReviewTask, stats?: { hits: number; misses: number }) => Promise<void>;
@@ -28,7 +27,8 @@ interface MissedFlashcard {
 }
 
 interface Progress {
-  version: 2;
+  version: 3;
+  reviewIds: string[];
   activeReview: ReviewTask | null;
   completedReviewIds: string[];
   cardIndex: number;
@@ -45,38 +45,61 @@ interface Progress {
 }
 
 const storageKey = () => `flashcard-deck-progress-${todayKey()}:${getAuthSession()?.user.id ?? 'local'}:${getActiveContestScopeId()}`;
-function loadProgress(): Progress {
-  const initial: Progress = {
-    version: 2, activeReview: null, completedReviewIds: [], cardIndex: 0,
+function initialProgress(reviews: ReviewTask[]): Progress {
+  return {
+    version: 3, reviewIds: reviews.map(r => r.id), activeReview: null,
+    completedReviewIds: [], cardIndex: 0,
     reviewStats: { hits: 0, misses: 0 }, streak: 0, totalHits: 0,
     totalCardsAnswered: 0, picked: null, missedFlashcards: [],
     redoMode: false, redoQueue: [], redoDone: 0, sessionCompleted: false,
   };
+}
+
+function firstPassFinished(state: Progress): boolean {
+  return !state.activeReview && state.reviewIds.length > 0 &&
+    state.reviewIds.every(id => state.completedReviewIds.includes(id));
+}
+
+function loadProgress(reviews: ReviewTask[]): Progress {
+  const initial = initialProgress(reviews);
   try {
     const saved = JSON.parse(localStorage.getItem(storageKey()) ?? 'null');
-    // Legacy counters cannot identify completed reviews reliably. Start a clean
-    // session from the pending tasks instead of restoring their stale totals.
-    if (saved?.version === 2 && Array.isArray(saved.completedReviewIds) &&
+    if ((saved?.version === 2 || saved?.version === 3) &&
+        Array.isArray(saved.completedReviewIds) &&
         Array.isArray(saved.missedFlashcards) && Array.isArray(saved.redoQueue)) {
-      return { ...initial, ...saved };
+      // v2 did not record session membership. Preserve active cards and retry
+      // summaries, but do not carry its counters into a fresh pending queue.
+      if (saved.version === 2 && !saved.activeReview && reviews.length > 0) return initial;
+      const restored: Progress = {
+        ...initial, ...saved, version: 3,
+        reviewIds: saved.version === 3 && Array.isArray(saved.reviewIds)
+          ? saved.reviewIds : [...new Set([...saved.completedReviewIds, ...initial.reviewIds])],
+      };
+      // Pending tasks after a finished round belong to a new session, including
+      // a task explicitly reopened with the same ID.
+      if (firstPassFinished(restored) && reviews.length > 0) return initial;
+      return restored;
     }
   } catch { /* Storage is optional. */ }
   return initial;
 }
 
 /** Review tasks and retry attempts have separate progress; retries never reschedule tasks. */
-export function FlashcardDeck({ reviews, completedTodayIds = [], notes, disciplines, onComplete }: Props) {
-  const [state, setState] = useState(loadProgress);
+export function FlashcardDeck({ reviews, notes, disciplines, onComplete }: Props) {
+  const [state, setState] = useState(() => loadProgress(reviews));
   const [animating, setAnimating] = useState(false);
   const busy = useRef(false);
   const [enabled] = useCelebrationsEnabled();
   const { cardIndex, reviewStats, streak, totalHits,
     totalCardsAnswered, picked, missedFlashcards, redoQueue,
     redoDone, sessionCompleted } = state;
-  const completedReviewIds = [...new Set([
-    ...state.completedReviewIds,
-    ...completedTodayIds.filter(id => id !== state.activeReview?.id),
-  ])];
+  // Start a fresh round if new tasks arrive while the finished deck remains
+  // mounted. Ignore stale props for tasks just completed by this component.
+  if (!busy.current && firstPassFinished(state) &&
+      reviews.some(r => !state.completedReviewIds.includes(r.id))) {
+    setState(initialProgress(reviews.filter(r => !state.completedReviewIds.includes(r.id))));
+  }
+  const completedReviewIds = state.completedReviewIds;
   const pending = reviews.filter(r => !completedReviewIds.includes(r.id));
   const review = state.activeReview ?? pending[0];
   const redoMode = state.redoMode && !review;
@@ -101,7 +124,7 @@ export function FlashcardDeck({ reviews, completedTodayIds = [], notes, discipli
     if (picked || !card || busy.current) return;
     const isCorrect = choice === card.answer;
     setState(s => ({
-      ...s, activeReview: redoMode ? s.activeReview : review, picked: choice, totalCardsAnswered: s.totalCardsAnswered + 1,
+      ...s, reviewIds: [...new Set([...s.reviewIds, ...reviews.map(r => r.id)])], activeReview: redoMode ? s.activeReview : review, picked: choice, totalCardsAnswered: s.totalCardsAnswered + 1,
       totalHits: s.totalHits + Number(isCorrect), streak: isCorrect ? s.streak + 1 : 0,
       reviewStats: { hits: s.reviewStats.hits + Number(isCorrect), misses: s.reviewStats.misses + Number(!isCorrect) },
       missedFlashcards: !isCorrect && !redoMode ? [...s.missedFlashcards, {
@@ -117,7 +140,7 @@ export function FlashcardDeck({ reviews, completedTodayIds = [], notes, discipli
     setAnimating(true);
     try {
       if (!redoMode && cardIndex + 1 >= cards.length) {
-        setState(s => ({ ...s, activeReview: review }));
+        setState(s => ({ ...s, activeReview: review, reviewIds: [...new Set([...s.reviewIds, ...reviews.map(r => r.id)])] }));
         await onComplete(review, card ? reviewStats : undefined);
       }
       setState(s => {
@@ -188,9 +211,11 @@ export function FlashcardDeck({ reviews, completedTodayIds = [], notes, discipli
               : `Revisão ${Math.min(doneReviews + 1, currentTotalItems)} de ${currentTotalItems}`}
             {!redoMode && cards.length > 1 ? ` · Flashcard ${cardIndex + 1} de ${cards.length}` : ''}
           </span>
-          <span className="flex items-center gap-1 font-semibold text-warning">
-            <Flame className="size-4" /> {streak} em sequência
-          </span>
+          {streak > 0 && (
+            <span className="flex items-center gap-1 font-semibold text-warning">
+              <Flame className="size-4" aria-hidden /> {streak} em sequência
+            </span>
+          )}
         </div>
         <div
           className="h-2 overflow-hidden rounded-full bg-surface-muted"
@@ -283,7 +308,9 @@ export function FlashcardDeck({ reviews, completedTodayIds = [], notes, discipli
                   : 'Finalizar revisão de erros'
                 : cardIndex + 1 < cards.length
                 ? 'Próximo flashcard'
-                : 'Próximo card'}
+                : pending.every(r => r.id === review.id)
+                  ? 'Finalizar'
+                  : 'Próximo card'}
             </Button>
           </div>
         </div>
