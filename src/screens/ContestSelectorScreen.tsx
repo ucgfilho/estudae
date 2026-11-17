@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import {
   BookOpen,
   CalendarRange,
@@ -9,8 +9,6 @@ import {
 } from 'lucide-react';
 import { BnbLogo } from '../components/ui/BnbLogo';
 import { Avatar } from '../components/ui/Avatar';
-import { ProfileModal } from '../components/profile/ProfileModal';
-import { NewContestModal } from '../components/modals/NewContestModal';
 import {
   deleteContestProfile,
   getActiveContestScopeId,
@@ -22,11 +20,21 @@ import {
 import { getAuthSession, setAuthSession, subscribeAuth } from '../services/auth';
 import { cn } from '../lib/utils';
 
+import { LoadingState } from '../components/ui/Display';
+
+const ProfileModal = lazy(() =>
+  import('../components/profile/ProfileModal').then((mod) => ({ default: mod.ProfileModal }))
+);
+const NewContestModal = lazy(() =>
+  import('../components/modals/NewContestModal').then((mod) => ({ default: mod.NewContestModal }))
+);
+
 interface ContestSelectorScreenProps {
+  initializing?: boolean;
   onSelectContest: (contest: UserContestProfile) => void;
 }
 
-export function ContestSelectorScreen({ onSelectContest }: ContestSelectorScreenProps) {
+export function ContestSelectorScreen({ onSelectContest, initializing = false }: ContestSelectorScreenProps) {
   const [authUser, setAuthUser] = useState(() => getAuthSession()?.user ?? null);
   const [contests, setContests] = useState<UserContestProfile[]>(() => getUserContests());
   const [loadingId, setLoadingId] = useState<string | null>(null);
@@ -52,7 +60,7 @@ export function ContestSelectorScreen({ onSelectContest }: ContestSelectorScreen
   }, []);
 
   const handleChoose = async (contest: UserContestProfile) => {
-    if (loadingId) return;
+    if (initializing || loadingId) return;
     setErrorMsg(null);
     setLoadingId(contest.id);
     try {
@@ -102,6 +110,7 @@ export function ContestSelectorScreen({ onSelectContest }: ContestSelectorScreen
             <button
               type="button"
               data-testid="selector-profile-button"
+              disabled={initializing}
               onClick={() => setProfileOpen(true)}
               title="Editar perfil"
               className="inline-flex control-height items-center gap-2 rounded-lg border border-border-strong bg-surface px-2.5 text-xs font-medium text-fg hover:border-primary/40 transition cursor-pointer"
@@ -141,8 +150,9 @@ export function ContestSelectorScreen({ onSelectContest }: ContestSelectorScreen
           </div>
         )}
 
+        {initializing && <p className="sr-only" role="status">Carregando seus concursos...</p>}
         {/* Grade de Perfis de Concursos (Estilo Netflix) */}
-        <div className="grid grid-cols-1 min-[440px]:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 sm:gap-6 w-full max-w-4xl justify-items-center">
+        <div inert={initializing} aria-busy={initializing} className="grid grid-cols-1 min-[440px]:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 sm:gap-6 w-full max-w-4xl justify-items-center">
           {contests.map((contest) => {
             const isLoading = loadingId === contest.id;
             const isCurrent = contest.id === activeScopeId;
@@ -244,6 +254,7 @@ export function ContestSelectorScreen({ onSelectContest }: ContestSelectorScreen
           <div className="mt-8">
             <button
               type="button"
+              disabled={initializing}
               onClick={() => setManageMode((prev) => !prev)}
               className="rounded-lg border border-border-strong bg-surface px-4 py-2 max-lg:py-2.5 max-lg:min-h-11 text-xs font-semibold text-fg-muted hover:text-fg hover:border-primary/40 transition"
             >
@@ -257,16 +268,24 @@ export function ContestSelectorScreen({ onSelectContest }: ContestSelectorScreen
         estudaê · Ciclos contínuos de estudos a partir do seu edital verticalizado
       </footer>
 
-      <NewContestModal
-        open={showNewModal}
-        onClose={() => setShowNewModal(false)}
-        onCreated={(created) => {
-          setShowNewModal(false);
-          onSelectContest(created);
-        }}
-      />
+      {showNewModal && (
+        <Suspense fallback={<LoadingState label="Carregando novo concurso..." />}>
+          <NewContestModal
+            open={showNewModal}
+            onClose={() => setShowNewModal(false)}
+            onCreated={(created) => {
+              setShowNewModal(false);
+              onSelectContest(created);
+            }}
+          />
+        </Suspense>
+      )}
 
-      <ProfileModal open={profileOpen} onClose={() => setProfileOpen(false)} />
+      {profileOpen && (
+        <Suspense fallback={<LoadingState label="Carregando perfil..." />}>
+          <ProfileModal open={profileOpen} onClose={() => setProfileOpen(false)} />
+        </Suspense>
+      )}
     </div>
   );
 }

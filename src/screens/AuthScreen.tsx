@@ -85,7 +85,7 @@ export function AuthScreen({ onAuthenticated }: AuthScreenProps) {
   };
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row bg-canvas text-fg">
+    <main className="min-h-screen flex flex-col lg:flex-row bg-canvas text-fg">
       {/* Coluna Institucional / Identidade Visual estudaê */}
       <div className="lg:w-5/12 xl:w-1/2 p-5 sm:p-10 lg:p-12 flex flex-col justify-between text-white bg-[#1e40af] border-b lg:border-b-0 lg:border-r border-white/10">
         <div className="flex items-center gap-3.5">
@@ -311,6 +311,6 @@ export function AuthScreen({ onAuthenticated }: AuthScreenProps) {
           </form>
         </div>
       </div>
-    </div>
+    </main>
   );
 }

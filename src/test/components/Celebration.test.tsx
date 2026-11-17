@@ -51,7 +51,8 @@ describe('Celebration layer and daily mission', () => {
 
   it('shows the daily mission card on the overview', async () => {
     render(<App />);
-    expect(await screen.findByRole('heading', { name: /missão de hoje/i })).toBeInTheDocument();
+    // O painel e a rota são imports separados; a transformação inicial no Vitest pode exceder 1 s.
+    expect(await screen.findByRole('heading', { name: /missão de hoje/i }, { timeout: 3000 })).toBeInTheDocument();
     const progressBars = screen.getAllByRole('progressbar', { name: /tempo estudado hoje em relação à meta diária/i });
     expect(progressBars.length).toBeGreaterThanOrEqual(1);
   });
@@ -59,7 +60,7 @@ describe('Celebration layer and daily mission', () => {
   it('does not celebrate pre-existing data on load, but celebrates new achievements', async () => {
     await db.sessions.add(completedSession('old', 30));
     render(<App />);
-    await screen.findByRole('heading', { name: /missão de hoje/i });
+    await screen.findByRole('heading', { name: /missão de hoje/i }, { timeout: 3000 });
     expect(screen.queryByRole('button', { name: /fechar aviso de conquista/i })).not.toBeInTheDocument();
 
     // Aguarda carregar dados iniciais antes de disparar nova conquista
