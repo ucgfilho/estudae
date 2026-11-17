@@ -100,9 +100,6 @@ export function Sidebar({
               <p className="text-sm font-bold tracking-tight text-fg truncate leading-tight">
                 estudaê
               </p>
-              <p className="text-[11px] text-fg-subtle truncate leading-none mt-0.5">
-                {activeContest ? `${activeContest.shortName} · ${activeContest.role}` : 'Multi-Concursos'}
-              </p>
             </div>
           </div>
           <IconButton
