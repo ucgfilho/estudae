@@ -104,7 +104,7 @@ export function CycleRecommendation({ showQueue = false }: { showQueue?: boolean
               </div>
               <div className="mt-auto flex flex-wrap items-center justify-between gap-2 border-t border-border pt-3 text-xs text-fg-muted">
                 <span>{activity.discipline.kind === 'technical' ? 'Específicos' : 'Básicos'}</span>
-                <span className="inline-flex items-center gap-1 whitespace-nowrap"><Clock3 className="size-3.5" aria-hidden />{activity.minutes} min</span>
+                {!timeGoalsDisabled && <span className="inline-flex items-center gap-1 whitespace-nowrap"><Clock3 className="size-3.5" aria-hidden />{activity.minutes} min</span>}
               </div>
             </li>
           ))}

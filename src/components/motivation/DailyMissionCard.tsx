@@ -47,6 +47,7 @@ export function DailyMissionCard({
   const queue = useMemo(() => settings ? previewCycle({ disciplines, topics, sessions,
     settings, questionLogs: logs, errorNotes: [] }, 4) : [], [disciplines, topics, sessions, settings, logs]);
   const next = queue[0];
+  const timeGoalsDisabled = settings?.dailyGoalMinutes === 0 && settings?.weeklyGoalMinutes === 0;
   const queueOffset = timer && !timer.cycleStudy ? 0 : 1;
   const completed = useMemo(() => cycleCompletions(sessions), [sessions]);
   const completedToday = completed.filter(s => s.date === today).length;
@@ -89,10 +90,10 @@ export function DailyMissionCard({
                     : 'Adicione ou ative as disciplinas do seu edital para começar.'}
               </p>
               {(timer || next) && <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-fg-muted">
-                <span className="inline-flex items-center gap-1.5 font-medium tabular-nums text-fg">
+                {(timer || (next && !timeGoalsDisabled)) && <span className="inline-flex items-center gap-1.5 font-medium tabular-nums text-fg">
                   <Clock className="size-4 text-primary" aria-hidden="true" />
                   {timer ? timer.plannedSeconds / 60 : next.minutes} min
-                </span>
+                </span>}
                 {next && !timer && <span>{next.discipline.kind === 'technical' ? 'Conhecimentos específicos' : 'Conhecimentos básicos'}</span>}
               </div>}
             </div>
