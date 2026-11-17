@@ -52,7 +52,7 @@ export function DailyMissionCard({
   const scheduleDone = p.scheduled.length > 0 && p.scheduledDone === p.scheduled.length;
   const pendingBlocks = p.scheduled.length - p.scheduledDone;
   const nameOf = (id: string) => discMap.get(id)?.name ?? (id === 'simulado' ? 'Simulado Geral BNB' : 'Disciplina');
-  const colorOf = (id: string) => discMap.get(id)?.color ?? '#A6193C';
+  const colorOf = (id: string) => discMap.get(id)?.color ?? '#1E40AF';
 
   return (
     <Card

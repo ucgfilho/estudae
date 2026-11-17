@@ -5,16 +5,13 @@ import {
   Plus,
   Trash2,
   Edit2,
-  Clock,
   Filter,
   Check,
   RotateCcw,
-  BookOpen,
-  FileText,
   Layers,
 } from 'lucide-react';
 import { Button, IconButton } from '../components/ui/Button';
-import { Card, PageHeader, Badge, EmptyState, DisciplineDot, Alert } from '../components/ui/Display';
+import { Card, PageHeader, EmptyState, DisciplineDot, Alert } from '../components/ui/Display';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { ErrorNoteModal } from '../components/modals/ErrorNoteModal';
 import { FlashcardModal } from '../components/modals/FlashcardModal';
@@ -178,81 +175,31 @@ export function ErrorNotebookScreen() {
       )}
 
 
-      {/* Interactive Status Filter Cards */}
-      <div className="stats-grid" role="group" aria-label="Filtrar por status">
-        <button
-          type="button"
-          aria-pressed={filterStatus === '' && !focusedNoteId}
-          onClick={() => {
-            if (focusedNoteId) setSearchParams({});
-            setFilterStatus('');
-          }}
-          className={cn(
-            'panel-padding flex flex-col gap-3 rounded-xl border text-left transition-colors',
-            filterStatus === '' && !focusedNoteId
-              ? 'border-primary bg-surface shadow-xs ring-2 ring-primary/40'
-              : 'border-border bg-surface hover:bg-surface-muted/60'
-          )}
-        >
-          <div className="text-xs font-medium text-fg-muted">Total de registros</div>
-          <div className="text-2xl font-bold leading-tight text-fg tabular-nums">{counts.total}</div>
-        </button>
-
-        <button
-          type="button"
-          aria-pressed={filterStatus === 'revisar' && !focusedNoteId}
-          onClick={() => {
-            if (focusedNoteId) setSearchParams({});
-            setFilterStatus(filterStatus === 'revisar' ? '' : 'revisar');
-          }}
-          className={cn(
-            'panel-padding flex flex-col gap-3 rounded-xl border text-left transition-colors',
-            filterStatus === 'revisar' && !focusedNoteId
-              ? 'border-warning bg-warning-soft/40 shadow-xs ring-2 ring-warning/50'
-              : 'border-warning/30 bg-warning-soft/20 hover:bg-warning-soft/30'
-          )}
-        >
-          <div className="text-xs font-medium text-warning">A revisar</div>
-          <div className="text-2xl font-bold leading-tight text-warning tabular-nums">{counts.revisar}</div>
-        </button>
-
-        <button
-          type="button"
-          aria-pressed={filterStatus === 'revisado' && !focusedNoteId}
-          onClick={() => {
-            if (focusedNoteId) setSearchParams({});
-            setFilterStatus(filterStatus === 'revisado' ? '' : 'revisado');
-          }}
-          className={cn(
-            'panel-padding flex flex-col gap-3 rounded-xl border text-left transition-colors',
-            filterStatus === 'revisado' && !focusedNoteId
-              ? 'border-info bg-info-soft/40 shadow-xs ring-2 ring-info/50'
-              : 'border-info/30 bg-info-soft/20 hover:bg-info-soft/30'
-          )}
-        >
-          <div className="text-xs font-medium text-info">Revisados</div>
-          <div className="text-2xl font-bold leading-tight text-info tabular-nums">{counts.revisado}</div>
-        </button>
-
-        <button
-          type="button"
-          aria-pressed={filterStatus === 'dominado' && !focusedNoteId}
-          onClick={() => {
-            if (focusedNoteId) setSearchParams({});
-            setFilterStatus(filterStatus === 'dominado' ? '' : 'dominado');
-          }}
-          className={cn(
-            'panel-padding flex flex-col gap-3 rounded-xl border text-left transition-colors',
-            filterStatus === 'dominado' && !focusedNoteId
-              ? 'border-success bg-success-soft/40 shadow-xs ring-2 ring-success/50'
-              : 'border-success/30 bg-success-soft/20 hover:bg-success-soft/30'
-          )}
-        >
-          <div className="text-xs font-medium text-success">Dominados</div>
-          <div className="text-2xl font-bold leading-tight text-success tabular-nums">{counts.dominado}</div>
-        </button>
+      <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filtrar por status">
+        {([
+          ['', 'Todos', counts.total],
+          ['revisar', 'A revisar', counts.revisar],
+          ['revisado', 'Revisados', counts.revisado],
+          ['dominado', 'Dominados', counts.dominado],
+        ] as const).map(([status, label, count]) => (
+          <button key={status} type="button" aria-pressed={filterStatus === status && !focusedNoteId}
+            onClick={() => { if (focusedNoteId) setSearchParams({}); setFilterStatus(status); }}
+            className={cn('inline-flex min-h-11 items-center gap-2 rounded-lg border px-3 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-ring',
+              filterStatus === status && !focusedNoteId ? 'border-primary bg-primary-soft font-semibold text-primary' : 'border-transparent text-fg-muted hover:bg-surface-muted')}>
+            {label}<span className="text-xs tabular-nums">{count}</span>
+          </button>
+        ))}
       </div>
 
+      <Field label="Buscar no caderno">
+        <Input type="search" placeholder="Busque por explicação, questão ou tópico" value={filterSearch} onChange={e => setFilterSearch(e.target.value)} />
+      </Field>
+      <details className="group rounded-xl border border-border bg-surface">
+        <summary className="flex min-h-11 cursor-pointer items-center gap-2 rounded-xl px-4 py-3 text-sm font-medium text-fg focus-visible:outline-2 focus-visible:outline-ring">
+          <Filter className="size-4 text-fg-muted" aria-hidden />
+          Refinar resultados
+          <span className="ml-auto text-xs text-fg-muted">{[filterDisciplineId, filterMockExamId, filterType].filter(Boolean).length || 'Sem'} filtros adicionais</span>
+        </summary>
       {/* Filters Bar */}
       <Card
         title={
@@ -282,15 +229,6 @@ export function ErrorNotebookScreen() {
         }
       >
         <div className="filter-grid">
-          <Field label="Buscar por palavra">
-              <Input
-                type="text"
-                placeholder="Explicação, questão, tópico..."
-                value={filterSearch}
-                onChange={(e) => setFilterSearch(e.target.value)}
-              />
-          </Field>
-
           <Field label="Simulado ou prova">
             <Select
               value={filterMockExamId}
@@ -350,6 +288,10 @@ export function ErrorNotebookScreen() {
         </div>
       </Card>
 
+      </details>
+
+      <p className="text-xs text-fg-muted" role="status">{filteredNotes.length} {filteredNotes.length === 1 ? 'registro encontrado' : 'registros encontrados'}</p>
+
       {/* Error Notes List */}
       <div className="space-y-4">
         {filteredNotes.length > 0 ? (
@@ -360,45 +302,30 @@ export function ErrorNotebookScreen() {
             const pendingReviews = linkedReviews.filter((r) => r.status === 'pendente');
 
             return (
-              <Card
-                key={note.id}
-                className={cn(
-                  'border-l-4 transition-all',
-                  note.status === 'revisar'
-                    ? 'border-l-warning'
-                    : note.status === 'revisado'
-                    ? 'border-l-info'
-                    : 'border-l-success'
-                )}
-                title={
-                  <div className="flex flex-wrap items-center gap-2">
-                    {d && <DisciplineDot color={d.color} />}
-                    <span className="font-semibold text-fg">{d?.name}</span>
-                    {t && (
-                      <Badge tone="neutral" className="max-w-full truncate">
-                        <span className="truncate">{t.title}</span>
-                      </Badge>
-                    )}
-                    {note.mockExamTitle && (
-                      <Badge tone="primary" icon={<FileText className="size-3" aria-hidden />} className="max-w-64 max-sm:max-w-full">
-                        <span className="truncate">Prova: {note.mockExamTitle}</span>
-                      </Badge>
-                    )}
-                    <Badge tone="neutral" className="text-xs">
-                      {ERROR_TYPE_LABELS[note.errorType]}
-                    </Badge>
-                    <Badge
-                      tone={(note.flashcards?.length ?? 0) > 0 ? 'primary' : 'neutral'}
-                      icon={<Layers className="size-3" aria-hidden />}
-                      className="text-xs"
-                    >
-                      {(note.flashcards?.length ?? 0) === 1
-                        ? '1 flashcard'
-                        : `${note.flashcards?.length ?? 0} flashcards`}
-                    </Badge>
+              <details key={note.id} open={focusedNoteId === note.id || undefined} className="overflow-hidden rounded-xl border border-border bg-surface">
+                <summary className="cursor-pointer px-[var(--panel-padding)] py-4 text-fg focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-[-2px]">
+                  <div className="inline-flex w-[calc(100%-1.5rem)] flex-col gap-2 align-middle">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="inline-flex min-w-0 items-center gap-2 text-sm font-semibold">{d && <DisciplineDot color={d.color} />}{d?.name ?? 'Disciplina'}</span>
+                      <span className="text-xs font-medium text-fg-muted">{ERROR_STATUS_LABELS[note.status]}</span>
+                    </div>
+                    <span className="text-sm text-fg-muted">{t?.title || note.sourceReference || 'Anotação de estudo'}</span>
+                    <span className="text-xs text-fg-subtle">{formatDate(note.errorDate)} · {pendingReviews.length > 0 ? `${pendingReviews.length} revisões pendentes` : 'Revisões em dia'}</span>
                   </div>
-                }
-                actions={
+                </summary>
+                <div className="space-y-5 border-t border-border panel-padding">
+                  <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-fg-muted">
+                    <span>{ERROR_TYPE_LABELS[note.errorType]}</span>
+                    {note.mockExamTitle && <span>Prova: {note.mockExamTitle}</span>}
+                    {(note.flashcards?.length ?? 0) > 0 && <span>{note.flashcards?.length} flashcards</span>}
+                    {note.nextReviewDate && <span>Próxima revisão: {formatDate(note.nextReviewDate)}</span>}
+                  </div>
+                  {note.sourceReference && <p className="text-xs text-fg-muted">Referência: {note.sourceReference}</p>}
+                  <div className="space-y-2 text-sm leading-relaxed text-fg">
+                    <h3 className="text-sm font-semibold">Aprendizado</h3>
+                    <FormattedText text={note.explanation} />
+                  </div>
+                  <div className="border-t border-border pt-4">
                   <div className="flex flex-wrap shrink-0 items-center gap-1.5">
                     <Button
                       variant="secondary"
@@ -447,57 +374,9 @@ export function ErrorNotebookScreen() {
                       }}
                     />
                   </div>
-                }
-              >
-                <div className="space-y-3 text-sm">
-                  {note.sourceReference && (
-                    <div className="text-xs font-semibold text-fg-subtle flex items-center gap-1.5">
-                      <BookOpen className="size-3.5" />
-                      <span>Referência: {note.sourceReference}</span>
-                    </div>
-                  )}
-
-                  <div className="rounded-lg bg-surface-muted/40 p-3 text-fg border border-border/60">
-                    <div className="text-xs font-medium text-fg-muted mb-1">
-                      Explicação correta e aprendizado
-                    </div>
-                    <FormattedText text={note.explanation} />
-                  </div>
-
-                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-fg-subtle pt-1 border-t border-border">
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-                      <span>Data do erro: <strong>{formatDate(note.errorDate)}</strong></span>
-                      {note.nextReviewDate && (
-                        <span className="flex items-center gap-1 text-primary">
-                          <Clock className="size-3.5" />
-                          Próxima revisão: <strong>{formatDate(note.nextReviewDate)}</strong>
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      {pendingReviews.length > 0 ? (
-                        <Badge tone="warning">
-                          {pendingReviews.length} revisão(ões) pendente(s)
-                        </Badge>
-                      ) : (
-                        <Badge tone="success">Revisões em dia</Badge>
-                      )}
-                      <Badge
-                        tone={
-                          note.status === 'revisar'
-                            ? 'warning'
-                            : note.status === 'revisado'
-                            ? 'info'
-                            : 'success'
-                        }
-                      >
-                        {ERROR_STATUS_LABELS[note.status]}
-                      </Badge>
-                    </div>
                   </div>
                 </div>
-              </Card>
+              </details>
             );
           })
         ) : (

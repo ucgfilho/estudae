@@ -104,7 +104,7 @@ export function RankCard(input: RankInput) {
               aria-valuemin={0}
               aria-valuemax={100}
               aria-valuenow={pct}
-              className="h-3 w-full overflow-hidden rounded-full bg-surface-muted"
+              className="h-3 w-full overflow-hidden rounded-full bg-white ring-1 ring-inset ring-primary/50"
             >
               <div className="h-full rounded-full bg-primary transition-[width] duration-700 ease-out" style={{ width: `${pct}%` }} />
             </div>

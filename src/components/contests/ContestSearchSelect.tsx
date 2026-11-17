@@ -114,7 +114,7 @@ export function ContestSearchSelect({
             <div
               className="size-8 rounded-lg flex items-center justify-center text-xs font-bold text-white shrink-0 shadow-xs"
               style={{
-                backgroundColor: selectedTemplate ? selectedTemplate.color : '#a6193c',
+                backgroundColor: selectedTemplate ? selectedTemplate.color : '#1e40af',
               }}
             >
               {selectedTemplate ? (

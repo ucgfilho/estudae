@@ -325,7 +325,7 @@ export function CalendarScreen() {
                               ? 'var(--success)'
                               : s.status === 'perdida'
                               ? 'var(--danger)'
-                              : d?.color ?? '#A6193C';
+                              : d?.color ?? '#1E40AF';
                           return (
                             <span
                               key={s.id}
@@ -408,7 +408,7 @@ export function CalendarScreen() {
                       >
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-1.5 font-semibold text-fg">
-                            <DisciplineDot color={d?.color ?? '#A6193C'} />
+                            <DisciplineDot color={d?.color ?? '#1E40AF'} />
                             <span className="truncate">
                               {d?.name ?? (s.disciplineId === 'simulado' ? 'Simulado Geral BNB' : 'Sessão')}
                             </span>
@@ -505,7 +505,7 @@ export function CalendarScreen() {
                               {d ? (
                                 <DisciplineDot color={d.color} />
                               ) : s.disciplineId === 'simulado' ? (
-                                <DisciplineDot color="#A6193C" />
+                                <DisciplineDot color="#1E40AF" />
                               ) : null}
                               <span>{d?.name ?? (s.disciplineId === 'simulado' ? 'Simulado Geral BNB' : 'Sessão')}</span>
                             </span>
@@ -559,7 +559,7 @@ export function CalendarScreen() {
                         {d ? (
                           <DisciplineDot color={d.color} />
                         ) : s.disciplineId === 'simulado' ? (
-                          <DisciplineDot color="#A6193C" />
+                          <DisciplineDot color="#1E40AF" />
                         ) : null}
                         <span className="font-semibold text-fg">
                           {d?.name ?? (s.disciplineId === 'simulado' ? 'Simulado Geral BNB' : 'Sessão')}
@@ -641,7 +641,7 @@ export function CalendarScreen() {
                   {discMap.get(selectedSessionDetail.disciplineId) ? (
                     <DisciplineDot color={discMap.get(selectedSessionDetail.disciplineId)!.color} />
                   ) : selectedSessionDetail.disciplineId === 'simulado' ? (
-                    <DisciplineDot color="#A6193C" />
+                    <DisciplineDot color="#1E40AF" />
                   ) : null}
                   {discMap.get(selectedSessionDetail.disciplineId)?.name ??
                     (selectedSessionDetail.disciplineId === 'simulado' ? 'Simulado Geral BNB' : 'Disciplina')}

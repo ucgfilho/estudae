@@ -348,7 +348,7 @@ export function ReportsScreen() {
                           : isTop2
                           ? 'bg-surface-muted text-fg-muted ring-1 ring-border-strong'
                           : isTop3
-                          ? 'bg-amber-700/15 text-amber-600 ring-1 ring-amber-700/40'
+                          ? 'bg-warning-soft text-warning ring-1 ring-warning/40'
                           : 'bg-surface-muted text-fg-subtle'
                       }`}
                     >

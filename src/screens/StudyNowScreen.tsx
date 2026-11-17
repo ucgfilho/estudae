@@ -310,7 +310,7 @@ export function StudyNowScreen() {
                   </div>
                 ) : activeTimer.disciplineId === 'simulado' ? (
                   <div className="flex items-center gap-1.5 font-semibold text-fg text-base">
-                    <DisciplineDot color="#A6193C" />
+                    <DisciplineDot color="#1E40AF" />
                     Simulado Geral BNB
                   </div>
                 ) : null}
@@ -561,7 +561,7 @@ export function StudyNowScreen() {
                               {d ? (
                                 <DisciplineDot color={d.color} />
                               ) : isSimulado ? (
-                                <DisciplineDot color="#A6193C" />
+                                <DisciplineDot color="#1E40AF" />
                               ) : null}
                               {d?.name ?? (isSimulado ? 'Simulado Geral BNB' : s.disciplineId)}
                             </div>
@@ -731,7 +731,7 @@ export function StudyNowScreen() {
             discMap.get(activeTimer.disciplineId)?.name ??
             (activeTimer.disciplineId === 'simulado' ? 'Simulado Geral BNB' : 'Sessão de estudo')
           }
-          disciplineColor={discMap.get(activeTimer.disciplineId)?.color ?? '#A6193C'}
+          disciplineColor={discMap.get(activeTimer.disciplineId)?.color ?? '#1E40AF'}
           topicTitle={activeTimer.topicId ? topicMap.get(activeTimer.topicId)?.title : null}
           loading={loading}
           onPause={handlePause}

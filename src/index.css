@@ -1,6 +1,6 @@
 @import 'tailwindcss';
 
-@theme {
+@theme inline {
   --color-canvas: var(--canvas);
   --color-surface: var(--surface);
   --color-surface-muted: var(--surface-muted);
@@ -179,65 +179,65 @@
     --control-height: 2.5rem;
     --control-height-sm: 2.25rem;
     --control-height-lg: 2.75rem;
-    --canvas: #f7f7f5;
+    --canvas: #f8fafc;
     --surface: #ffffff;
-    --surface-muted: #f0f0ec;
+    --surface-muted: #f1f5f9;
     --surface-elevated: #ffffff;
-    --border: #e4e4df;
-    --border-strong: #cfcfc8;
-    --fg: #141413;
-    --fg-muted: #52524e;
-    --fg-subtle: #666660;
+    --border: #dbe4ee;
+    --border-strong: #b8c8da;
+    --fg: #1e293b;
+    --fg-muted: #475569;
+    --fg-subtle: #52647a;
 
-    --primary: #b8001f;
-    --primary-hover: #9a001a;
+    --primary: #1e40af;
+    --primary-hover: #1e3a8a;
     --primary-fg: #ffffff;
-    --primary-soft: #fcecef;
-    --accent: #e07200;
+    --primary-soft: #e8efff;
+    --accent: #d97706;
     --accent-fg: #ffffff;
-    --accent-soft: #fff2e2;
+    --accent-soft: #fff3df;
 
-    --success: #16793b;
-    --success-soft: #e6f5ec;
-    --warning: #a86200;
+    --success: #15803d;
+    --success-soft: #e5f5ec;
+    --warning: #a85b00;
     --warning-soft: #fef3dc;
     --danger: #b91c1c;
     --danger-soft: #fde8e8;
-    --info: #1565a3;
-    --info-soft: #e6f2fc;
+    --info: #2563eb;
+    --info-soft: #e8efff;
 
-    --ring: #b8001f;
+    --ring: #1e40af;
   }
 
   .dark {
-    --canvas: #0f0f0e;
-    --surface: #171716;
-    --surface-muted: #21211f;
-    --surface-elevated: #262624;
-    --border: #2c2c29;
-    --border-strong: #42423d;
-    --fg: #f3f3ef;
-    --fg-muted: #b5b5ad;
-    --fg-subtle: #a3a399;
+    --canvas: #0f172a;
+    --surface: #17243a;
+    --surface-muted: #203149;
+    --surface-elevated: #283b55;
+    --border: #344762;
+    --border-strong: #506480;
+    --fg: #f1f5f9;
+    --fg-muted: #c1cee0;
+    --fg-subtle: #aebfd3;
 
-    --primary: #f06478;
-    --primary-hover: #ff7b8d;
-    --primary-fg: #25060c;
-    --primary-soft: #331217;
-    --accent: #ff9a1f;
-    --accent-fg: #121212;
-    --accent-soft: #382309;
+    --primary: #93b4ff;
+    --primary-hover: #b7ccff;
+    --primary-fg: #10265a;
+    --primary-soft: #203964;
+    --accent: #ffb454;
+    --accent-fg: #29200e;
+    --accent-soft: #49331a;
 
-    --success: #2ea85c;
-    --success-soft: #112d1b;
-    --warning: #e59212;
-    --warning-soft: #332207;
+    --success: #4ade80;
+    --success-soft: #153b30;
+    --warning: #fbbf24;
+    --warning-soft: #49351b;
     --danger: #e54848;
     --danger-soft: #361414;
-    --info: #4299e1;
-    --info-soft: #0f263c;
+    --info: #93b4ff;
+    --info-soft: #203964;
 
-    --ring: #f06478;
+    --ring: #93b4ff;
   }
 
   html {
@@ -245,7 +245,7 @@
     /* Evita o "pulo" lateral quando a barra de rolagem aparece ou some. */
     scrollbar-gutter: stable;
   }
-  /* Barra de rolagem na cor oficial (vermelho da paleta) com 50% de transparência. */
+  /* Barra de rolagem na cor principal da paleta com 50% de transparência. */
   * {
     scrollbar-width: thin;
     scrollbar-color: color-mix(in srgb, var(--primary) 50%, transparent) transparent;
@@ -439,4 +439,30 @@ input[type='number']::-webkit-outer-spin-button {
 }
 .recharts-cartesian-axis-tick-value {
   fill: var(--fg-subtle);
+}
+
+/* A navegação acompanha o tema escolhido na plataforma, independentemente do sistema. */
+:root:not(.dark) .navigation-chrome {
+  --surface: #1e3a8a;
+  --surface-muted: #2b4b98;
+  --surface-elevated: #294993;
+  --border: #4966a6;
+  --border-strong: #7290c5;
+  --fg: #ffffff;
+  --fg-muted: #e0eaff;
+  --fg-subtle: #c7d8f8;
+  --primary: #ffffff;
+  --primary-soft: #365ba9;
+  --ring: #fbbf24;
+  color: var(--fg);
+}
+
+/* Confirmações destrutivas usam o âmbar da paleta, com contraste para o texto. */
+.confirm-destructive {
+  background-color: var(--warning);
+  border-color: var(--warning);
+  color: #fff;
+}
+.dark .confirm-destructive {
+  color: #1e293b;
 }

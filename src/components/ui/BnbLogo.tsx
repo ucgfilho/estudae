@@ -5,8 +5,8 @@ interface BnbLogoProps {
 
 /**
  * Logomarca oficial da plataforma "estudaê" mantendo a paleta de cores característica:
- * - Fundo Rubi (#A6193C)
- * - Moldura e Acento Circunflexo (^) Laranja Vibrante (#F68B1F)
+ * - Fundo Azul (#1E40AF)
+ * - Moldura e Acento Circunflexo (^) Âmbar (#D97706)
  * - Livro aberto estilizado em Branco (#FFFFFF) simbolizando qualquer edital e aprovação
  */
 export function BnbLogo({ className = 'size-8', size }: BnbLogoProps) {
@@ -21,12 +21,12 @@ export function BnbLogo({ className = 'size-8', size }: BnbLogoProps) {
       aria-label="estudaê"
       role="img"
     >
-      <rect width="64" height="64" rx="14" fill="#A6193C" />
-      <rect x="5.5" y="5.5" width="53" height="53" rx="11" stroke="#F68B1F" strokeWidth={3.5} />
+      <rect width="64" height="64" rx="14" fill="#1E40AF" />
+      <rect x="5.5" y="5.5" width="53" height="53" rx="11" stroke="#D97706" strokeWidth={3.5} />
       {/* Acento circunflexo (^) do "estudaê" / Seta de aprovação */}
       <path
         d="M20 24 L32 14 L44 24 L40.5 27.5 L32 20.5 L23.5 27.5 Z"
-        fill="#F68B1F"
+        fill="#D97706"
       />
       <circle cx="32" cy="25.5" r="2.6" fill="#FFFFFF" />
       {/* Livro aberto estilizado (Edital Verticalizado / Estudos) */}
@@ -40,7 +40,7 @@ export function BnbLogo({ className = 'size-8', size }: BnbLogoProps) {
       />
       <path
         d="M18 47.5 C23 47.5 28 49 32 51.5 C36 49 41 47.5 46 47.5"
-        stroke="#F68B1F"
+        stroke="#D97706"
         strokeWidth={2.5}
         strokeLinecap="round"
       />

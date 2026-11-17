@@ -1,29 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
-  <!-- Fundo Rubi estudaê (#A6193C) -->
-  <rect width="64" height="64" rx="14" fill="#A6193C" />
-  <!-- Moldura Laranja Vibrante estudaê (#F68B1F) -->
-  <rect x="5.5" y="5.5" width="53" height="53" rx="11" stroke="#F68B1F" stroke-width="3.5" />
-  <!-- Acento circunflexo (^) do "estudaê" / Capelo de aprovação -->
-  <path
-    d="M20 24 L32 14 L44 24 L40.5 27.5 L32 20.5 L23.5 27.5 Z"
-    fill="#F68B1F"
-  />
-  <!-- Estrela/Ponto de foco central -->
-  <circle cx="32" cy="25.5" r="2.6" fill="#FFFFFF" />
-  <!-- Livro aberto estilizado (Edital / Conhecimento) em Branco -->
-  <path
-    d="M15 31 C21 31 27 33 30.5 36.5 L30.5 48.5 C27 45.5 21 43.8 15 43.8 Z"
-    fill="#FFFFFF"
-  />
-  <path
-    d="M49 31 C43 31 37 33 33.5 36.5 L33.5 48.5 C37 45.5 43 43.8 49 43.8 Z"
-    fill="#FFFFFF"
-  />
-  <!-- Base/Marcador de página em Laranja -->
-  <path
-    d="M18 47.5 C23 47.5 28 49 32 51.5 C36 49 41 47.5 46 47.5"
-    stroke="#F68B1F"
-    stroke-width="2.5"
-    stroke-linecap="round"
-  />
+  <rect width="64" height="64" rx="14" fill="#1E40AF"/>
+  <rect x="5.5" y="5.5" width="53" height="53" rx="11" stroke="#D97706" stroke-width="3.5"/>
+  <path d="M20 24 32 14l12 10-3.5 3.5L32 20.5l-8.5 7Z" fill="#D97706"/>
+  <circle cx="32" cy="25.5" r="2.6" fill="#fff"/>
+  <path d="M15 31c6 0 12 2 15.5 5.5v12C27 45.5 21 43.8 15 43.8Z" fill="#fff"/>
+  <path d="M49 31c-6 0-12 2-15.5 5.5v12c6-3 12-4.7 15.5-4.7Z" fill="#fff"/>
+  <path d="M18 47.5c5 0 10 1.5 14 4 4-2.5 9-4 14-4" stroke="#D97706" stroke-width="2.5" stroke-linecap="round"/>
 </svg>

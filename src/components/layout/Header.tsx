@@ -105,7 +105,7 @@ export function Header({
 
   return (
     <>
-      <header className="sticky top-0 z-20 flex h-14 max-lg:h-[calc(3.5rem+env(safe-area-inset-top))] max-lg:pt-[env(safe-area-inset-top)] shrink-0 items-center justify-between gap-2 border-b border-border bg-surface px-3 sm:px-6">
+      <header className="sticky top-0 z-20 flex h-14 max-lg:h-[calc(3.5rem+env(safe-area-inset-top))] max-lg:pt-[env(safe-area-inset-top)] shrink-0 items-center justify-between gap-2 navigation-chrome border-b border-border bg-surface px-3 sm:px-6">
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <IconButton
             label="Abrir menu de navegação"
@@ -166,7 +166,7 @@ export function Header({
                 data-testid="header-rank-icon"
                 title={`Patente atual: ${rankState.rank.name} (${rankState.xp} XP)`}
                 className={cn(
-                  'hidden sm:inline-flex size-5 shrink-0 items-center justify-center rounded-md bg-surface-muted ring-1',
+                  'hidden sm:inline-flex size-5 shrink-0 items-center justify-center rounded-md bg-white ring-1 ring-primary/20',
                   rankTier.ring,
                 )}
               >

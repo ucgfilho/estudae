@@ -87,7 +87,7 @@ export function AuthScreen({ onAuthenticated }: AuthScreenProps) {
   return (
     <div className="min-h-screen flex flex-col lg:flex-row bg-canvas text-fg">
       {/* Coluna Institucional / Identidade Visual estudaê */}
-      <div className="lg:w-5/12 xl:w-1/2 p-5 sm:p-10 lg:p-12 flex flex-col justify-between text-white bg-[#8E1532] border-b lg:border-b-0 lg:border-r border-white/10">
+      <div className="lg:w-5/12 xl:w-1/2 p-5 sm:p-10 lg:p-12 flex flex-col justify-between text-white bg-[#1e40af] border-b lg:border-b-0 lg:border-r border-white/10">
         <div className="flex items-center gap-3.5">
           <BnbLogo className="size-10 sm:size-11 rounded-xl shadow-md" />
           <div>
@@ -100,7 +100,7 @@ export function AuthScreen({ onAuthenticated }: AuthScreenProps) {
 
         <div className="my-4 sm:my-8 lg:my-0 space-y-3 sm:space-y-5 max-w-lg relative z-10">
           <div className="inline-flex max-w-full items-center gap-2 rounded-full bg-white/15 px-3.5 py-1.5 text-xs font-medium">
-            <ShieldCheck className="size-4 text-[#f68b1f] shrink-0" />
+            <ShieldCheck className="size-4 text-[#ffbf69] shrink-0" />
             <span>Ciclo contínuo de estudos feito a partir do seu edital</span>
           </div>
 
@@ -116,19 +116,19 @@ export function AuthScreen({ onAuthenticated }: AuthScreenProps) {
 
           <ul className="hidden sm:block space-y-2.5 text-xs sm:text-sm text-white/90 pt-1">
             <li className="flex items-center gap-2.5">
-              <CheckCircle2 className="size-4 text-[#f68b1f] shrink-0" />
+              <CheckCircle2 className="size-4 text-[#ffbf69] shrink-0" />
               <span>
                 Bancos, TI, polícia, fiscal, tribunais e outros
               </span>
             </li>
             <li className="flex items-center gap-2.5">
-              <CheckCircle2 className="size-4 text-[#f68b1f] shrink-0" />
+              <CheckCircle2 className="size-4 text-[#ffbf69] shrink-0" />
               <span>
                 O ciclo segue os tópicos do seu edital
               </span>
             </li>
             <li className="flex items-center gap-2.5">
-              <CheckCircle2 className="size-4 text-[#f68b1f] shrink-0" />
+              <CheckCircle2 className="size-4 text-[#ffbf69] shrink-0" />
               <span>
                 Um painel separado para cada concurso
               </span>

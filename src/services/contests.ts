@@ -148,7 +148,7 @@ function buildDefaultContestProfileFromMemory(): UserContestProfile {
     role,
     category: tpl?.category || 'Bancários',
     examBoard: tpl?.banca || 'Cesgranrio',
-    accentColor: tpl?.color || '#c20018',
+    accentColor: tpl?.color || '#1e40af',
     editalFileName: settings?.editalFileName ?? null,
     disciplineCount: disciplines.length || 8,
     topicCount: topics.length || 148,
@@ -236,7 +236,7 @@ export async function createAndActivateContest(
   const examBoard =
     (input.customExamBoard?.trim() || tpl?.banca || 'Banca Examinadora').trim();
   const category = tpl?.category || 'Personalizado';
-  const accentColor = tpl?.color || '#c20018';
+  const accentColor = tpl?.color || '#1e40af';
   const weeklyGoalMinutes = input.weeklyGoalMinutes ?? DEFAULT_SETTINGS.weeklyGoalMinutes;
 
   let disciplines: Discipline[];

@@ -87,7 +87,7 @@ export function Sidebar({
       {/* Sidebar container */}
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-40 flex w-60 xl:w-64 max-lg:w-72 max-lg:max-w-[85vw] max-lg:shadow-2xl max-lg:pb-[env(safe-area-inset-bottom)] flex-col border-r border-border bg-surface transition-transform duration-200 ease-in-out lg:static lg:translate-x-0',
+          'fixed inset-y-0 left-0 z-40 flex w-60 xl:w-64 max-lg:w-72 max-lg:max-w-[85vw] max-lg:shadow-2xl max-lg:pb-[env(safe-area-inset-bottom)] flex-col navigation-chrome border-r border-border bg-surface transition-transform duration-200 ease-in-out lg:static lg:translate-x-0',
           mobileOpen ? 'translate-x-0' : '-translate-x-full max-lg:invisible',
         )}
         aria-label="Navegação principal"
@@ -142,7 +142,7 @@ export function Sidebar({
                     cn(
                       'group flex items-center gap-2.5 rounded-lg px-2.5 py-2 max-lg:min-h-11 max-lg:gap-3 text-sm font-medium transition-colors',
                       isActive
-                        ? 'bg-primary-soft text-primary font-semibold'
+                        ? 'bg-white text-[#1e3a8a] font-semibold'
                         : 'text-fg-muted hover:bg-surface-muted hover:text-fg',
                     )
                   }

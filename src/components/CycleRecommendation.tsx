@@ -52,13 +52,13 @@ export function CycleRecommendation({ showQueue = false }: { showQueue?: boolean
             <h2 id="cycle-next" className="section-title flex items-center gap-2"><span className="flex size-7 items-center justify-center rounded-full bg-primary text-primary-fg"><Play className="size-3.5" aria-hidden /></span>Próxima atividade do ciclo</h2>
             <Badge tone="primary">Sessão {completed + 1}</Badge>
           </div>
-          <div className="panel-padding space-y-6">
+          <div className="panel-padding grid gap-6 md:grid-cols-2 md:items-start">
             <div className="space-y-3">
               <p className="text-xs font-medium uppercase tracking-wider text-fg-muted">{next.discipline.kind === 'technical' ? 'Conhecimentos específicos' : 'Conhecimentos básicos'}</p>
               <div className="flex items-start gap-3"><span className="mt-2 shrink-0"><DisciplineDot color={next.discipline.color} /></span><h3 className="min-w-0 text-2xl font-semibold leading-tight text-fg sm:text-3xl">{next.discipline.name}</h3></div>
               <p className="flex items-start gap-2 text-sm leading-relaxed text-fg-muted"><BookOpen className="mt-0.5 size-4 shrink-0" aria-hidden />{next.topic?.title ?? 'Nenhum assunto ativo. Você pode estudar a disciplina ou cadastrar um assunto.'}</p>
             </div>
-            <div className="border-t border-border pt-5">
+            <div className="border-t border-border pt-5 md:border-t-0 md:border-l md:pl-6 md:pt-0">
               <fieldset className="min-w-0">
                 <legend className="text-sm font-medium text-fg">Tempo de estudo</legend>
                 <p className="mt-1 text-xs text-fg-muted">Escolha quanto tempo você tem agora.</p>
@@ -75,7 +75,7 @@ export function CycleRecommendation({ showQueue = false }: { showQueue?: boolean
         {showQueue && <aside className="space-y-5">
           <Card title="Como seu estudo é dividido">
             <div className="flex items-baseline justify-between gap-3"><span className="text-4xl font-semibold tracking-tight text-primary">80<span className="text-xl">%</span></span><span className="text-sm text-fg-muted">Específicos</span></div>
-            <div className="my-4 flex h-2 overflow-hidden rounded-full bg-surface-muted" aria-hidden><div className="w-4/5 bg-primary" /><div className="w-1/5 bg-fg-muted" /></div>
+            <div className="my-4 flex h-2 overflow-hidden rounded-full bg-white ring-1 ring-inset ring-primary/50" aria-hidden><div className="w-4/5 bg-primary" /></div>
             <div className="flex justify-between gap-3 text-sm"><span className="font-semibold text-fg">20% Básicos</span><span className="text-fg-muted">1 a cada 5 sessões</span></div>
             <p className="mt-4 text-xs leading-relaxed text-fg-muted">Quatro sessões de específicos e uma de básicos. As disciplinas se alternam dentro de cada área.</p>
             {!hasBothAreas && <p className="mt-3 text-xs text-warning">Seu edital tem apenas uma área ativa. Ela ocupa todas as sessões disponíveis.</p>}
@@ -84,11 +84,30 @@ export function CycleRecommendation({ showQueue = false }: { showQueue?: boolean
         </aside>}
       </div>
       {showQueue && <Card title="Na sequência" description="Estas atividades ficam disponíveis conforme você conclui as sessões.">
-        <ol className="divide-y divide-border">{queue.map((activity, index) => <li key={index} className="flex min-w-0 items-center gap-3 py-4 first:pt-0 last:pb-0 sm:gap-4">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-surface-muted text-sm font-semibold tabular-nums text-fg-muted">{String(index + 2).padStart(2, '0')}</span>
-          <div className="min-w-0 flex-1"><div className="flex items-center gap-2"><DisciplineDot color={activity.discipline.color} /><p className="text-sm font-semibold text-fg">{activity.discipline.name}</p></div><p className="mt-1 text-xs leading-relaxed text-fg-muted">{activity.topic?.title ?? 'Estudo da disciplina'} · {activity.discipline.kind === 'technical' ? 'Específicos' : 'Básicos'}</p></div>
-          <span className="hidden items-center gap-1 text-xs text-fg-muted sm:flex"><Clock3 className="size-3.5" aria-hidden />{activity.minutes} min</span>
-        </li>)}</ol>
+        <ol
+          aria-label="Próximos estudos do ciclo"
+          tabIndex={0}
+          className="grid grid-flow-col auto-cols-[minmax(13rem,1fr)] gap-4 overflow-x-auto overscroll-x-contain snap-x snap-proximity rounded-lg pb-3"
+        >
+          {queue.map((activity, index) => (
+            <li key={index} className="flex min-w-0 snap-start flex-col gap-4 rounded-xl border border-border bg-surface-muted/30 p-4">
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-sm font-semibold tabular-nums text-primary">
+                {String(index + 2).padStart(2, '0')}
+              </span>
+              <div className="min-w-0 space-y-2">
+                <div className="flex items-start gap-2">
+                  <DisciplineDot color={activity.discipline.color} className="mt-1.5" />
+                  <h3 className="min-w-0 text-sm font-semibold leading-relaxed text-fg">{activity.discipline.name}</h3>
+                </div>
+                <p className="text-sm leading-relaxed text-fg-muted">{activity.topic?.title ?? 'Estudo da disciplina'}</p>
+              </div>
+              <div className="mt-auto flex flex-wrap items-center justify-between gap-2 border-t border-border pt-3 text-xs text-fg-muted">
+                <span>{activity.discipline.kind === 'technical' ? 'Específicos' : 'Básicos'}</span>
+                <span className="inline-flex items-center gap-1 whitespace-nowrap"><Clock3 className="size-3.5" aria-hidden />{activity.minutes} min</span>
+              </div>
+            </li>
+          ))}
+        </ol>
         <Link to="/disciplinas" className="mt-5 inline-flex min-h-11 items-center gap-2 text-sm font-medium text-primary">Organizar disciplinas e assuntos<ArrowRight className="size-4" aria-hidden /></Link>
       </Card>}
     </>}

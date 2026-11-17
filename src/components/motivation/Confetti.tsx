@@ -28,7 +28,7 @@ function prefersReducedMotion(): boolean {
 function paletteFromTokens(): string[] {
   const css = getComputedStyle(document.documentElement);
   const read = (name: string, fallback: string) => css.getPropertyValue(name).trim() || fallback;
-  return [read('--primary', '#a6193c'), read('--accent', '#f68b1f'), read('--success', '#07a684'), read('--info', '#0996b6'), '#ffcb05'];
+  return [read('--primary', '#1e40af'), read('--accent', '#d97706'), read('--success', '#07a684'), read('--info', '#0996b6'), '#ffcb05'];
 }
 
 /**

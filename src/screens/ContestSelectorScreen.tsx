@@ -183,7 +183,7 @@ export function ContestSelectorScreen({ onSelectContest }: ContestSelectorScreen
                 <div
                   className="size-20 sm:size-24 rounded-xl flex flex-col items-center justify-center text-white font-bold mb-3.5 relative overflow-hidden"
                   style={{
-                    backgroundColor: contest.accentColor || '#8E1532',
+                    backgroundColor: contest.accentColor || '#1E40AF',
                   }}
                 >
                   <span className="text-xl sm:text-2xl tracking-tight">

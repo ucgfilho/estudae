@@ -37,7 +37,7 @@ export function ConfirmModal({
           <Button variant="secondary" onClick={onClose} disabled={loading}>
             {cancelLabel}
           </Button>
-          <Button variant={variant} onClick={onConfirm} loading={loading}>
+          <Button variant={variant === 'danger' ? 'primary' : variant} className={variant === 'danger' ? 'confirm-destructive' : undefined} onClick={onConfirm} loading={loading}>
             {confirmLabel}
           </Button>
         </>
@@ -45,7 +45,7 @@ export function ConfirmModal({
     >
       <div className="flex items-start gap-3 py-1">
         {variant === 'danger' && (
-          <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-danger-soft text-danger" aria-hidden>
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-warning-soft text-warning" aria-hidden>
             <AlertTriangle className="size-5" />
           </div>
         )}
