@@ -433,9 +433,7 @@ export function QuestionsScreen() {
                         </>
                       )}
                       {notesByLogId.has(log.id) && (
-                        <span className="ml-auto inline-flex items-center text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-medium">
-                          No Caderno
-                        </span>
+                        <span className="ml-auto size-1.5 shrink-0 rounded-full bg-primary" role="img" aria-label="Anotação registrada no Caderno de Erros" title="Anotação registrada no Caderno de Erros" />
                       )}
                     </div>
 
@@ -530,15 +528,15 @@ export function QuestionsScreen() {
                         {log.correct}
                       </td>
                       <td className="py-2.5 px-1.5 xl:px-3 text-center text-danger font-semibold tabular-nums">
-                        <div className="flex items-center justify-center gap-1">
+                        <div className="inline-flex items-center justify-center gap-1">
                           <span>{log.incorrect}</span>
                           {notesByLogId.has(log.id) && (
                             <span
+                              role="img"
+                              aria-label="Anotação registrada no Caderno de Erros"
                               title="Anotação registrada no Caderno de Erros"
-                              className="hidden xl:inline-flex items-center text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-medium whitespace-nowrap"
-                            >
-                              No Caderno
-                            </span>
+                              className="size-1.5 shrink-0 rounded-full bg-primary"
+                            />
                           )}
                         </div>
                       </td>
