@@ -186,7 +186,7 @@ export function Sidebar({
 
         {/* Botão de Trocar Concurso na parte inferior */}
         {onSwitchContestScreen && (
-          <div className="border-t border-border p-2.5">
+          <div className="p-2.5">
             <button
               type="button"
               data-testid="sidebar-switch-contest-button"
