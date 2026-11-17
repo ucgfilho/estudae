@@ -24,6 +24,7 @@ export function CycleRecommendation({ showQueue = false }: { showQueue?: boolean
   if (!settings) return null;
   const input = { disciplines, topics, sessions, questionLogs: [], errorNotes: [], settings };
   const next = nextCycleActivity(input);
+  const timeGoalsDisabled = settings.dailyGoalMinutes === 0 && settings.weeklyGoalMinutes === 0;
   const completed = cycleCompletions(sessions).length;
   const due = reviews.filter(r => r.status === 'pendente' && r.dueDate <= todayKey()).length;
   const queue = showQueue ? previewCycle(input, 6).slice(1) : [];
@@ -52,21 +53,21 @@ export function CycleRecommendation({ showQueue = false }: { showQueue?: boolean
             <h2 id="cycle-next" className="section-title flex items-center gap-2"><span className="flex size-7 items-center justify-center rounded-full bg-primary text-primary-fg"><Play className="size-3.5" aria-hidden /></span>Próxima atividade do ciclo</h2>
             <Badge tone="primary">Sessão {completed + 1}</Badge>
           </div>
-          <div className="panel-padding grid gap-6 md:grid-cols-2 md:items-start">
+          <div className={`panel-padding grid gap-6 ${timeGoalsDisabled ? '' : 'md:grid-cols-2 md:items-start'}`}>
             <div className="space-y-3">
               <p className="text-xs font-medium uppercase tracking-wider text-fg-muted">{next.discipline.kind === 'technical' ? 'Conhecimentos específicos' : 'Conhecimentos básicos'}</p>
               <div className="flex items-start gap-3"><span className="mt-2 shrink-0"><DisciplineDot color={next.discipline.color} /></span><h3 className="min-w-0 text-2xl font-semibold leading-tight text-fg sm:text-3xl">{next.discipline.name}</h3></div>
               <p className="flex items-start gap-2 text-sm leading-relaxed text-fg-muted"><BookOpen className="mt-0.5 size-4 shrink-0" aria-hidden />{next.topic?.title ?? 'Nenhum assunto ativo. Você pode estudar a disciplina ou cadastrar um assunto.'}</p>
             </div>
-            <div className="border-t border-border pt-5 md:border-t-0 md:border-l md:pl-6 md:pt-0">
-              <fieldset className="min-w-0">
+            <div className={timeGoalsDisabled ? '' : 'border-t border-border pt-5 md:border-t-0 md:border-l md:pl-6 md:pt-0'}>
+              {!timeGoalsDisabled && <fieldset className="min-w-0">
                 <legend className="text-sm font-medium text-fg">Tempo de estudo</legend>
                 <p className="mt-1 text-xs text-fg-muted">Escolha quanto tempo você tem agora.</p>
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   {[25, 45, 60].map(value => <button type="button" key={value} aria-pressed={Number(minutes || next.minutes) === value} onClick={() => setMinutes(String(value))} className={`min-h-11 rounded-lg border px-4 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-ring ${Number(minutes || next.minutes) === value ? 'border-primary bg-primary-soft text-primary' : 'border-border bg-surface text-fg-muted hover:bg-surface-muted'}`}>{value} min</button>)}
                   <div className="flex items-center gap-2"><Input aria-label="Duração personalizada em minutos" type="number" min={1} max={720} className="w-24" value={minutes} placeholder={String(next.minutes)} onChange={e => setMinutes(e.target.value)} /><span className="text-xs text-fg-muted">min</span></div>
                 </div>
-              </fieldset>
+              </fieldset>}
               <Button variant="primary" size="lg" className="mt-5 w-full sm:w-auto" icon={<Play className="size-4" aria-hidden />} onClick={() => timer ? navigate('/estudar-agora') : void start()} loading={loading}>{timer ? 'Retomar sessão em andamento' : 'Iniciar estudo do ciclo'}</Button>
               <p className="mt-3 flex items-center gap-2 text-xs leading-relaxed text-fg-muted"><Repeat2 className="size-4 shrink-0" aria-hidden />Ao finalizar, a próxima sessão fica disponível. Sua posição fica salva.</p>
             </div>

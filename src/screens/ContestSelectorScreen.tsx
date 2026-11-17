@@ -106,7 +106,7 @@ export function ContestSelectorScreen({ onSelectContest, initializing = false }:
       <div className="contest-selector-glow contest-selector-glow-primary" aria-hidden="true" />
       <div className="contest-selector-glow contest-selector-glow-secondary" aria-hidden="true" />
       {/* Topo com Logo estudaê e botão Sair */}
-      <header className="flex items-center justify-between px-4 sm:px-8 py-4 sm:py-6 max-w-6xl w-full mx-auto border-b border-border">
+      <header className="flex items-center justify-between px-4 sm:px-8 py-4 sm:py-6 max-w-6xl w-full mx-auto">
         <div className="flex min-w-0 items-center gap-3 max-sm:gap-2">
           <BnbLogo className="size-10 rounded-xl shadow-md" />
           <div>
