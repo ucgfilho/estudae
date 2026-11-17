@@ -36487,7 +36487,7 @@ var settingsDtoSchema = object({
 		"light",
 		"dark",
 		"system"
-	]),
+	]).optional().transform(() => "light"),
 	examDate: nullableDateKey,
 	scheduleStartDate: nullableDateKey.optional(),
 	scheduleWeeks: number().int().positive().optional(),
@@ -36880,7 +36880,7 @@ CREATE TABLE IF NOT EXISTS user_settings (
   accuracy_goal INTEGER NOT NULL DEFAULT 80,
   topic_completion_goal INTEGER NULL,
   review_intervals_json TEXT NOT NULL,
-  theme TEXT NOT NULL DEFAULT 'system' CHECK (theme IN ('light', 'dark', 'system')),
+  theme TEXT NOT NULL DEFAULT 'light' CHECK (theme = 'light'),
   exam_date TEXT NULL,
   schedule_start_date TEXT NULL,
   schedule_weeks INTEGER NOT NULL DEFAULT 24,
@@ -37307,7 +37307,7 @@ var DEFAULT_SETTINGS = {
 		7,
 		30
 	],
-	theme: "system",
+	theme: "light",
 	examDate: null,
 	distribution: {
 		portugues: 120,
@@ -37648,6 +37648,7 @@ var MongoStudyDataRepository = class {
 					return {
 						...s,
 						id: SETTINGS_ID,
+						theme: "light",
 						geminiApiKey: key
 					};
 				});
@@ -37724,6 +37725,7 @@ var MongoStudyDataRepository = class {
 			return {
 				...s,
 				id: SETTINGS_ID,
+				theme: "light",
 				geminiApiKey: key
 			};
 		});
@@ -38506,7 +38508,7 @@ var SqlStudyDataRepository = class {
 			s.accuracyGoal,
 			s.topicCompletionGoal,
 			JSON.stringify(s.reviewIntervals),
-			s.theme,
+			"light",
 			s.examDate,
 			s.scheduleStartDate ?? null,
 			s.scheduleWeeks ?? 24,
@@ -38757,7 +38759,7 @@ var SqlStudyDataRepository = class {
 			accuracyGoal: row.accuracy_goal,
 			topicCompletionGoal: row.topic_completion_goal,
 			reviewIntervals: JSON.parse(row.review_intervals_json),
-			theme: row.theme,
+			theme: "light",
 			examDate: row.exam_date,
 			scheduleStartDate: row.schedule_start_date,
 			scheduleWeeks: row.schedule_weeks,
