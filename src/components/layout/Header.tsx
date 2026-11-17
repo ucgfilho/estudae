@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  Menu,
   Settings as SettingsIcon,
   Timer as TimerIcon,
   CalendarDays,
@@ -12,6 +11,7 @@ import { IconButton } from '../ui/Button';
 import { Badge } from '../ui/Display';
 import { Avatar } from '../ui/Avatar';
 import { ProfileModal } from '../profile/ProfileModal';
+import { AiAssistantWidget } from '../assistant/AiAssistantWidget';
 import { tierOf } from '../motivation/RankCard';
 import { useSettings, useActiveTimer, useNow, useSessions, useReviews } from '../../hooks/useData';
 import { getAuthSession, setAuthSession, subscribeAuth } from '../../services/auth';
@@ -26,13 +26,11 @@ import { BnbLogo } from '../ui/BnbLogo';
 import type { UserContestProfile } from '../../services/contests';
 
 interface HeaderProps {
-  onToggleMobileMenu: () => void;
   activeContest?: UserContestProfile;
 }
 
 export function Header({
-  onToggleMobileMenu,
-  activeContest: _activeContest,
+  activeContest,
 }: HeaderProps) {
   const [profileOpen, setProfileOpen] = useState(false);
   const [authUser, setAuthUser] = useState(() => getAuthSession()?.user ?? null);
@@ -75,14 +73,14 @@ export function Header({
     <>
       <header className="sticky top-0 z-20 flex h-14 max-lg:h-[calc(3.5rem+env(safe-area-inset-top))] max-lg:pt-[env(safe-area-inset-top)] shrink-0 items-center justify-between gap-2 navigation-chrome bg-surface px-3 sm:px-6">
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-          <IconButton
-            label="Abrir menu de navegação"
-            icon={<Menu className="size-5" />}
-            onClick={onToggleMobileMenu}
-            className="lg:hidden shrink-0"
-          />
-
           <BnbLogo className={cn('size-7 shrink-0 lg:hidden rounded-lg', timer && 'max-sm:hidden')} />
+
+          <div className={cn('min-w-0 lg:hidden', timer && 'max-sm:hidden')}>
+            <p className="text-sm font-bold leading-tight">estudaê</p>
+            <p className="max-w-32 truncate text-xs text-fg-muted sm:max-w-48">
+              {activeContest?.name ?? 'Seu espaço de estudos'}
+            </p>
+          </div>
 
           <div className="hidden md:flex items-center gap-2">
             <CalendarDays className="size-4 text-fg-subtle" />
@@ -106,6 +104,7 @@ export function Header({
         </div>
 
         <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+          <AiAssistantWidget />
           {timer && (
             <button
               type="button"

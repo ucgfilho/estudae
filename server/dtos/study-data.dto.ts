@@ -161,7 +161,7 @@ export const weeklyPlanDtoSchema = z.object({
 export const settingsDtoSchema = z.object({
   id: z.literal('settings'),
   dailyGoalMinutes: z.number().int().min(0),
-  weeklyGoalMinutes: z.number().int().positive(),
+  weeklyGoalMinutes: z.number().int().min(0),
   dailyQuestionGoal: z.number().int().positive().nullable(),
   accuracyGoal: z.number().int().min(1).max(100),
   topicCompletionGoal: z.number().int().min(1).max(100).nullable(),

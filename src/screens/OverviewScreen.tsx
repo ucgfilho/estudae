@@ -75,6 +75,7 @@ export function OverviewScreen() {
   const errorNoteMap = useMemo(() => new Map(errorNotes.map((e) => [e.id, e])), [errorNotes]);
 
   const weeklyGoal = settings?.weeklyGoalMinutes ?? 840;
+  const weeklyGoalEnabled = weeklyGoal > 0;
 
   // Limites da semana atual
   const currentWeekStart = useMemo(() => startOfWeek(today), [today]);
@@ -354,7 +355,7 @@ export function OverviewScreen() {
 
       {/* Resumo enxuto de ritmo e progresso (Informações Progressivas — sem gráficos pesados no painel de execução) */}
       <div className="stats-grid">
-        <StatCard
+        {weeklyGoalEnabled && <StatCard
           label="Ritmo na semana"
           value={formatMinutes(weekDoneMinutes)}
           hint={`Meta: ${formatMinutes(weeklyGoal)} · Planejado: ${formatMinutes(weekPlannedMinutes)}`}
@@ -367,7 +368,7 @@ export function OverviewScreen() {
             tone={weekDoneMinutes >= weeklyGoal ? 'success' : 'primary'}
             showOverflow
           />
-        </StatCard>
+        </StatCard>}
 
         <StatCard
           label="Taxa de acerto"

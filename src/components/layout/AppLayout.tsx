@@ -1,7 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import {
-  BookMarked,
   Calendar,
   CalendarClock,
   LayoutDashboard,
@@ -12,7 +11,6 @@ import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { CelebrationLayer } from '../motivation/CelebrationLayer';
 import { NewContestModal } from '../modals/NewContestModal';
-import { AiAssistantWidget } from '../assistant/AiAssistantWidget';
 import { useActiveTimer, useDisciplines, useSettings } from '../../hooks/useData';
 import { elapsedSeconds } from '../../domain/timer';
 import { formatClock } from '../../lib/format';
@@ -57,6 +55,7 @@ function useWorkerTick(enabled: boolean): number {
 }
 
 export function AppLayout({ onSwitchContestScreen }: AppLayoutProps) {
+  const { pathname } = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [newContestModalOpen, setNewContestModalOpen] = useState(false);
   const activeTimer = useActiveTimer();
@@ -111,7 +110,6 @@ export function AppLayout({ onSwitchContestScreen }: AppLayoutProps) {
     { to: '/estudar-agora', label: 'Estudar', icon: Timer },
     { to: '/cronograma', label: 'Ciclo', icon: CalendarClock },
     { to: '/calendario', label: 'Agenda', icon: Calendar },
-    { to: '/disciplinas', label: 'Edital', icon: BookMarked },
   ];
 
   return (
@@ -129,7 +127,6 @@ export function AppLayout({ onSwitchContestScreen }: AppLayoutProps) {
       />
       <div className="flex flex-1 flex-col overflow-hidden min-w-0 lg:bg-[#1e3a8a]">
         <Header
-          onToggleMobileMenu={() => setMobileMenuOpen((prev) => !prev)}
           activeContest={activeContest}
         />
         <main
@@ -145,7 +142,7 @@ export function AppLayout({ onSwitchContestScreen }: AppLayoutProps) {
         {/* Barra inferior de acesso rápido em dispositivos Mobile */}
         <nav
           aria-label="Acesso rápido mobile"
-          className="lg:hidden fixed bottom-0 inset-x-0 z-20 flex items-stretch justify-around border-t border-border bg-surface/95 backdrop-blur supports-[backdrop-filter]:bg-surface/85 px-1 pt-1 pb-[calc(0.25rem+env(safe-area-inset-bottom))]"
+          className="lg:hidden fixed bottom-0 inset-x-0 z-20 flex items-stretch gap-1 border-t border-border bg-surface px-[max(0.5rem,env(safe-area-inset-left))] pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] shadow-[0_-4px_20px_rgb(15_23_42/0.04)]"
         >
           {mobileQuickLinks.map((item) => {
             const Icon = item.icon;
@@ -156,8 +153,8 @@ export function AppLayout({ onSwitchContestScreen }: AppLayoutProps) {
                 end={item.to === '/'}
                 className={({ isActive }) =>
                   cn(
-                    'flex min-h-12 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-lg px-1 py-1 text-[11px] font-medium transition-colors',
-                    isActive ? 'text-primary font-semibold bg-primary-soft/50' : 'text-fg-muted hover:text-fg',
+                    'flex min-h-12 min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-xl px-1 py-1 text-xs font-medium transition-colors active:bg-primary-soft',
+                    isActive ? 'text-primary font-semibold bg-primary-soft' : 'text-fg-muted hover:text-fg',
                   )
                 }
               >
@@ -171,7 +168,11 @@ export function AppLayout({ onSwitchContestScreen }: AppLayoutProps) {
             onClick={() => setMobileMenuOpen(true)}
             aria-label="Abrir menu completo"
             aria-expanded={mobileMenuOpen}
-            className="flex min-h-12 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-lg px-1 py-1 text-[11px] font-medium text-fg-muted transition-colors hover:text-fg"
+            aria-controls="main-navigation"
+            className={cn(
+              'flex min-h-12 min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-xl px-1 py-1 text-xs font-medium transition-colors hover:text-fg active:bg-primary-soft',
+              mobileQuickLinks.some((item) => item.to === pathname) ? 'text-fg-muted' : 'bg-primary-soft text-primary font-semibold',
+            )}
           >
             <Menu className="size-5" aria-hidden="true" />
             <span className="max-w-full truncate">Mais</span>
@@ -179,7 +180,6 @@ export function AppLayout({ onSwitchContestScreen }: AppLayoutProps) {
         </nav>
       </div>
       <CelebrationLayer />
-      <AiAssistantWidget />
 
       <NewContestModal
         open={newContestModalOpen}

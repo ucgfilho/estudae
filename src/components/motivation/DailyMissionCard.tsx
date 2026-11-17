@@ -65,7 +65,7 @@ export function DailyMissionCard({
     >
       <div className="space-y-6">
         <div className="grid items-stretch gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] lg:gap-6">
-          <section className="flex min-w-0 flex-col rounded-xl border border-primary/25 bg-primary-soft/60 p-5 sm:p-6" aria-label="Sua próxima sessão">
+          <section className="flex min-w-0 flex-col rounded-xl border border-primary/25 bg-primary-soft/60 p-5 max-sm:p-4 sm:p-6" aria-label="Sua próxima sessão">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <p className="flex items-center gap-2 text-sm font-semibold text-primary">
                 <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-fg">
@@ -76,7 +76,7 @@ export function DailyMissionCard({
               {!timer && next && <Badge tone="primary">Sessão {completed.length + 1}</Badge>}
             </div>
 
-            <div className="my-6 space-y-3">
+            <div className="my-6 max-sm:my-4 space-y-3">
               <div className="flex items-start gap-2.5">
                 {(timer || next) && <span className="mt-2.5 shrink-0"><DisciplineDot color={timer ? activeDiscipline?.color ?? '#1E40AF' : next.discipline.color} className="size-3" /></span>}
                 <h3 className="min-w-0 text-2xl font-semibold leading-tight tracking-tight text-fg sm:text-3xl">
@@ -116,7 +116,7 @@ export function DailyMissionCard({
             </div>
           </section>
 
-          <section className="min-w-0 rounded-xl border border-border bg-surface p-5 sm:p-6" aria-labelledby="mission-progress-title">
+          <section className="min-w-0 rounded-xl border border-border bg-surface p-5 max-sm:p-4 sm:p-6" aria-labelledby="mission-progress-title">
             <h3 id="mission-progress-title" className="flex items-center gap-2 text-sm font-semibold text-fg">
               <Target className="size-4 text-primary" aria-hidden="true" />
               Seu progresso hoje

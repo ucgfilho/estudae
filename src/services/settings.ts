@@ -14,7 +14,7 @@ export async function getSettings(): Promise<Settings> {
 export function validateSettingsPatch(patch: Partial<Settings>): string | null {
   const intIn = (v: unknown, min: number, max: number) => typeof v === 'number' && Number.isInteger(v) && v >= min && v <= max;
   if (patch.dailyGoalMinutes !== undefined && !intIn(patch.dailyGoalMinutes, 0, 1440)) return 'A meta diária deve ser um inteiro entre 0 e 1440 minutos.';
-  if (patch.weeklyGoalMinutes !== undefined && !intIn(patch.weeklyGoalMinutes, 1, 10080)) return 'A meta semanal deve ser um inteiro entre 1 e 10080 minutos.';
+  if (patch.weeklyGoalMinutes !== undefined && !intIn(patch.weeklyGoalMinutes, 0, 10080)) return 'A meta semanal deve ser um inteiro entre 0 e 10080 minutos.';
   if (patch.dailyQuestionGoal !== undefined && patch.dailyQuestionGoal !== null && !intIn(patch.dailyQuestionGoal, 1, 10000)) return 'A meta diária de questões deve ser um inteiro entre 1 e 10000.';
   if (patch.accuracyGoal !== undefined && !intIn(patch.accuracyGoal, 1, 100)) return 'A meta de acerto deve ser um inteiro entre 1 e 100.';
   if (patch.topicCompletionGoal !== undefined && patch.topicCompletionGoal !== null && !intIn(patch.topicCompletionGoal, 1, 100)) return 'A meta de conclusão de tópicos deve ser um inteiro entre 1 e 100.';

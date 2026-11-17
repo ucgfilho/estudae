@@ -85,7 +85,7 @@ export function Dialog({ open, onClose, title, description, children, footer, si
               className="absolute top-3.5 right-3.5 max-sm:top-1 max-sm:right-2"
             />
           </div>
-          <div className="panel-padding min-h-0 overflow-y-auto overscroll-contain">{children}</div>
+          <div className={cn('panel-padding min-h-0 overflow-y-auto overscroll-contain', !footer && 'max-sm:pb-[max(1rem,env(safe-area-inset-bottom))]')}>{children}</div>
           {footer && (
             <div className="flex shrink-0 flex-wrap justify-end gap-2 border-t border-border px-[var(--panel-padding)] py-4 max-sm:pb-[calc(1rem+env(safe-area-inset-bottom))] max-sm:[&>*]:flex-1">
               {footer}

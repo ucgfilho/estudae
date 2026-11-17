@@ -573,7 +573,7 @@ export function DisciplinesScreen() {
                 title="Nenhum tópico cadastrado nesta disciplina"
                 description="Cadastre tópicos manualmente ou importe o checklist estruturado do edital."
                 action={
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center justify-center gap-2">
                     <Button
                       variant="secondary"
                       size="sm"

@@ -401,10 +401,11 @@ export function CalendarScreen() {
                   {(sessionsByDate.get(currentDate) ?? []).map((s) => {
                     const d = discMap.get(s.disciplineId);
                     return (
-                      <div
+                      <button
+                        type="button"
                         key={s.id}
                         onClick={() => setSelectedSessionDetail(s)}
-                        className="flex items-center justify-between gap-3 rounded-xl border border-border bg-surface p-3 text-xs cursor-pointer active:bg-surface-muted/60"
+                        className="flex min-h-11 w-full items-center justify-between gap-3 rounded-xl border border-border bg-surface p-3 text-left text-sm cursor-pointer active:bg-surface-muted/60"
                       >
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-1.5 font-semibold text-fg">
@@ -430,7 +431,7 @@ export function CalendarScreen() {
                             {s.plannedMinutes}m
                           </Badge>
                         </div>
-                      </div>
+                      </button>
                     );
                   })}
                 </div>
@@ -582,7 +583,7 @@ export function CalendarScreen() {
                         </Badge>
                       </div>
                       <p className="text-sm text-fg-muted">{s.objective || 'Sem objetivo registrado'}</p>
-                      <div className="text-xs text-fg-subtle flex items-center gap-3">
+                      <div className="text-xs text-fg-subtle flex flex-wrap items-center gap-x-3 gap-y-1">
                         <span>Planejado: {s.plannedMinutes} min</span>
                         {s.actualSeconds > 0 && (
                           <span>Realizado: {Math.round(s.actualSeconds / 60)} min</span>

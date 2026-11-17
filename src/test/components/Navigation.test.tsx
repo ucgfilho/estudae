@@ -150,6 +150,22 @@ describe('App Navigation, Auth Gate and Screen Integration', () => {
     expect(screen.queryByText(/Semana 2/)).not.toBeInTheDocument();
   });
 
+  it('keeps four quick links and opens the full menu for the remaining screens', async () => {
+    setAuthSession(TEST_SESSION);
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByRole('heading', { name: /visão geral/i });
+    const quickNav = screen.getByRole('navigation', { name: 'Acesso rápido mobile' });
+    expect(within(quickNav).getAllByRole('link')).toHaveLength(4);
+    const more = within(quickNav).getByRole('button', { name: 'Abrir menu completo' });
+    await user.click(more);
+    expect(more).toHaveAttribute('aria-expanded', 'true');
+    const menu = screen.getByRole('navigation', { name: 'Menu principal' });
+    await user.click(within(menu).getByRole('link', { name: 'Disciplinas e conteúdos' }));
+    await screen.findByRole('heading', { name: 'Disciplinas e conteúdos' });
+    expect(more).toHaveAttribute('aria-expanded', 'false');
+  });
+
   it('inicia o ciclo pela interface, retoma o cronômetro e salva no histórico', async () => {
     setAuthSession(TEST_SESSION);
     window.location.hash = '#/cronograma';

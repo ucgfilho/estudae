@@ -107,13 +107,13 @@ export function ContestSelectorScreen({ onSelectContest, initializing = false }:
       <div className="contest-selector-glow contest-selector-glow-secondary" aria-hidden="true" />
       {/* Topo com Logo estudaê e botão Sair */}
       <header className="flex items-center justify-between px-4 sm:px-8 py-4 sm:py-6 max-w-6xl w-full mx-auto border-b border-border">
-        <div className="flex items-center gap-3">
+        <div className="flex min-w-0 items-center gap-3 max-sm:gap-2">
           <BnbLogo className="size-10 rounded-xl shadow-md" />
           <div>
             <div className="text-lg sm:text-xl font-bold tracking-tight text-fg flex items-center gap-1.5">
               <span>estudaê</span>
             </div>
-            <div className="text-[11px] text-fg-muted">
+            <div className="text-[11px] text-fg-muted max-sm:hidden">
               Seus concursos e ciclos de estudo
             </div>
           </div>

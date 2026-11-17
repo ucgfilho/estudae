@@ -244,7 +244,7 @@ export function PageHeader({ title, description, actions }: { title: string; des
         {description && <p className="max-w-prose text-sm text-fg-muted leading-relaxed">{description}</p>}
       </div>
       {actions && (
-        <div className="flex max-w-full flex-wrap items-center gap-2 max-sm:w-full [&>*]:max-w-full">{actions}</div>
+        <div className="page-actions flex max-w-full flex-wrap items-center gap-2 max-sm:w-full [&>*]:max-w-full">{actions}</div>
       )}
     </header>
   );
@@ -284,7 +284,7 @@ interface SegmentedOption<T extends string> {
 /** Grupo de opções exclusivas (botões com aria-pressed). */
 export function Segmented<T extends string>({ value, onChange, options, label }: { value: T; onChange: (v: T) => void; options: SegmentedOption<T>[]; label: string }) {
   return (
-    <div role="group" aria-label={label} className="inline-flex max-w-full flex-wrap gap-1 rounded-xl border border-border bg-surface-muted p-1">
+    <div role="group" aria-label={label} className="inline-flex max-w-full flex-wrap gap-1 rounded-xl border border-border bg-surface-muted p-1 max-sm:w-full">
       {options.map((o) => (
         <button
           key={o.value}
@@ -292,7 +292,7 @@ export function Segmented<T extends string>({ value, onChange, options, label }:
           aria-pressed={value === o.value}
           onClick={() => onChange(o.value)}
           className={cn(
-            'min-h-8 max-lg:min-h-11 rounded-lg px-3 whitespace-nowrap text-sm font-medium transition-colors',
+            'min-h-8 max-lg:min-h-11 max-sm:min-w-0 max-sm:flex-1 max-sm:whitespace-normal rounded-lg px-3 whitespace-nowrap text-sm font-medium transition-colors',
             value === o.value ? 'bg-surface text-fg shadow-sm' : 'text-fg-muted hover:text-fg',
           )}
         >

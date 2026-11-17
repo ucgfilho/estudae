@@ -63,7 +63,7 @@ export function FocusMode({ timer, elapsed, disciplineName, disciplineColor, top
       role="dialog"
       aria-modal="true"
       aria-label="Modo foco"
-      className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 overflow-y-auto bg-canvas p-6 pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))] text-center animate-fade-in"
+      className="fixed inset-0 z-50 flex flex-col items-center justify-center max-lg:justify-start gap-6 overflow-y-auto bg-canvas p-6 pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))] text-center animate-fade-in"
     >
       <div className="space-y-1">
         <div className="flex items-center justify-center gap-2 text-base font-semibold text-fg">

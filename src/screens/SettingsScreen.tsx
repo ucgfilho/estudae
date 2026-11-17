@@ -94,8 +94,8 @@ export function SettingsScreen() {
       setActionError('Informe 0 para ficar sem meta ou um valor entre 1 e 1440 minutos.')
       return;
     }
-    if (isNaN(weekly) || weekly < 1) {
-      setActionError('Informe uma meta semanal de pelo menos 1 minuto.');
+    if (isNaN(weekly) || weekly < 0 || weekly > 10080) {
+      setActionError('Informe 0 para ficar sem meta ou um valor entre 1 e 10080 minutos.');
       return;
     }
     if (isNaN(accuracy) || accuracy < 1 || accuracy > 100) {
@@ -113,7 +113,7 @@ export function SettingsScreen() {
     try {
       await updateSettings({
         dailyGoalMinutes: daily,
-        weeklyGoalMinutes: daily === 0 ? settings?.weeklyGoalMinutes ?? weekly : weekly,
+        weeklyGoalMinutes: weekly,
         accuracyGoal: accuracy,
         dailyQuestionGoal: dailyQuestions,
         topicCompletionGoal: topicGoal,
@@ -261,14 +261,13 @@ export function SettingsScreen() {
             />
           </Field>
 
-          <Field label="Meta semanal de estudo (min)" required hint="Padrão: 840 minutos (14 horas)">
+          <Field label="Meta semanal de estudo (min)" hint="Opcional. Use 0 para não acompanhar uma meta semanal.">
             <Input
               type="number"
-              min="1"
+              min="0"
               max="10080"
               value={weeklyGoalMinutes}
               onChange={(e) => setWeeklyGoalMinutes(e.target.value)}
-              required
             />
           </Field>
 

@@ -369,6 +369,14 @@ input[type='number']::-webkit-outer-spin-button {
     --control-height-sm: 2.75rem;
     --control-height-lg: 3rem;
   }
+  html {
+    scrollbar-gutter: auto;
+  }
+  #main-content {
+    scroll-padding-block: 1rem 6rem;
+    padding-left: max(clamp(1rem, 2.5vw, 1.5rem), env(safe-area-inset-left));
+    padding-right: max(clamp(1rem, 2.5vw, 1.5rem), env(safe-area-inset-right));
+  }
   input:not([type='checkbox']):not([type='radio']):not([type='range']),
   textarea,
   select {
@@ -380,6 +388,30 @@ input[type='number']::-webkit-outer-spin-button {
   label {
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
+  }
+}
+
+@media (width < 40rem) {
+  :root {
+    --page-gap: 1.25rem;
+  }
+  /* Distribui ações por conteúdo, sem apertar rótulos longos. */
+  .page-actions > div:not([role='group']) {
+    width: 100%;
+  }
+  .page-actions button,
+  .page-actions a {
+    flex: 1 1 auto;
+  }
+  .stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+}
+
+@media (width < 22rem) {
+  .stats-grid {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 

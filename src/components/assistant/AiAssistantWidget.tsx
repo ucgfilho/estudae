@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, type FormEvent } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import {
   Bot,
@@ -198,12 +199,12 @@ export function AiAssistantWidget() {
   };
 
   return (
-    <div className="fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom))] right-3 sm:right-4 lg:bottom-6 lg:right-6 z-40 flex flex-col items-end">
-      {open && (
+    <div className="shrink-0 lg:fixed lg:bottom-6 lg:right-6 z-20 flex flex-col items-end">
+      {open && createPortal(
         <section
           aria-label="Assistente IA estudaê"
           data-testid="ai-assistant-panel"
-          className="mb-3 flex h-[500px] max-h-[78dvh] w-[calc(100vw-1.5rem)] max-sm:h-[calc(100dvh-11rem-env(safe-area-inset-bottom))] max-sm:max-h-none sm:w-96 flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl"
+          className="fixed z-30 lg:bottom-[5.75rem] lg:right-6 flex h-[500px] max-h-[78dvh] w-96 max-lg:inset-x-3 max-lg:top-[calc(4rem+env(safe-area-inset-top))] max-lg:bottom-[calc(5rem+env(safe-area-inset-bottom))] max-lg:h-auto max-lg:max-h-none max-lg:w-auto flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl"
         >
           <div className="flex items-center justify-between border-b border-border bg-surface-muted/70 px-4 py-3">
             <div className="flex items-center gap-2.5">
@@ -361,16 +362,18 @@ export function AiAssistantWidget() {
               <Send className="size-3.5" aria-hidden="true" />
             </button>
           </form>
-        </section>
+        </section>,
+        document.body,
       )}
 
       <button
         type="button"
         data-testid="ai-assistant-fab"
         onClick={() => setOpen((prev) => !prev)}
-        aria-label="Abrir Assistente IA"
+        aria-label={open ? 'Fechar Assistente IA' : 'Abrir Assistente IA'}
+        aria-expanded={open}
         title="Assistente IA estudaê"
-        className="group relative inline-flex size-12 items-center justify-center rounded-full bg-primary text-primary-fg shadow-lg ring-2 ring-primary/30 transition-transform hover:scale-105 active:scale-95 cursor-pointer"
+        className="group relative inline-flex size-12 max-lg:size-11 items-center justify-center rounded-full max-lg:rounded-lg bg-[#1e40af] max-lg:bg-white/10 text-white shadow-lg max-lg:shadow-none ring-2 ring-blue-700/30 max-lg:ring-1 max-lg:ring-white/25 transition-transform hover:scale-105 active:scale-95 cursor-pointer"
       >
         {open ? (
           <X className="size-5" aria-hidden="true" />

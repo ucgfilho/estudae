@@ -24,3 +24,11 @@ describe('meta diária de tempo opcional', () => {
     expect(activity?.minutes).toBe(60);
   });
 });
+
+describe('meta semanal de tempo opcional', () => {
+  it('aceita zero e rejeita valores semanais negativos ou acima do limite', () => {
+    expect(validateSettingsPatch({ weeklyGoalMinutes: 0 })).toBeNull();
+    expect(validateSettingsPatch({ weeklyGoalMinutes: -1 })).not.toBeNull();
+    expect(validateSettingsPatch({ weeklyGoalMinutes: 10081 })).not.toBeNull();
+  });
+});
