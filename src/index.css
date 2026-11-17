@@ -428,6 +428,52 @@ input[type='number']::-webkit-outer-spin-button {
   color: var(--fg);
 }
 
+/* Gradientes azuis difusos e sutis na seleção de concursos. */
+.contest-selector-screen::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(145deg, #e8efff 0%, #f8fafc 43%, #ffffff 72%, #edf3ff 100%);
+  background-size: 180% 180%;
+  animation: contest-gradient-drift 24s ease-in-out infinite alternate;
+}
+.contest-selector-glow {
+  position: absolute;
+  z-index: -1;
+  width: clamp(18rem, 42vw, 40rem);
+  aspect-ratio: 1;
+  border-radius: 9999px;
+  pointer-events: none;
+  filter: blur(100px);
+  will-change: transform;
+}
+.contest-selector-glow-primary {
+  top: -18rem;
+  left: 50%;
+  background: rgb(37 99 235 / 0.17);
+  animation: contest-glow-float 30s ease-in-out infinite alternate;
+}
+.contest-selector-glow-secondary {
+  right: -22rem;
+  bottom: -24rem;
+  background: rgb(96 165 250 / 0.15);
+  animation: contest-glow-float 36s ease-in-out -12s infinite alternate-reverse;
+}
+@keyframes contest-gradient-drift {
+  from { background-position: 0% 20%; }
+  to { background-position: 100% 80%; }
+}
+@keyframes contest-glow-float {
+  from { transform: translate3d(-12%, 0, 0) scale(0.92); }
+  to { transform: translate3d(14%, 12%, 0) scale(1.08); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .contest-selector-screen::before,
+  .contest-selector-glow { animation: none; }
+}
+
 /* Confirmações destrutivas usam o âmbar da paleta, com contraste para o texto. */
 .confirm-destructive {
   background-color: var(--warning);

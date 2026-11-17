@@ -101,8 +101,10 @@ export function ContestSelectorScreen({ onSelectContest, initializing = false }:
   return (
     <div
       data-testid="contest-selector-screen"
-      className="min-h-screen flex flex-col justify-between bg-canvas text-fg"
+      className="contest-selector-screen relative isolate min-h-screen flex flex-col justify-between overflow-hidden bg-canvas text-fg"
     >
+      <div className="contest-selector-glow contest-selector-glow-primary" aria-hidden="true" />
+      <div className="contest-selector-glow contest-selector-glow-secondary" aria-hidden="true" />
       {/* Topo com Logo estudaê e botão Sair */}
       <header className="flex items-center justify-between px-4 sm:px-8 py-4 sm:py-6 max-w-6xl w-full mx-auto border-b border-border">
         <div className="flex items-center gap-3">
