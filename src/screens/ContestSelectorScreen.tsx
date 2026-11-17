@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import {
   BookOpen,
   CalendarRange,
@@ -37,6 +37,7 @@ interface ContestSelectorScreenProps {
 export function ContestSelectorScreen({ onSelectContest, initializing = false }: ContestSelectorScreenProps) {
   const [authUser, setAuthUser] = useState(() => getAuthSession()?.user ?? null);
   const [contests, setContests] = useState<UserContestProfile[]>(() => getUserContests());
+  const [pendingContest, setPendingContest] = useState<UserContestProfile | null>(null);
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [showNewModal, setShowNewModal] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -59,8 +60,12 @@ export function ContestSelectorScreen({ onSelectContest, initializing = false }:
     };
   }, []);
 
-  const handleChoose = async (contest: UserContestProfile) => {
-    if (initializing || loadingId) return;
+  const handleChoose = useCallback(async (contest: UserContestProfile) => {
+    if (loadingId) return;
+    if (initializing) {
+      setPendingContest(contest);
+      return;
+    }
     setErrorMsg(null);
     setLoadingId(contest.id);
     try {
@@ -71,7 +76,14 @@ export function ContestSelectorScreen({ onSelectContest, initializing = false }:
     } finally {
       setLoadingId(null);
     }
-  };
+  }, [initializing, loadingId, onSelectContest]);
+
+  useEffect(() => {
+    if (!initializing && pendingContest) {
+      setPendingContest(null);
+      void handleChoose(pendingContest);
+    }
+  }, [initializing, pendingContest, handleChoose]);
 
   const handleDelete = async (e: React.MouseEvent, contest: UserContestProfile) => {
     e.stopPropagation();
@@ -150,11 +162,11 @@ export function ContestSelectorScreen({ onSelectContest, initializing = false }:
           </div>
         )}
 
-        {initializing && <p className="sr-only" role="status">Carregando seus concursos...</p>}
+        {initializing && <p role="status" className="mb-4 text-sm text-fg-muted">Carregando seus concursos{pendingContest ? "; abrindo o concurso selecionado" : ""}...</p>}
         {/* Grade de Perfis de Concursos (Estilo Netflix) */}
-        <div inert={initializing} aria-busy={initializing} className="grid grid-cols-1 min-[440px]:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 sm:gap-6 w-full max-w-4xl justify-items-center">
+        <div aria-busy={initializing} className="grid grid-cols-1 min-[440px]:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 sm:gap-6 w-full max-w-4xl justify-items-center">
           {contests.map((contest) => {
-            const isLoading = loadingId === contest.id;
+            const isLoading = loadingId === contest.id || pendingContest?.id === contest.id;
             const isCurrent = contest.id === activeScopeId;
             return (
               <div
@@ -235,6 +247,7 @@ export function ContestSelectorScreen({ onSelectContest, initializing = false }:
           <button
             type="button"
             data-testid="new-contest-card-button"
+            disabled={initializing}
             onClick={() => setShowNewModal(true)}
             className="group w-full max-w-[260px] min-[440px]:max-w-[240px] rounded-xl border border-dashed border-border-strong hover:border-primary bg-surface/50 hover:bg-primary-soft/15 p-5 flex flex-col items-center justify-center text-center transition-colors duration-150 cursor-pointer min-h-[210px]"
           >
