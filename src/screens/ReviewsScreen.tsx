@@ -1,6 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { CheckCircle } from 'lucide-react';
-import { PageHeader, EmptyState, Alert } from '../components/ui/Display';
+import { PageHeader, Alert } from '../components/ui/Display';
 import {
   useDisciplines,
   useReviews,
@@ -13,6 +12,7 @@ import {
 } from '../services/performance';
 import { reviewBuckets } from '../domain/metrics';
 import type { ReviewTask } from '../db/types';
+import { toDateKey } from '../lib/dates';
 import { errorMessage } from '../lib/utils';
 import { FlashcardDeck } from '../components/reviews/FlashcardDeck';
 import { useSuccessToast } from '../components/ui/Toast';
@@ -24,19 +24,27 @@ export function ReviewsScreen() {
   const reviews = useReviews();
   const errorNotes = useErrorNotes();
 
+  const [ready, setReady] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const setActionSuccess = useSuccessToast();
 
   const discMap = useMemo(() => new Map(disciplines.map((d) => [d.id, d])), [disciplines]);
   const errorNoteMap = useMemo(() => new Map(errorNotes.map((e) => [e.id, e])), [errorNotes]);
 
-  // Sincroniza rigorosamente revisões com o Caderno de Erros e remove revisões futuras duplicadas
+  // Reconcile on entry before accepting answers. Running it on each note
+  // update can race with completion and restore an outdated pending task.
   useEffect(() => {
-    if (reviews.length === 0 && errorNotes.length === 0) return;
-    void reconcileReviewsAndErrorNotes();
-  }, [reviews.length, errorNotes]);
+    let active = true;
+    void reconcileReviewsAndErrorNotes()
+      .catch(err => { if (active) setActionError(errorMessage(err)); })
+      .finally(() => { if (active) setReady(true); });
+    return () => { active = false; };
+  }, []);
 
   const buckets = useMemo(() => reviewBuckets(reviews, today), [reviews, today]);
+  const completedTodayIds = useMemo(() => reviews
+    .filter(r => r.status === 'concluida' && r.completedAt && toDateKey(r.completedAt) === today)
+    .map(r => r.id), [reviews, today]);
   const dueList = useMemo(() => [...buckets.overdue, ...buckets.today], [buckets]);
 
   const handleComplete = async (review: ReviewTask, stats?: { hits: number; misses: number }) => {
@@ -46,6 +54,7 @@ export function ReviewsScreen() {
       if (!stats) setActionSuccess('Revisão marcada como concluída.');
     } catch (err) {
       setActionError(errorMessage(err));
+      throw err;
     }
   };
 
@@ -63,19 +72,17 @@ export function ReviewsScreen() {
       )}
 
       <div className="space-y-3">
-        {dueList.length > 0 ? (
+        {ready ? (
           <FlashcardDeck
+            key={today}
             reviews={dueList}
+            completedTodayIds={completedTodayIds}
             notes={errorNoteMap}
             disciplines={discMap}
             onComplete={handleComplete}
           />
         ) : (
-          <EmptyState
-            icon={<CheckCircle className="size-8" />}
-            title="Todas as revisões de hoje estão em dia"
-            description="As próximas revisões aparecerão aqui na data agendada."
-          />
+          <p role="status" className="text-sm text-fg-muted">Preparando revisões…</p>
         )}
       </div>
     </div>

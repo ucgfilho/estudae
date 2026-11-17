@@ -1,321 +1,180 @@
-import { useState, useEffect, useMemo } from 'react';
-import { CheckCircle2, XCircle, Sparkles, Flame, Layers, RotateCcw, CheckCircle } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { CheckCircle2, XCircle, Sparkles, Flame, Layers, RotateCcw, Trophy } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { FormattedText } from '../ui/RichText';
-import { Badge, DisciplineDot } from '../ui/Display';
+import { Badge, DisciplineDot, EmptyState } from '../ui/Display';
 import { cn } from '../../lib/utils';
+import { todayKey } from '../../lib/dates';
+import { useCelebrationsEnabled } from '../../hooks/useCelebrationPrefs';
+import { Confetti } from '../motivation/Confetti';
+import { getActiveContestScopeId, getAuthSession } from '../../services/auth';
 import { resolveReviewDisplayTitle } from '../../services/performance';
 import type { Discipline, ErrorFlashcard, ErrorNote, ReviewTask } from '../../db/types';
 
 interface Props {
   reviews: ReviewTask[];
+  completedTodayIds?: string[];
   notes: Map<string, ErrorNote>;
   disciplines: Map<string, Discipline>;
   onComplete: (review: ReviewTask, stats?: { hits: number; misses: number }) => Promise<void>;
 }
 
-interface SavedProgress {
-  totalReviews?: number;
-  doneReviews: number;
-  cardIndex: number;
-  reviewStats: { hits: number; misses: number };
-  streak: number;
-  totalHits: number;
-  totalCardsAnswered: number;
-  reviewIds: string[];
-  date: string;
-}
-
 interface MissedFlashcard {
   reviewId: string;
-  reviewIndex: number;
-  cardIndex: number;
   card: ErrorFlashcard;
-  note: ErrorNote | undefined;
   disciplineId: string;
   displayTitle: string;
   intervalDays: number;
 }
 
-const STORAGE_KEY_PREFIX = 'flashcard-deck-progress-';
-const getTodayKey = () => {
-  const today = new Date();
-  return `${STORAGE_KEY_PREFIX}${today.toISOString().split('T')[0]}`;
-};
+interface Progress {
+  version: 2;
+  activeReview: ReviewTask | null;
+  completedReviewIds: string[];
+  cardIndex: number;
+  reviewStats: { hits: number; misses: number };
+  streak: number;
+  totalHits: number;
+  totalCardsAnswered: number;
+  picked: 'certo' | 'errado' | null;
+  missedFlashcards: MissedFlashcard[];
+  redoMode: boolean;
+  redoQueue: MissedFlashcard[];
+  redoDone: number;
+  sessionCompleted: boolean;
+}
 
-/** Baralho de flashcards: um por vez, vira ao responder (Certo/Errado) e só avança depois. */
-export function FlashcardDeck({ reviews, notes, disciplines, onComplete }: Props) {
-  const [totalReviews, setTotalReviews] = useState(reviews.length);
-  const [doneReviews, setDoneReviews] = useState(0);
-  const [cardIndex, setCardIndex] = useState(0);
-  const [reviewStats, setReviewStats] = useState({ hits: 0, misses: 0 });
-  const [streak, setStreak] = useState(0);
-  const [totalHits, setTotalHits] = useState(0);
-  const [totalCardsAnswered, setTotalCardsAnswered] = useState(0);
-  const [picked, setPicked] = useState<'certo' | 'errado' | null>(null);
-  const [lastCorrect, setLastCorrect] = useState(false);
+const storageKey = () => `flashcard-deck-progress-${todayKey()}:${getAuthSession()?.user.id ?? 'local'}:${getActiveContestScopeId()}`;
+function loadProgress(): Progress {
+  const initial: Progress = {
+    version: 2, activeReview: null, completedReviewIds: [], cardIndex: 0,
+    reviewStats: { hits: 0, misses: 0 }, streak: 0, totalHits: 0,
+    totalCardsAnswered: 0, picked: null, missedFlashcards: [],
+    redoMode: false, redoQueue: [], redoDone: 0, sessionCompleted: false,
+  };
+  try {
+    const saved = JSON.parse(localStorage.getItem(storageKey()) ?? 'null');
+    // Legacy counters cannot identify completed reviews reliably. Start a clean
+    // session from the pending tasks instead of restoring their stale totals.
+    if (saved?.version === 2 && Array.isArray(saved.completedReviewIds) &&
+        Array.isArray(saved.missedFlashcards) && Array.isArray(saved.redoQueue)) {
+      return { ...initial, ...saved };
+    }
+  } catch { /* Storage is optional. */ }
+  return initial;
+}
+
+/** Review tasks and retry attempts have separate progress; retries never reschedule tasks. */
+export function FlashcardDeck({ reviews, completedTodayIds = [], notes, disciplines, onComplete }: Props) {
+  const [state, setState] = useState(loadProgress);
   const [animating, setAnimating] = useState(false);
-  const [progressLoaded, setProgressLoaded] = useState(false);
-
-  // Redo mode state
-  const [redoMode, setRedoMode] = useState(false);
-  const [missedFlashcards, setMissedFlashcards] = useState<MissedFlashcard[]>([]);
-  const [sessionCompleted, setSessionCompleted] = useState(false);
-
-  // Ensure totalReviews is properly set when reviews are loaded
-  useEffect(() => {
-    if (totalReviews === 0 && reviews.length > 0) {
-      setTotalReviews(reviews.length);
-    }
-  }, [reviews.length, totalReviews]);
-
-  // Create a unique identifier for the current review list to validate saved progress
-  const reviewIds = useMemo(() => reviews.map(r => r.id), [reviews]);
-
-  // Load saved progress on mount
-  useEffect(() => {
-    const key = getTodayKey();
-    try {
-      const saved = localStorage.getItem(key);
-      if (saved) {
-        const progress: SavedProgress = JSON.parse(saved);
-        // Validate that the saved progress matches current reviews
-        if (progress.date === new Date().toISOString().split('T')[0] &&
-            progress.reviewIds.length === reviewIds.length &&
-            progress.reviewIds.every((id, i) => id === reviewIds[i])) {
-          setTotalReviews(progress.totalReviews ?? (progress.doneReviews + reviews.length));
-          setDoneReviews(progress.doneReviews);
-          setCardIndex(progress.cardIndex);
-          setReviewStats(progress.reviewStats);
-          setStreak(progress.streak);
-          setTotalHits(progress.totalHits);
-          setTotalCardsAnswered(progress.totalCardsAnswered);
-        } else {
-          // Clear invalid progress
-          localStorage.removeItem(key);
-        }
-      }
-    } catch {
-      // Ignore parse errors
-    }
-    setProgressLoaded(true);
-  }, [reviewIds]);
-
-  // Save progress whenever relevant state changes
-  useEffect(() => {
-    if (!progressLoaded) return;
-    const key = getTodayKey();
-    const progress: SavedProgress = {
-      totalReviews,
-      doneReviews,
-      cardIndex,
-      reviewStats,
-      streak,
-      totalHits,
-      totalCardsAnswered,
-      reviewIds,
-      date: new Date().toISOString().split('T')[0],
-    };
-    localStorage.setItem(key, JSON.stringify(progress));
-  }, [totalReviews, doneReviews, cardIndex, reviewStats, streak, totalHits, totalCardsAnswered, reviewIds, progressLoaded]);
-
-  // Clear progress when all reviews are done (but not in redo mode)
-  useEffect(() => {
-    if (progressLoaded && doneReviews >= totalReviews && totalReviews > 0 && !redoMode) {
-      localStorage.removeItem(getTodayKey());
-    }
-  }, [doneReviews, totalReviews, progressLoaded, redoMode]);
-
-  // Current item to review (in normal mode reviews[0] is next as reviews drop; in redoMode index by doneReviews)
-  const current = redoMode ? missedFlashcards[doneReviews] : reviews[0];
-
-  // Get note and cards for current item - type narrowing
-  let note: ErrorNote | undefined;
-  let cards: ErrorFlashcard[] = [];
-  let displayTitle = '';
-  let d: Discipline | undefined;
-
-  if (!redoMode && current) {
-    const review = current as ReviewTask;
-    note = review.errorNoteId ? notes.get(review.errorNoteId) : undefined;
-    cards = note?.flashcards ?? [];
-    d = disciplines.get(review.disciplineId);
-    displayTitle = resolveReviewDisplayTitle(review, note);
-  } else if (redoMode && current) {
-    const missed = current as MissedFlashcard;
-    note = missed.note;
-    cards = [missed.card];
-    d = disciplines.get(missed.disciplineId);
-    displayTitle = missed.displayTitle;
-  }
+  const busy = useRef(false);
+  const [enabled] = useCelebrationsEnabled();
+  const { cardIndex, reviewStats, streak, totalHits,
+    totalCardsAnswered, picked, missedFlashcards, redoQueue,
+    redoDone, sessionCompleted } = state;
+  const completedReviewIds = [...new Set([
+    ...state.completedReviewIds,
+    ...completedTodayIds.filter(id => id !== state.activeReview?.id),
+  ])];
+  const pending = reviews.filter(r => !completedReviewIds.includes(r.id));
+  const review = state.activeReview ?? pending[0];
+  const redoMode = state.redoMode && !review;
+  const current = redoMode ? redoQueue[0] : review;
+  const note = !redoMode && review?.errorNoteId ? notes.get(review.errorNoteId) : undefined;
+  const cards = redoMode ? (current ? [(current as MissedFlashcard).card] : []) : note?.flashcards ?? [];
   const card = cards[cardIndex];
+  const d = current ? disciplines.get(current.disciplineId) : undefined;
+  const displayTitle = redoMode ? (current as MissedFlashcard | undefined)?.displayTitle ?? ''
+    : review ? resolveReviewDisplayTitle(review, note) : '';
+  const doneReviews = redoMode ? redoDone : completedReviewIds.length;
+  const currentTotalItems = redoMode ? redoDone + redoQueue.length : completedReviewIds.length + pending.length + Number(!!review && !pending.some(r => r.id === review.id));
+  const progress = currentTotalItems ? Math.round(doneReviews / currentTotalItems * 100) : 0;
+  const correct = !!picked && picked === card?.answer;
 
-  // Completion screen - show when all items done
-  if (!current) {
-    if (redoMode) {
-      // All missed flashcards completed in redo mode
-      return (
-        <div className="rounded-2xl border border-success/40 bg-success-soft/20 p-10 text-center space-y-4">
-          <CheckCircle className="mx-auto size-12 text-success" />
-          <h3 className="text-xl font-bold text-fg">Revisão do dia concluída!</h3>
-          <p className="text-sm text-fg-muted">
-            Você acertou todos os flashcards em revisão. Ótimo trabalho!
-          </p>
-          <div className="flex items-center justify-center gap-2">
-            <Button variant="primary" onClick={() => {}} disabled>
-              Finalizar
-            </Button>
-          </div>
-        </div>
-      );
-    }
-
-    // First pass completed - show summary and offer redo
-    if (!sessionCompleted && missedFlashcards.length > 0) {
-      return (
-        <div className="rounded-2xl border border-border bg-surface p-6 space-y-4 max-w-md mx-auto">
-          <div className="flex items-center justify-center gap-2">
-            <Sparkles className="size-8 text-primary" />
-            <h3 className="text-xl font-bold text-fg">Primeira rodada concluída!</h3>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4 p-4 bg-surface-muted rounded-xl">
-            <div className="text-center">
-              <div className="text-3xl font-bold text-success">{totalHits}</div>
-              <div className="text-sm text-fg-muted">Acertos</div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl font-bold text-danger">{totalCardsAnswered - totalHits}</div>
-              <div className="text-sm text-fg-muted">Erros</div>
-            </div>
-          </div>
-
-          <p className="text-sm text-fg-muted text-center">
-            Você errou {missedFlashcards.length} flashcard{missedFlashcards.length !== 1 ? 's' : ''}.
-            Deseja revisar apenas os que errou até acertar todos?
-          </p>
-
-          <div className="flex flex-col gap-2">
-            <Button variant="primary" size="lg" onClick={() => handleStartRedo()}>
-              <RotateCcw className="size-4 mr-2" />
-              Refazer os que errei ({missedFlashcards.length})
-            </Button>
-            <Button variant="secondary" size="lg" onClick={() => handleFinishSession()}>
-              Finalizar mesmo assim
-            </Button>
-          </div>
-        </div>
-      );
-    }
-
-    // Final completion screen
-    return (
-      <div className="rounded-2xl border border-success/40 bg-success-soft/20 p-10 text-center space-y-2">
-        <Sparkles className="mx-auto size-10 text-success" />
-        <h3 className="text-xl font-bold text-fg">Sessão concluída!</h3>
-        <p className="text-sm text-fg-muted">
-          {totalCardsAnswered > 0
-            ? `Você acertou ${totalHits} de ${totalCardsAnswered} flashcards.`
-            : 'Todas as revisões de hoje foram concluídas.'}
-        </p>
-      </div>
-    );
-  }
-
-  const correct = animating ? lastCorrect : (picked !== null && card ? picked === card.answer : false);
-  const currentTotalItems = redoMode ? missedFlashcards.length : Math.max(totalReviews, doneReviews);
-  const progress = currentTotalItems > 0 ? Math.min(100, Math.max(0, Math.round((doneReviews / currentTotalItems) * 100))) : 0;
+  useEffect(() => {
+    try { localStorage.setItem(storageKey(), JSON.stringify(state)); }
+    catch { /* Continue reviewing when browser storage is unavailable. */ }
+  }, [state]);
 
   const answer = (choice: 'certo' | 'errado') => {
-    if (picked || !card) return;
+    if (picked || !card || busy.current) return;
     const isCorrect = choice === card.answer;
-    setPicked(choice);
-    setLastCorrect(isCorrect);
-    setTotalCardsAnswered((n) => n + 1);
-    if (isCorrect) {
-      setTotalHits((h) => h + 1);
-      setStreak((s) => s + 1);
-      setReviewStats((s) => ({ ...s, hits: s.hits + 1 }));
-    } else {
-      setStreak(0);
-      setReviewStats((s) => ({ ...s, misses: s.misses + 1 }));
-      // Track missed flashcard for redo mode
-      if (!redoMode) {
-        const review = current as ReviewTask;
-        setMissedFlashcards((prev) => [
-          ...prev,
-          {
-            reviewId: review.id,
-            reviewIndex: doneReviews,
-            cardIndex,
-            card,
-            note,
-            disciplineId: review.disciplineId,
-            displayTitle,
-            intervalDays: review.intervalDays,
-          },
-        ]);
+    setState(s => ({
+      ...s, activeReview: redoMode ? s.activeReview : review, picked: choice, totalCardsAnswered: s.totalCardsAnswered + 1,
+      totalHits: s.totalHits + Number(isCorrect), streak: isCorrect ? s.streak + 1 : 0,
+      reviewStats: { hits: s.reviewStats.hits + Number(isCorrect), misses: s.reviewStats.misses + Number(!isCorrect) },
+      missedFlashcards: !isCorrect && !redoMode ? [...s.missedFlashcards, {
+        reviewId: review.id, card, disciplineId: review.disciplineId,
+        displayTitle, intervalDays: review.intervalDays,
+      }] : s.missedFlashcards,
+    }));
+  };
+
+  const advance = async () => {
+    if (busy.current || (card && !picked)) return;
+    busy.current = true;
+    setAnimating(true);
+    try {
+      if (!redoMode && cardIndex + 1 >= cards.length) {
+        setState(s => ({ ...s, activeReview: review }));
+        await onComplete(review, card ? reviewStats : undefined);
       }
+      setState(s => {
+        if (redoMode) {
+          const [item, ...rest] = s.redoQueue;
+          return { ...s, picked: null, reviewStats: { hits: 0, misses: 0 },
+            // A wrong answer returns to the end of the queue until mastered.
+            redoQueue: correct ? rest : [...rest, item], redoDone: s.redoDone + Number(correct) };
+        }
+        if (cardIndex + 1 < cards.length) return { ...s, cardIndex: s.cardIndex + 1, picked: null };
+        return { ...s, activeReview: null, redoMode: false, completedReviewIds: [...new Set([...s.completedReviewIds, review.id])],
+          cardIndex: 0, picked: null, reviewStats: { hits: 0, misses: 0 }, sessionCompleted: false };
+      });
+    } catch {
+      // Keep the answer for retry, including when local persistence succeeded
+      // but the server has not confirmed the review yet. The parent shows why.
+    } finally {
+      busy.current = false;
+      setAnimating(false);
     }
   };
 
-  function handleStartRedo() {
-    setRedoMode(true);
-    setDoneReviews(0);
-    setCardIndex(0);
-    setReviewStats({ hits: 0, misses: 0 });
-    setSessionCompleted(true);
-  }
+  if (animating) return <div role="status" className="p-10 text-center text-fg-muted">Salvando revisão…</div>;
 
-  function handleFinishSession() {
-    setSessionCompleted(true);
-  }
-
-  const next = async () => {
-    if (cardIndex + 1 < cards.length) {
-      setAnimating(true);
-      setPicked(null);
-      // Wait for flip animation to complete before changing card
-      setTimeout(() => {
-        setCardIndex((i) => i + 1);
-        setAnimating(false);
-      }, 700);
-      return;
+  if (!current) {
+    if (!redoMode && missedFlashcards.length > 0 && !sessionCompleted) {
+      return (
+        <div className="mx-auto max-w-md space-y-4 rounded-2xl border border-border bg-surface p-6">
+          <Sparkles className="mx-auto size-8 text-primary" aria-hidden />
+          <h3 className="text-center text-xl font-bold text-fg">Primeira rodada concluída!</h3>
+          <div className="grid grid-cols-2 gap-4 rounded-xl bg-surface-muted p-4 text-center">
+            <div><div className="text-3xl font-bold text-success">{totalHits}</div><div className="text-sm text-fg-muted">Acertos</div></div>
+            <div><div className="text-3xl font-bold text-danger">{totalCardsAnswered - totalHits}</div><div className="text-sm text-fg-muted">Erros</div></div>
+          </div>
+          <p className="text-center text-sm text-fg-muted">Você errou {missedFlashcards.length} flashcard{missedFlashcards.length !== 1 ? 's' : ''}. Deseja revisar apenas os que errou até acertar todos?</p>
+          <div className="flex flex-col gap-2">
+            <Button onClick={() => setState(s => ({ ...s, redoMode: true, redoQueue: s.missedFlashcards, redoDone: 0, cardIndex: 0, picked: null, reviewStats: { hits: 0, misses: 0 } }))}>
+              <RotateCcw className="mr-2 size-4" />Refazer os que errei ({missedFlashcards.length})
+            </Button>
+            <Button variant="secondary" onClick={() => setState(s => ({ ...s, sessionCompleted: true }))}>Finalizar mesmo assim</Button>
+          </div>
+        </div>
+      );
     }
-
-    // Last card of current item - flip back then advance
-    setAnimating(true);
-    setPicked(null); // Start flip-back animation
-    // Wait for flip-back to complete, then advance to next item
-    setTimeout(async () => {
-      if (!redoMode) {
-        const review = current as ReviewTask;
-        await onComplete(review, reviewStats);
-      }
-      setDoneReviews((n) => n + 1);
-      setCardIndex(0);
-      setReviewStats({ hits: 0, misses: 0 });
-      // Now on front face of next item's first card, no flip needed
-      setAnimating(false);
-    }, 700);
-  };
-
-  const completeWithoutFlashcard = async () => {
-    setAnimating(true);
-    setPicked(null); // Start flip-back animation
-    // Wait for flip-back to complete, then advance to next item
-    setTimeout(async () => {
-      if (!redoMode) {
-        const review = current as ReviewTask;
-        await onComplete(review);
-      }
-      setDoneReviews((n) => n + 1);
-      setCardIndex(0);
-      setReviewStats({ hits: 0, misses: 0 });
-      // Now on front face of next item's first card, no flip needed
-      setAnimating(false);
-    }, 700);
-  };
+    const mastered = totalCardsAnswered > 0 && (redoMode || missedFlashcards.length === 0);
+    if (mastered) return (
+      <div role="status" className={cn('mx-auto max-w-3xl space-y-4 rounded-2xl border border-success/40 bg-success-soft/20 p-10 text-center', enabled && 'animate-celebrate-in motion-reduce:animate-none')}>
+        {enabled && <Confetti burst={1} intensity="big" />}
+        <div className={cn('mx-auto grid size-20 place-items-center rounded-full bg-success-soft text-success', enabled && 'animate-pop motion-reduce:animate-none')}><Trophy className="size-12" aria-hidden /></div>
+        <Badge tone="success">Conquista desbloqueada · Meta de revisão</Badge>
+        <h3 className="text-2xl font-bold text-fg">Revisão do dia concluída!</h3>
+        <p className="text-fg-muted">Você acertou todos os flashcards em revisão. Ótimo trabalho!</p>
+        <p className="text-sm font-semibold text-success">{completedReviewIds.length} revisões concluídas · Todos os desafios superados</p>
+      </div>
+    );
+    return <EmptyState icon={<CheckCircle2 className="size-8" />} title={sessionCompleted ? 'Sessão concluída!' : 'Todas as revisões de hoje estão em dia'} description={sessionCompleted ? 'Suas revisões foram salvas. Continue praticando os erros na próxima sessão.' : 'As próximas revisões aparecerão aqui na data agendada.'} />;
+  }
 
   const face = 'absolute inset-0 flex flex-col rounded-2xl border p-6 sm:p-8 [backface-visibility:hidden]';
 
@@ -336,6 +195,7 @@ export function FlashcardDeck({ reviews, notes, disciplines, onComplete }: Props
         <div
           className="h-2 overflow-hidden rounded-full bg-surface-muted"
           role="progressbar"
+          aria-label={redoMode ? "Erros superados nesta rodada" : "Revisões concluídas nesta sessão"}
           aria-valuenow={progress}
           aria-valuemin={0}
           aria-valuemax={100}
@@ -368,7 +228,7 @@ export function FlashcardDeck({ reviews, notes, disciplines, onComplete }: Props
                       : 'Esta revisão não possui flashcard vinculado.'}
                   </p>
                   <div className="flex flex-wrap items-center justify-center gap-2">
-                    <Button size="sm" variant="secondary" onClick={() => void completeWithoutFlashcard()}>
+                    <Button size="sm" variant="secondary" disabled={animating} onClick={() => void advance()}>
                       Concluir sem flashcard
                     </Button>
                   </div>
@@ -378,7 +238,7 @@ export function FlashcardDeck({ reviews, notes, disciplines, onComplete }: Props
             <div className="grid grid-cols-2 gap-3">
               <Button
                 variant="secondary"
-                disabled={!card}
+                disabled={!card || animating}
                 onClick={() => answer('certo')}
                 icon={<CheckCircle2 className="size-5" />}
               >
@@ -386,7 +246,7 @@ export function FlashcardDeck({ reviews, notes, disciplines, onComplete }: Props
               </Button>
               <Button
                 variant="secondary"
-                disabled={!card}
+                disabled={!card || animating}
                 onClick={() => answer('errado')}
                 icon={<XCircle className="size-5" />}
               >
@@ -416,7 +276,7 @@ export function FlashcardDeck({ reviews, notes, disciplines, onComplete }: Props
                 <FormattedText text={card?.explanation ?? ''} className="mt-1 text-white" />
               </div>
             </div>
-            <Button variant="secondary" onClick={() => void next()}>
+            <Button variant="secondary" disabled={!picked || animating} onClick={() => void advance()}>
               {redoMode
                 ? doneReviews + 1 < currentTotalItems
                   ? 'Próximo erro'
