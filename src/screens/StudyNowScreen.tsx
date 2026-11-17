@@ -287,7 +287,7 @@ export function StudyNowScreen() {
             actions={
               <div className="flex items-center gap-2">
                 <Badge tone={activeTimer.status === 'running' ? 'primary' : 'warning'}>
-                  {activeTimer.sessionId ? 'Sessão planejada' : 'Sessão avulsa'}
+                  {activeTimer.cycleStudy ? 'Sessão do ciclo de estudos' : activeTimer.sessionId ? 'Sessão planejada' : 'Sessão avulsa'}
                 </Badge>
                 <Button
                   variant="secondary"
