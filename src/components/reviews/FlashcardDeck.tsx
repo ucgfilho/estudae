@@ -15,6 +15,7 @@ interface Props {
 }
 
 interface SavedProgress {
+  totalReviews?: number;
   doneReviews: number;
   cardIndex: number;
   reviewStats: { hits: number; misses: number };
@@ -44,7 +45,7 @@ const getTodayKey = () => {
 
 /** Baralho de flashcards: um por vez, vira ao responder (Certo/Errado) e só avança depois. */
 export function FlashcardDeck({ reviews, notes, disciplines, onComplete }: Props) {
-  const [totalReviews] = useState(reviews.length);
+  const [totalReviews, setTotalReviews] = useState(reviews.length);
   const [doneReviews, setDoneReviews] = useState(0);
   const [cardIndex, setCardIndex] = useState(0);
   const [reviewStats, setReviewStats] = useState({ hits: 0, misses: 0 });
@@ -61,6 +62,13 @@ export function FlashcardDeck({ reviews, notes, disciplines, onComplete }: Props
   const [missedFlashcards, setMissedFlashcards] = useState<MissedFlashcard[]>([]);
   const [sessionCompleted, setSessionCompleted] = useState(false);
 
+  // Ensure totalReviews is properly set when reviews are loaded
+  useEffect(() => {
+    if (totalReviews === 0 && reviews.length > 0) {
+      setTotalReviews(reviews.length);
+    }
+  }, [reviews.length, totalReviews]);
+
   // Create a unique identifier for the current review list to validate saved progress
   const reviewIds = useMemo(() => reviews.map(r => r.id), [reviews]);
 
@@ -75,6 +83,7 @@ export function FlashcardDeck({ reviews, notes, disciplines, onComplete }: Props
         if (progress.date === new Date().toISOString().split('T')[0] &&
             progress.reviewIds.length === reviewIds.length &&
             progress.reviewIds.every((id, i) => id === reviewIds[i])) {
+          setTotalReviews(progress.totalReviews ?? (progress.doneReviews + reviews.length));
           setDoneReviews(progress.doneReviews);
           setCardIndex(progress.cardIndex);
           setReviewStats(progress.reviewStats);
@@ -97,6 +106,7 @@ export function FlashcardDeck({ reviews, notes, disciplines, onComplete }: Props
     if (!progressLoaded) return;
     const key = getTodayKey();
     const progress: SavedProgress = {
+      totalReviews,
       doneReviews,
       cardIndex,
       reviewStats,
@@ -107,7 +117,7 @@ export function FlashcardDeck({ reviews, notes, disciplines, onComplete }: Props
       date: new Date().toISOString().split('T')[0],
     };
     localStorage.setItem(key, JSON.stringify(progress));
-  }, [doneReviews, cardIndex, reviewStats, streak, totalHits, totalCardsAnswered, reviewIds, progressLoaded]);
+  }, [totalReviews, doneReviews, cardIndex, reviewStats, streak, totalHits, totalCardsAnswered, reviewIds, progressLoaded]);
 
   // Clear progress when all reviews are done (but not in redo mode)
   useEffect(() => {
@@ -116,9 +126,8 @@ export function FlashcardDeck({ reviews, notes, disciplines, onComplete }: Props
     }
   }, [doneReviews, totalReviews, progressLoaded, redoMode]);
 
-  // Build the list of items to review (either original reviews or missed flashcards)
-  const currentItems = redoMode ? missedFlashcards : reviews;
-  const current = currentItems[0];
+  // Current item to review (in normal mode reviews[0] is next as reviews drop; in redoMode index by doneReviews)
+  const current = redoMode ? missedFlashcards[doneReviews] : reviews[0];
 
   // Get note and cards for current item - type narrowing
   let note: ErrorNote | undefined;
@@ -214,8 +223,8 @@ export function FlashcardDeck({ reviews, notes, disciplines, onComplete }: Props
   }
 
   const correct = animating ? lastCorrect : (picked !== null && card ? picked === card.answer : false);
-  const currentTotalItems = currentItems.length;
-  const progress = currentTotalItems > 0 ? Math.round((doneReviews / currentTotalItems) * 100) : 0;
+  const currentTotalItems = redoMode ? missedFlashcards.length : Math.max(totalReviews, doneReviews);
+  const progress = currentTotalItems > 0 ? Math.min(100, Math.max(0, Math.round((doneReviews / currentTotalItems) * 100))) : 0;
 
   const answer = (choice: 'certo' | 'errado') => {
     if (picked || !card) return;
@@ -250,17 +259,17 @@ export function FlashcardDeck({ reviews, notes, disciplines, onComplete }: Props
     }
   };
 
-  const handleStartRedo = () => {
+  function handleStartRedo() {
     setRedoMode(true);
     setDoneReviews(0);
     setCardIndex(0);
     setReviewStats({ hits: 0, misses: 0 });
     setSessionCompleted(true);
-  };
+  }
 
-  const handleFinishSession = () => {
+  function handleFinishSession() {
     setSessionCompleted(true);
-  };
+  }
 
   const next = async () => {
     if (cardIndex + 1 < cards.length) {
@@ -317,7 +326,7 @@ export function FlashcardDeck({ reviews, notes, disciplines, onComplete }: Props
           <span className="font-semibold text-fg">
             {redoMode
               ? `Revisão de erros ${doneReviews + 1} de ${currentTotalItems}`
-              : `Revisão ${Math.min(doneReviews + 1, totalReviews)} de ${totalReviews}`}
+              : `Revisão ${Math.min(doneReviews + 1, currentTotalItems)} de ${currentTotalItems}`}
             {!redoMode && cards.length > 1 ? ` · Flashcard ${cardIndex + 1} de ${cards.length}` : ''}
           </span>
           <span className="flex items-center gap-1 font-semibold text-warning">
