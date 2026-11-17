@@ -501,9 +501,37 @@ input[type='number']::-webkit-outer-spin-button {
   from { transform: translate3d(-12%, 0, 0) scale(0.92); }
   to { transform: translate3d(14%, 12%, 0) scale(1.08); }
 }
+.cycle-book-animation {
+  width: min(100%, 21rem);
+  filter: drop-shadow(0 14px 18px rgb(30 64 175 / 0.12));
+}
+.cycle-book-animation svg {
+  display: block;
+  width: 100%;
+  overflow: visible;
+}
+.cycle-book-shadow { fill: var(--primary); opacity: 0.1; }
+.cycle-book-cover { fill: var(--primary-soft); stroke: var(--primary); stroke-opacity: 0.35; stroke-width: 2; }
+.cycle-book-page-base,
+.cycle-book-flipping-page { fill: var(--surface); stroke: var(--border-strong); stroke-opacity: 0.65; stroke-width: 1.5; }
+.cycle-book-spine { fill: var(--primary); opacity: 0.78; }
+.cycle-book-rule { fill: none; stroke: var(--primary); stroke-linecap: round; stroke-opacity: 0.22; stroke-width: 2; }
+.cycle-book-flip {
+  transform-box: view-box;
+  transform-origin: 160px 110px;
+  animation: cycle-book-page-turn 4.8s ease-in-out infinite;
+  backface-visibility: hidden;
+}
+.cycle-book-flip-two { animation-delay: -2.4s; }
+@keyframes cycle-book-page-turn {
+  0%, 12% { transform: perspective(800px) rotateY(0deg); }
+  52%, 65% { transform: perspective(800px) rotateY(-180deg); }
+  100% { transform: perspective(800px) rotateY(-360deg); }
+}
 @media (prefers-reduced-motion: reduce) {
   .contest-selector-screen::before,
-  .contest-selector-glow { animation: none; }
+  .contest-selector-glow,
+  .cycle-book-flip { animation: none; }
 }
 
 /* Confirmações destrutivas usam o âmbar da paleta, com contraste para o texto. */
