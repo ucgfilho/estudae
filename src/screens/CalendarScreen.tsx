@@ -532,7 +532,7 @@ export function CalendarScreen() {
       {view === 'daily' && (
         <Card
           title={`Sessões para ${formatDate(currentDate, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}`}
-          description={`Meta diária de estudo: ${formatMinutes(dailyGoal)} | Estudado hoje: ${formatMinutes(Math.round((secondsByDate.get(currentDate) ?? 0) / 60))}`}
+          description={`${dailyGoal > 0 ? `Meta diária de estudo: ${formatMinutes(dailyGoal)} | ` : ''}Estudado hoje: ${formatMinutes(Math.round((secondsByDate.get(currentDate) ?? 0) / 60))}`}
           actions={
             <Button
               variant="secondary"

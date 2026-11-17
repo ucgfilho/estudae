@@ -36477,7 +36477,7 @@ var weeklyPlanDtoSchema = object({
 });
 var settingsDtoSchema = object({
 	id: literal("settings"),
-	dailyGoalMinutes: number().int().positive(),
+	dailyGoalMinutes: number().int().min(0),
 	weeklyGoalMinutes: number().int().positive(),
 	dailyQuestionGoal: number().int().positive().nullable(),
 	accuracyGoal: number().int().min(1).max(100),

@@ -54,7 +54,7 @@ export function nextCycleActivity(input: CycleInput): CycleActivity | null {
   const reason = discipline.kind === 'technical'
     ? 'Conhecimentos específicos: 80% das sessões do ciclo.'
     : 'Conhecimentos básicos: 20% das sessões do ciclo.';
-  return { discipline, topic, minutes: Math.max(1, Math.min(60, input.settings.dailyGoalMinutes)), reason };
+  return { discipline, topic, minutes: input.settings.dailyGoalMinutes > 0 ? Math.max(1, Math.min(60, input.settings.dailyGoalMinutes)) : 60, reason };
 }
 /** Prévia recalculada a cada conclusão; não cria sessões nem compromissos no calendário. */
 export function previewCycle(input: CycleInput, count = 7): CycleActivity[] {

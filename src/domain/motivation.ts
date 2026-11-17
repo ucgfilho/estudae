@@ -71,7 +71,7 @@ export function dailyProgress(
 export function progressFraming(studied: number, goal: number): string {
   const done = Math.round(studied);
   if (goal <= 0) return `${done} min estudados hoje.`;
-  if (done >= goal) return 'Excelente! Sua meta diária foi cumprida.';
+  if (goal > 0 && done >= goal) return 'Excelente! Sua meta diária foi cumprida.';
   const remaining = Math.max(1, Math.round(goal - studied));
   if (done === 0) return 'Hoje ainda não teve sessão de estudos. Que tal começar o primeiro bloco?';
   if (studied / goal < 0.5) return `Você já estudou ${done} min hoje. Continue avançando!`;

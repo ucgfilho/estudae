@@ -90,8 +90,8 @@ export function SettingsScreen() {
     const dailyQuestions = dailyQuestionGoal.trim() ? parseInt(dailyQuestionGoal, 10) : null;
     const topicGoal = topicCompletionGoal.trim() ? parseInt(topicCompletionGoal, 10) : null;
 
-    if (isNaN(daily) || daily < 1) {
-      setActionError('Informe uma meta diária de pelo menos 1 minuto.');
+    if (isNaN(daily) || daily < 0 || daily > 1440) {
+      setActionError('Informe 0 para ficar sem meta ou um valor entre 1 e 1440 minutos.')
       return;
     }
     if (isNaN(weekly) || weekly < 1) {
@@ -113,7 +113,7 @@ export function SettingsScreen() {
     try {
       await updateSettings({
         dailyGoalMinutes: daily,
-        weeklyGoalMinutes: weekly,
+        weeklyGoalMinutes: daily === 0 ? settings?.weeklyGoalMinutes ?? weekly : weekly,
         accuracyGoal: accuracy,
         dailyQuestionGoal: dailyQuestions,
         topicCompletionGoal: topicGoal,
@@ -251,14 +251,13 @@ export function SettingsScreen() {
         description="Defina as metas que acompanham seu progresso."
       >
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <Field label="Meta diária de estudo (min)" required hint="Padrão: 120 minutos (2 horas)">
+          <Field label="Meta diária de estudo (min)" hint="Opcional. Use 0 para estudar sem uma meta de tempo.">
             <Input
               type="number"
-              min="1"
+              min="0"
               max="1440"
               value={dailyGoalMinutes}
               onChange={(e) => setDailyGoalMinutes(e.target.value)}
-              required
             />
           </Field>
 

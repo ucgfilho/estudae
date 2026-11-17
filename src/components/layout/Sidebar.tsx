@@ -205,7 +205,7 @@ export function Sidebar({
                   {activeContest ? activeContest.role : 'Analista de Sistemas — Desenvolvimento'}
                 </div>
                 <div className="mt-1 text-[11px] text-fg-muted tabular-nums">
-                  Meta: {dailyGoal} min/dia ({weeklyGoal} min/sem)
+                  {dailyGoal > 0 ? `Meta: ${dailyGoal} min/dia · ` : ''}{weeklyGoal} min/sem
                 </div>
               </div>
               <div className="flex size-7 items-center justify-center rounded-md border border-border bg-surface text-fg-muted group-hover:text-primary transition-colors shrink-0">
@@ -223,7 +223,7 @@ export function Sidebar({
             <div className="truncate">
               {activeContest ? activeContest.role : 'Analista de Sistemas — Desenvolvimento'}
             </div>
-            <div className="mt-1 text-fg-muted tabular-nums">Meta: {dailyGoal} min/dia ({weeklyGoal} min/sem)</div>
+            <div className="mt-1 text-fg-muted tabular-nums">{dailyGoal > 0 ? `Meta: ${dailyGoal} min/dia · ` : ''}{weeklyGoal} min/sem</div>
           </div>
         )}
       </aside>

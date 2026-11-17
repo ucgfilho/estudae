@@ -54,7 +54,7 @@ export function DailyMissionCard({
   const discMap = useMemo(() => new Map(disciplines.map((d) => [d.id, d])), [disciplines]);
 
   const pct = Math.round(p.ratio * 100);
-  const goalDone = p.ratio >= 1;
+  const goalDone = p.goalMinutes > 0 && p.ratio >= 1;
   const nameOf = (id: string) => discMap.get(id)?.name ?? (id === 'simulado' ? 'Simulado Geral BNB' : 'Disciplina');
 
   return (
@@ -122,7 +122,7 @@ export function DailyMissionCard({
               Seu progresso hoje
             </h3>
             <div className="my-5 flex items-center gap-4">
-              <ProgressRing
+              {p.goalMinutes > 0 && <ProgressRing
                 value={p.studiedMinutes}
                 max={p.goalMinutes}
                 label="Tempo estudado hoje em relação à meta diária"
@@ -130,11 +130,11 @@ export function DailyMissionCard({
                 stroke={7}
               >
                 <span className="text-xl font-semibold tabular-nums text-fg">{Math.min(pct, 999)}%</span>
-              </ProgressRing>
+              </ProgressRing>}
               <div className="min-w-0 space-y-1">
                 <p className="text-xs font-medium text-fg-muted">Tempo estudado</p>
                 <p className="text-2xl font-semibold tracking-tight tabular-nums text-fg">{formatMinutes(p.studiedMinutes)}</p>
-                <p className="text-xs text-fg-muted">{goalDone ? 'Meta diária cumprida' : `Meta diária: ${formatMinutes(p.goalMinutes)}`}</p>
+                {p.goalMinutes > 0 && <p className="text-xs text-fg-muted">{goalDone ? 'Meta diária cumprida' : `Meta diária: ${formatMinutes(p.goalMinutes)}`}</p>}
               </div>
             </div>
 
