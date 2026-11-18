@@ -12,7 +12,7 @@ import { Badge } from '../ui/Display';
 import { Avatar } from '../ui/Avatar';
 import { ProfileModal } from '../profile/ProfileModal';
 import { tierOf } from '../motivation/RankCard';
-import { useSettings, useActiveTimer, useNow, useSessions, useReviews } from '../../hooks/useData';
+import { useSettings, useActiveTimer, useSessions, useReviews } from '../../hooks/useData';
 import { getAuthSession, logoutUser, subscribeAuth } from '../../services/auth';
 import { todayKey, formatLongDate } from '../../lib/dates';
 import { daysUntil } from '../../domain/metrics';
@@ -26,10 +26,12 @@ import type { UserContestProfile } from '../../services/contests';
 
 interface HeaderProps {
   activeContest?: UserContestProfile;
+  timerNow: number;
 }
 
 export function Header({
   activeContest,
+  timerNow,
 }: HeaderProps) {
   const [profileOpen, setProfileOpen] = useState(false);
   const [authUser, setAuthUser] = useState(() => getAuthSession()?.user ?? null);
@@ -37,8 +39,7 @@ export function Header({
   const sessions = useSessions();
   const reviews = useReviews();
   const timer = useActiveTimer();
-  const now = useNow(1000, Boolean(timer && timer.status === 'running'));
-  const today = todayKey(now);
+  const today = todayKey(timerNow);
   const navigate = useNavigate();
   const toast = useToast();
 
@@ -66,7 +67,7 @@ export function Header({
 
   const examDaysLeft = daysUntil(settings?.examDate ?? null, today);
 
-  const timerSeconds = timer ? elapsedSeconds(timer, now) : 0;
+  const timerSeconds = timer ? elapsedSeconds(timer, timerNow) : 0;
 
   return (
     <>

@@ -128,6 +128,7 @@ export function AppLayout({ onSwitchContestScreen }: AppLayoutProps) {
       <div className="flex flex-1 flex-col overflow-hidden min-w-0 lg:bg-[#1e3a8a]">
         <Header
           activeContest={activeContest}
+          timerNow={now}
         />
         <main
           id="main-content"
@@ -135,7 +136,7 @@ export function AppLayout({ onSwitchContestScreen }: AppLayoutProps) {
           tabIndex={-1}
         >
           <div className="mx-auto w-full min-w-0 max-w-7xl">
-            <Outlet />
+            <Outlet context={now} />
           </div>
         </main>
 

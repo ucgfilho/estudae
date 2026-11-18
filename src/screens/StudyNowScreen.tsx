@@ -28,7 +28,6 @@ import {
   useQuestionLogs,
   useSettings,
   useActiveTimer,
-  useNow,
 } from '../hooks/useData';
 import {
   startAdHocTimer,
@@ -46,6 +45,7 @@ import { formatClock, formatMinutes } from '../lib/format';
 import type { StudySession } from '../db/types';
 import { errorMessage, cn } from '../lib/utils';
 import { todayKey } from '../lib/dates';
+import { useOutletContext } from 'react-router-dom';
 
 export function StudyNowScreen() {
   const disciplines = useDisciplines();
@@ -55,7 +55,7 @@ export function StudyNowScreen() {
   const settings = useSettings();
   const activeTimer = useActiveTimer();
 
-  const now = useNow(1000, Boolean(activeTimer && activeTimer.status === 'running'));
+  const now = useOutletContext<number>();
 
   // Form states for ad-hoc session
   const [adHocDisciplineId, setAdHocDisciplineId] = useState('');
@@ -98,6 +98,9 @@ export function StudyNowScreen() {
 
   const discMap = useMemo(() => new Map(disciplines.map((d) => [d.id, d])), [disciplines]);
   const topicMap = useMemo(() => new Map(topics.map((t) => [t.id, t])), [topics]);
+  const activeTopicTitle = activeTimer?.topicId
+    ? topicMap.get(activeTimer.topicId)?.title ?? 'Tópico'
+    : null;
 
   const filteredTopics = useMemo(() => {
     return topics.filter(
@@ -301,8 +304,8 @@ export function StudyNowScreen() {
             }
           >
             <div className="flex flex-col items-center justify-center py-6 text-center space-y-4">
-              {/* Discipline and Topic badge */}
-              <div className="flex flex-wrap items-center justify-center gap-2">
+              {/* Disciplina e assunto em linhas separadas, sem repetir o assunto. */}
+              <div className="flex flex-col items-center gap-1">
                 {discMap.get(activeTimer.disciplineId) ? (
                   <div className="flex items-center gap-1.5 font-semibold text-fg text-base">
                     <DisciplineDot color={discMap.get(activeTimer.disciplineId)!.color} />
@@ -314,14 +317,10 @@ export function StudyNowScreen() {
                     Simulado Geral BNB
                   </div>
                 ) : null}
-                {activeTimer.topicId && (
-                  <Badge tone="neutral">
-                    {topicMap.get(activeTimer.topicId)?.title ?? 'Tópico'}
-                  </Badge>
-                )}
+                {activeTopicTitle && <p className="text-sm text-fg-muted">{activeTopicTitle}</p>}
               </div>
 
-              {activeTimer.objective && (
+              {activeTimer.objective && activeTimer.objective.trim() !== activeTopicTitle && (
                 <p className="max-w-md text-sm text-fg-muted font-medium">
                   {activeTimer.objective}
                 </p>
