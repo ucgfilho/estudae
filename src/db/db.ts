@@ -416,13 +416,6 @@ export class AppDatabase {
         }
       }
       const snapshot = this.exportWorkspaceSnapshot();
-      // LGPD / Proteção de Segredos: nunca persistir chaves de API em texto puro no localStorage
-      if (Array.isArray(snapshot.settings)) {
-        snapshot.settings = (snapshot.settings as Settings[]).map((s) => ({
-          ...s,
-          geminiApiKey: '',
-        }));
-      }
       const key = getWorkspaceCacheKey(session.user.email);
       window.localStorage.setItem(
         key,
@@ -445,7 +438,12 @@ export class AppDatabase {
       if (Array.isArray(rows)) {
         const records = rows as { id: string }[];
         this.table(tableName).replaceAllSilent(tableName === 'settings'
-          ? records.map(row => ({ ...row, theme: 'light' }))
+          ? records.map((row) => {
+              const safeRow = { ...row, theme: 'light' } as Record<string, unknown>;
+              delete safeRow.geminiApiKey;
+              delete safeRow.aiProvider;
+              return safeRow as typeof row;
+            })
           : records);
         if (rows.length > 0) {
           delete this.explicitlyClearedTables[tableName];

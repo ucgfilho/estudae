@@ -151,42 +151,6 @@ describe('Backend SOLID Architecture, DTOs, JWT Bearer & LGPD Compliance', () =>
     expect(workspaceRes.data.data.settings).toHaveLength(1);
   });
 
-  it('encrypts sensitive third-party API keys (gemini_api_key) at rest using AES-256-GCM (LGPD Art. 46)', async () => {
-    const loginRes = await container.authController.login({
-      email: TEST_USER.email,
-      password: TEST_USER.password,
-    });
-    const authUser = await container.authGuard.authenticate({
-      authorization: `Bearer ${loginRes.data.token}`,
-    });
-
-    const sampleSensitiveKey = 'test-sensitive-api-key-value-do-not-store-plaintext';
-    await container.studyDataController.mutateTable(authUser, 'settings', {
-      action: 'upsert',
-      records: [
-        {
-          ...DEFAULT_SETTINGS,
-          id: SETTINGS_ID,
-          geminiApiKey: sampleSensitiveKey,
-          aiProvider: 'gemini',
-        },
-      ],
-    });
-
-    // Inspect raw SQLite row to prove key is encrypted at rest and NOT stored in plaintext
-    const rawRow = container.dbClient!.get<{ gemini_api_key: string }>(
-      `SELECT gemini_api_key FROM user_settings WHERE user_id = ?`,
-      [authUser.id],
-    );
-    expect(rawRow).not.toBeNull();
-    expect(rawRow!.gemini_api_key).not.toBe(sampleSensitiveKey);
-    expect(rawRow!.gemini_api_key).toMatch(/^\$aes256gcm\$/);
-
-    // Verify transparent decryption when read back by the authenticated owner
-    const ws = (await container.studyDataController.getWorkspace(authUser)).data.data;
-    expect(ws.settings[0].geminiApiKey).toBe(sampleSensitiveKey);
-  });
-
   it('enforces JWT Bearer authentication, isolates data per user, and supports permanent LGPD account deletion (Art. 18, VI)', async () => {
     await expect(container.authGuard.authenticate({})).rejects.toThrow(UnauthorizedError);
     await expect(
@@ -312,7 +276,7 @@ describe('Backend SOLID Architecture, DTOs, JWT Bearer & LGPD Compliance', () =>
       expect(await exchange.json()).toMatchObject({ exchanged: true, user: { id: user.id } });
 
       const workspace = `http://127.0.0.1:${address.port}/api/study-data`;
-      const settings = { dailyGoalMinutes: 75, geminiApiKey: 'gemini-test-value' };
+      const settings = { dailyGoalMinutes: 75 };
       const save = await fetch(`${workspace}/batch`, {
         method: 'POST',
         headers: migrationHeaders,
@@ -768,7 +732,7 @@ describe('MongoDB Row-Level Security (RLS) & Zero Explicit Data at Rest', () => 
             errorNotes: [],
             reviews: [],
             weeklyPlans: [],
-            settings: [{ ...DEFAULT_SETTINGS, id: SETTINGS_ID, geminiApiKey: 'plain-api-key-123' }],
+            settings: [{ ...DEFAULT_SETTINGS, id: SETTINGS_ID }],
             mockExams: [],
             updatedAt: '2026-10-01T00:00:00.000Z',
           },
@@ -798,7 +762,7 @@ describe('MongoDB Row-Level Security (RLS) & Zero Explicit Data at Rest', () => 
     const ws = await studyRepo.getWorkspace('legacy-user-1');
     expect(ws.topics).toHaveLength(1);
     expect(ws.topics[0].title).toBe('Crase');
-    expect(ws.settings[0].geminiApiKey).toBe('plain-api-key-123');
+    expect(ws.settings[0]).not.toHaveProperty('geminiApiKey');
   });
 
   it('rejects NoSQL operator injection, invalid tenant scopes, and cross-tenant document ownership tampering', () => {

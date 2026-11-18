@@ -434,14 +434,16 @@ function storePendingBatches(key: string, batches: PendingBatch[]): void {
   const safe = batches.map((batch) => ({ ...batch, operations: batch.operations.map((op) => {
     if (op.table !== 'settings') return op;
     if (op.action === 'patch') {
-      const changes = { ...op.changes };
+      const changes = { ...op.changes } as Record<string, unknown>;
       delete changes.geminiApiKey;
+      delete changes.aiProvider;
       return { ...op, changes };
     }
     if (op.action !== 'upsert') return op;
     return { ...op, records: op.records.map((record) => {
       const safeRecord = { ...(record as Record<string, unknown>) };
       delete safeRecord.geminiApiKey;
+      delete safeRecord.aiProvider;
       return safeRecord;
     }) };
   }) }));

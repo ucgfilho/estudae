@@ -233,10 +233,6 @@ export interface Settings {
   scheduleWeeks?: number;
   /** Minutos semanais planejados por disciplina. */
   distribution: Record<string, number>;
-  /** Chave de API do Google Gemini para uso do assistente de estudos. */
-  geminiApiKey?: string;
-  /** Provedor preferido de IA ('builtin' | 'gemini'). */
-  aiProvider?: 'builtin' | 'gemini';
   /** Identificador do concurso ativo neste workspace. */
   contestId?: string;
   /** Nome do concurso escolhido pelo usuário (ex: "Banco do Brasil", "Polícia Federal"). */

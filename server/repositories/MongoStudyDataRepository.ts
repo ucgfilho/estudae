@@ -75,7 +75,7 @@ function buildDefaultWorkspaceDto(): StudyWorkspaceDto {
  * - Cada documento exige `_id`, `ownerId` (chave de isolamento de titular) e `scopeId`.
  * - Nenhuma tabela de estudo (`disciplines`, `topics`, `sessions`, `settings`, etc.) fica explícita no banco:
  *   todo o documento de workspace é cifrado em repouso (`encryptedPayload`) com AES-256-GCM e AAD vinculado ao `ownerId`.
- * - As chaves de API (`geminiApiKey`) possuem dupla camada de criptografia autenticada vinculada ao `ownerId`.
+ * - Os workspaces são criptografados com chave autenticada vinculada ao `ownerId`.
  * - Exclusão em cascata via `ownerId` remove todos os escopos de concursos do titular (LGPD Art. 18, VI).
  */
 export class MongoStudyDataRepository implements IStudyDataRepository {
@@ -146,15 +146,9 @@ export class MongoStudyDataRepository implements IStudyDataRepository {
         workspace = this.decryptAndDeserializeWorkspace(ctx.ownerId, raw.encryptedPayload);
       } else {
         const decryptedSettings: Settings[] = (raw.settings || []).map((s) => {
-          let key = s.geminiApiKey ?? '';
-          if (key) {
-            try {
-              key = this.cipher.decryptForTenant(ctx.ownerId, key);
-            } catch {
-              key = this.cipher.decrypt(key);
-            }
-          }
-          return { ...s, id: SETTINGS_ID as 'settings', theme: 'light', geminiApiKey: key };
+          const legacy = s as Settings & { geminiApiKey?: string; aiProvider?: string };
+          const { geminiApiKey: _legacyKey, aiProvider: _legacyProvider, ...settings } = legacy;
+          return { ...settings, id: SETTINGS_ID as 'settings', theme: 'light' };
         });
 
         workspace = {
@@ -207,13 +201,11 @@ export class MongoStudyDataRepository implements IStudyDataRepository {
   }
 
   private serializeAndEncryptWorkspace(ownerId: string, workspace: StudyWorkspaceDto): string {
-    const encryptedSettings: Settings[] = (workspace.settings || []).map((s) => ({
-      ...s,
-      id: SETTINGS_ID as 'settings',
-      geminiApiKey: s.geminiApiKey
-        ? this.cipher.encryptForTenant(ownerId, s.geminiApiKey)
-        : '',
-    }));
+    const encryptedSettings: Settings[] = (workspace.settings || []).map((s) => {
+      const legacy = s as Settings & { geminiApiKey?: string; aiProvider?: string };
+      const { geminiApiKey: _legacyKey, aiProvider: _legacyProvider, ...settings } = legacy;
+      return { ...settings, id: SETTINGS_ID as 'settings' };
+    });
 
     const normalized: StudyWorkspaceDto = {
       disciplines: workspace.disciplines || [],
@@ -239,15 +231,9 @@ export class MongoStudyDataRepository implements IStudyDataRepository {
     const parsed = JSON.parse(decryptedJson) as Partial<StudyWorkspaceDto>;
 
     const settings: Settings[] = (parsed.settings || []).map((s) => {
-      let key = s.geminiApiKey ?? '';
-      if (key) {
-        try {
-          key = this.cipher.decryptForTenant(ownerId, key);
-        } catch {
-          key = this.cipher.decrypt(key);
-        }
-      }
-      return { ...s, id: SETTINGS_ID as 'settings', theme: 'light', geminiApiKey: key };
+      const legacy = s as Settings & { geminiApiKey?: string; aiProvider?: string };
+      const { geminiApiKey: _legacyKey, aiProvider: _legacyProvider, ...rest } = legacy;
+      return { ...rest, id: SETTINGS_ID as 'settings', theme: 'light' };
     });
 
     return {
@@ -286,7 +272,8 @@ export class MongoStudyDataRepository implements IStudyDataRepository {
     assertWorkspaceDocumentOwnership(existing, userId);
     const workspace = this.decryptAndDeserializeWorkspace(ctx.ownerId, existing.encryptedPayload);
 
-    let needsUpdate = false;
+    const encryptedSettingsJson = this.cipher.decryptForTenant(ctx.ownerId, existing.encryptedPayload);
+    let needsUpdate = encryptedSettingsJson.includes('"geminiApiKey"') || encryptedSettingsJson.includes('"aiProvider"');
     if (!workspace.disciplines || workspace.disciplines.length === 0) {
       workspace.disciplines = [...DEFAULT_DISCIPLINES];
       needsUpdate = true;

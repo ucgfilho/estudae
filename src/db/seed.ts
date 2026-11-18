@@ -231,6 +231,4 @@ export const DEFAULT_SETTINGS: Settings = {
   theme: 'light',
   examDate: null,
   distribution: { ...DEFAULT_DISTRIBUTION },
-  geminiApiKey: '',
-  aiProvider: 'builtin',
 };

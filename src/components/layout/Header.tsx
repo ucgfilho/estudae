@@ -11,7 +11,6 @@ import { IconButton } from '../ui/Button';
 import { Badge } from '../ui/Display';
 import { Avatar } from '../ui/Avatar';
 import { ProfileModal } from '../profile/ProfileModal';
-import { AiAssistantWidget } from '../assistant/AiAssistantWidget';
 import { tierOf } from '../motivation/RankCard';
 import { useSettings, useActiveTimer, useNow, useSessions, useReviews } from '../../hooks/useData';
 import { getAuthSession, logoutUser, subscribeAuth } from '../../services/auth';
@@ -104,7 +103,6 @@ export function Header({
         </div>
 
         <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-          <AiAssistantWidget />
           {timer && (
             <button
               type="button"

@@ -31,19 +31,22 @@ import type { IStudyDataRepository } from '../interfaces/IStudyDataRepository';
 /**
  * Implementação concreta de IStudyDataRepository (SRP, LSP & DIP).
  * Todos os registros de estudo são intrinsecamente vinculados ao `user_id` do usuário autenticado.
- * Credenciais sensíveis de terceiros (gemini_api_key) são criptografadas em repouso (AES-256-GCM / LGPD Art. 46).
+ * As colunas antigas da integração Gemini são mantidas apenas para compatibilidade com bancos existentes.
  */
 export class SqlStudyDataRepository implements IStudyDataRepository {
   private readonly db: IDatabaseClient;
-  private readonly cipher?: ISensitiveDataCipher;
 
-  constructor(db: IDatabaseClient, cipher?: ISensitiveDataCipher) {
+  constructor(db: IDatabaseClient, _cipher?: ISensitiveDataCipher) {
     this.db = db;
-    this.cipher = cipher;
   }
 
   public ensureUserSeed(userId: string): void {
     this.db.transaction(() => {
+      // Apaga credenciais legadas da integração Gemini removida.
+      this.db.run(
+        `UPDATE user_settings SET gemini_api_key = '', ai_provider = 'builtin' WHERE user_id = ?`,
+        [userId],
+      );
       if (userId.includes('::contest::')) {
         const now = new Date().toISOString();
         this.db.run(
@@ -621,8 +624,8 @@ export class SqlStudyDataRepository implements IStudyDataRepository {
           s.scheduleStartDate ?? null,
           s.scheduleWeeks ?? 24, // Coluna legada NOT NULL; não participa do planejamento.
           JSON.stringify(s.distribution),
-          this.cipher ? this.cipher.encrypt(s.geminiApiKey ?? '') : (s.geminiApiKey ?? ''),
-          s.aiProvider ?? 'builtin',
+          '',
+          'builtin',
           s.contestId ?? null,
           s.contestName ?? null,
           s.contestRole ?? null,
@@ -1066,10 +1069,6 @@ export class SqlStudyDataRepository implements IStudyDataRepository {
             ...DEFAULT_SETTINGS.distribution,
             ...parsedDist,
           },
-      geminiApiKey: this.cipher
-        ? this.cipher.decrypt(row.gemini_api_key ?? '')
-        : (row.gemini_api_key ?? ''),
-      aiProvider: row.ai_provider ?? 'builtin',
     };
     if (row.contest_id) settingsObj.contestId = row.contest_id;
     if (row.contest_name) settingsObj.contestName = row.contest_name;

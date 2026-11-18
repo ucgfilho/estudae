@@ -31,7 +31,6 @@ export function loadFirefoxSeedWorkspace(seedFilePath?: string): StudyWorkspaceD
     if (Array.isArray(workspace.settings)) {
       workspace.settings = workspace.settings.map((s) => ({
         ...s,
-        geminiApiKey: '',
       }));
     }
     return workspace;

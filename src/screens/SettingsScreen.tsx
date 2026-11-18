@@ -6,8 +6,6 @@ import {
   Save,
   Database,
   Target,
-  Sparkles,
-  ExternalLink,
   Trash2,
 } from 'lucide-react';
 import { Button } from '../components/ui/Button';
@@ -44,7 +42,6 @@ export function SettingsScreen() {
   const [topicCompletionGoal, setTopicCompletionGoal] = useState('');
   const [reviewIntervalsText, setReviewIntervalsText] = useState('1, 7, 30');
   const [examDate, setExamDate] = useState('');
-  const [geminiApiKey, setGeminiApiKey] = useState('');
 
   // Backup & Restore states
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -76,7 +73,6 @@ export function SettingsScreen() {
       );
       setReviewIntervalsText(settings.reviewIntervals.join(', '));
       setExamDate(settings.examDate ?? '');
-      setGeminiApiKey(settings.geminiApiKey ?? '');
     }
   }, [settings]);
 
@@ -120,7 +116,6 @@ export function SettingsScreen() {
         topicCompletionGoal: topicGoal,
         reviewIntervals: intervalsParsed.value,
         examDate: examDate.trim() || null,
-        ...(geminiApiKey.trim() !== (settings?.geminiApiKey ?? '') && { geminiApiKey: geminiApiKey.trim() }),
       });
       setActionSuccess('Configurações e metas salvas.');
     } catch (err) {
@@ -348,45 +343,7 @@ export function SettingsScreen() {
         </div>
       </Card>
 
-      {/* Section 3: Inteligência Artificial (IA) */}
-      <Card
-        title={
-          <div className="flex items-center gap-2">
-            <Sparkles className="size-4 text-primary" />
-            <span>Assistente de estudos</span>
-          </div>
-        }
-        description="Adicione sua chave do Google Gemini para usar o assistente."
-      >
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Field
-            label="Chave de API do Google Gemini"
-            hint={
-              <span className="inline-flex flex-wrap items-center gap-1">
-                <span>Opcional para o assistente de estudos.</span>
-                <a
-                  href="https://aistudio.google.com/app/apikey"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-primary hover:underline inline-flex items-center gap-0.5 max-lg:min-h-9 max-lg:px-1"
-                >
-                  Obter chave gratuita
-                  <ExternalLink className="size-2.5" />
-                </a>
-              </span>
-            }
-          >
-            <Input
-              type="password"
-              placeholder="AIzaSy..."
-              value={geminiApiKey}
-              onChange={(e) => setGeminiApiKey(e.target.value)}
-            />
-          </Field>
-        </div>
-      </Card>
-
-      {/* Section 4: Persistence, Privacy & Backup */}
+      {/* Section 3: Persistence, Privacy & Backup */}
       <Card
         title={
           <div className="flex items-center gap-2">

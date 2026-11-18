@@ -173,8 +173,6 @@ export const settingsDtoSchema = z.object({
   scheduleStartDate: nullableDateKey.optional(),
   scheduleWeeks: z.number().int().positive().optional(),
   distribution: z.record(z.string(), nonNegInt),
-  geminiApiKey: z.string().optional(),
-  aiProvider: z.enum(['builtin', 'gemini']).optional(),
   contestId: z.string().optional(),
   contestName: z.string().optional(),
   contestRole: z.string().optional(),

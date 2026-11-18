@@ -26,7 +26,6 @@ personalizados com edital verticalizado.
 - Relatórios por dia, semana ou mês e exportação de sessões e questões em CSV.
 - Configuração de metas, tema, data da prova, intervalos de revisão e backup
   ou restauração dos dados em JSON.
-- Assistente de estudos com Google Gemini, quando uma chave for configurada.
 
 O ciclo avança somente ao concluir uma sessão iniciada pelo botão do ciclo.
 Revisões espaçadas e sessões manuais do calendário continuam independentes.

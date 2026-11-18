@@ -172,8 +172,6 @@ const settingsSchema = z.object({
   scheduleStartDate: nullableDateKey.optional(),
   scheduleWeeks: z.number().int().positive().optional(),
   distribution: z.record(z.string(), nonNegInt),
-  geminiApiKey: z.string().optional(),
-  aiProvider: z.enum(['builtin', 'gemini']).optional(),
   contestId: z.string().optional(),
   contestName: z.string().optional(),
   contestRole: z.string().optional(),
@@ -242,6 +240,7 @@ export async function createBackup(): Promise<BackupFile> {
     data.settings = data.settings.map((s) => {
       const sanitized = { ...(s as Record<string, unknown>) };
       delete sanitized.geminiApiKey;
+      delete sanitized.aiProvider;
       return sanitized as BackupData['settings'][number];
     });
   }
@@ -297,14 +296,9 @@ export function validateBackup(text: string): BackupValidation {
 /** Substitui todos os dados pelo conteúdo do backup (em uma única transação). */
 export async function restoreBackup(backup: BackupFile): Promise<void> {
   await waitForPendingSync();
-  const previousSettings = await db.settings.get('settings');
   const restoredData: Record<DataTableName, unknown[]> = {
     ...backup.data,
-    settings: backup.data.settings.map((s) => ({
-      ...s,
-      geminiApiKey: s.geminiApiKey ?? previousSettings?.geminiApiKey,
-      aiProvider: s.aiProvider ?? previousSettings?.aiProvider,
-    })),
+    settings: backup.data.settings.map((s) => ({ ...s })),
   };
 
   const sessionId = getLocalSessionId();
