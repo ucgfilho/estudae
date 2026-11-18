@@ -48,6 +48,7 @@ import { toCsv, downloadFile } from '../services/backup';
 import type { Settings } from '../db/types';
 
 type ReportPreferences = Pick<Settings, 'reportTimeGranularity' | 'reportPeriodDays'>;
+const CHART_ANIMATION_MS = 250;
 
 export function ReportsScreen() {
   const today = useToday();
@@ -266,14 +267,14 @@ export function ReportsScreen() {
                     name="Tempo Realizado"
                     fill="var(--primary)"
                     radius={[4, 4, 0, 0]}
-                    isAnimationActive={false}
+                    animationDuration={CHART_ANIMATION_MS}
                   />
                   <Bar
                     dataKey="plannedMinutes"
                     name="Tempo Planejado"
                     fill="var(--accent)"
                     radius={[4, 4, 0, 0]}
-                    isAnimationActive={false}
+                    animationDuration={CHART_ANIMATION_MS}
                   />
                 </BarChart>
               </ResponsiveContainer>
@@ -308,7 +309,7 @@ export function ReportsScreen() {
                     strokeWidth={2}
                     dot={{ r: 4 }}
                     activeDot={{ r: 6 }}
-                    isAnimationActive={false}
+                    animationDuration={CHART_ANIMATION_MS}
                   />
                 </LineChart>
               </ResponsiveContainer>
