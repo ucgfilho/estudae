@@ -34,9 +34,12 @@ export async function updateSettings({ theme: _theme, ...patch }: Partial<Omit<S
   if (sessionId !== getLocalSessionId() || scope !== getActiveContestScopeId()) {
     throw new Error('O concurso ou a sessão mudou antes do salvamento.');
   }
-  const result = syncBatchMutationsToApi([{ table: 'settings', action: 'patch', changes: patch }], scope);
-  db.applyLocalSettings({ ...current, ...patch, theme: 'light', id: SETTINGS_ID });
-  if (!await result) {
+  if (!await syncBatchMutationsToApi([{ table: 'settings', action: 'patch', changes: patch }], scope)) {
     throw new Error('O servidor não confirmou o salvamento. Confira sua conexão e salve novamente.');
   }
+  if (sessionId !== getLocalSessionId() || scope !== getActiveContestScopeId()) {
+    throw new Error('O concurso ou a sessão mudou durante o salvamento.');
+  }
+  const latest = db.settings.getSync(SETTINGS_ID) ?? current;
+  db.applyLocalSettings({ ...latest, ...patch, theme: 'light', id: SETTINGS_ID });
 }

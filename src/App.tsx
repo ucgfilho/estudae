@@ -4,9 +4,11 @@ import { ContestSelectorScreen } from './screens/ContestSelectorScreen';
 import { db, ensureSeed } from './db/db';
 import {
   getAuthSession,
+  getLocalSessionId,
   getActiveContestScopeId,
   setActiveContestScopeId,
   subscribeAuth,
+  verifyCurrentSession,
   TEST_LOCAL_SESSION_ID,
   type AuthSessionDto,
 } from './services/auth';
@@ -49,6 +51,8 @@ export function App() {
     setInitialized(false);
     let cancelled = false;
     const load = async () => {
+      if (getAuthSession()?.legacyToken) await verifyCurrentSession();
+      if (cancelled || getLocalSessionId() !== activeSessionId) return;
       try {
         await refreshUserContests();
       } catch (err) {
@@ -77,8 +81,10 @@ export function App() {
 
   useEffect(() => {
     if (!activeSessionId || activeSessionId === TEST_LOCAL_SESSION_ID) return;
-    const refresh = () => {
+    const refresh = async () => {
       if (document.visibilityState === 'visible') {
+        if (getAuthSession()?.legacyToken) await verifyCurrentSession();
+        if (getLocalSessionId() !== activeSessionId) return;
         void ensureSeed().catch((err) => console.error('Falha ao atualizar dados:', err));
         if (showContestSelector) {
           void refreshUserContests().catch((err) => console.error('Falha ao atualizar concursos:', err));

@@ -39419,13 +39419,11 @@ function checkBrowserWrite(req) {
 	if (typeof req.headers[BROWSER_SESSION_HEADER] !== "string" || site && site !== "same-origin") throw new ForbiddenError("Requisição de origem não permitida.");
 }
 function sendAuthResponse(container, req, res, status, data) {
-	const exchange = req.headers[BROWSER_SESSION_HEADER] === "exchange";
-	if (req.headers[BROWSER_SESSION_HEADER] === "start" || exchange) {
+	if (req.headers[BROWSER_SESSION_HEADER] === "start") {
 		setSessionCookie(container, res, data.token, data.expiresIn);
 		sendJson(res, status, {
 			expiresIn: data.expiresIn,
-			user: data.user,
-			...exchange ? { exchanged: true } : {}
+			user: data.user
 		});
 		return;
 	}
@@ -39528,7 +39526,8 @@ async function handleApiRequest(container, req, res) {
 			return true;
 		}
 		const user = await container.authGuard.authenticate(cookie && !req.headers.authorization ? { authorization: `Bearer ${cookie}` } : req.headers);
-		if (bearer && req.headers[BROWSER_SESSION_HEADER] === "exchange") {
+		if (method === "GET" && pathname === "/api/auth/me" && bearer && req.headers[BROWSER_SESSION_HEADER] === "exchange") {
+			checkBrowserWrite(req);
 			const payload = container.tokenService.verifyToken(bearer);
 			if (payload.sub !== user.id || await container.authControls.isRevoked(bearer)) throw new UnauthorizedError("A sessão antiga não pode ser transferida.");
 			setSessionCookie(container, res, bearer, Math.max(0, payload.exp - Math.floor(Date.now() / 1e3)));

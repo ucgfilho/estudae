@@ -29,10 +29,9 @@ function checkBrowserWrite(req: IncomingMessage): void {
 function sendAuthResponse(
   container: AppContainer, req: IncomingMessage, res: ServerResponse, status: number, data: AuthResponseDto,
 ): void {
-  const exchange = req.headers[BROWSER_SESSION_HEADER] === 'exchange';
-  if (req.headers[BROWSER_SESSION_HEADER] === 'start' || exchange) {
+  if (req.headers[BROWSER_SESSION_HEADER] === 'start') {
     setSessionCookie(container, res, data.token, data.expiresIn);
-    sendJson(res, status, { expiresIn: data.expiresIn, user: data.user, ...(exchange ? { exchanged: true } : {}) });
+    sendJson(res, status, { expiresIn: data.expiresIn, user: data.user });
     return;
   }
   sendJson(res, status, data);
@@ -163,7 +162,8 @@ export async function handleApiRequest(
       cookie && !req.headers.authorization ? { authorization: `Bearer ${cookie}` } : req.headers,
     );
 
-    if (bearer && req.headers[BROWSER_SESSION_HEADER] === 'exchange') {
+    if (method === 'GET' && pathname === '/api/auth/me' && bearer && req.headers[BROWSER_SESSION_HEADER] === 'exchange') {
+      checkBrowserWrite(req);
       const payload = container.tokenService.verifyToken(bearer);
       if (payload.sub !== user.id || await container.authControls.isRevoked(bearer)) {
         throw new UnauthorizedError('A sessão antiga não pode ser transferida.');

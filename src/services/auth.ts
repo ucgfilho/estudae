@@ -136,6 +136,7 @@ export function setAuthSession(session: AuthSessionDto | null): void {
       } else {
         activeContestScopeId = 'default';
         window.localStorage.removeItem(AUTH_STORAGE_KEY);
+        window.localStorage.removeItem(LEGACY_AUTH_STORAGE_KEY);
         window.localStorage.removeItem(ACTIVE_CONTEST_SCOPE_KEY);
         window.localStorage.removeItem('bnb_unsynced_changes_v1');
         if (previousEmail) {
@@ -169,7 +170,6 @@ export function buildSessionHeaders(extra: Record<string, string> = {}): Record<
   if (session) headers[BROWSER_SESSION_HEADER] = session.user.id;
   if (session?.legacyToken) {
     headers.Authorization = `Bearer ${session.legacyToken}`;
-    headers[BROWSER_SESSION_HEADER] = 'exchange';
   }
   if (activeContestScopeId && activeContestScopeId !== 'default' && !headers['X-Contest-Id']) {
     headers['X-Contest-Id'] = activeContestScopeId;
@@ -218,13 +218,16 @@ export async function verifyCurrentSession(): Promise<AuthUserDto | null> {
   const session = getAuthSession();
   if (!session) return null;
   try {
+    const headers = buildSessionHeaders();
+    if (session.legacyToken) headers[BROWSER_SESSION_HEADER] = 'exchange';
     const res = await fetch('/api/auth/me', {
       method: 'GET',
-      headers: buildSessionHeaders(),
+      headers,
     });
-    const data = await parseApiJson<{ user: AuthUserDto }>(res);
-    if (cachedSession) {
-      setAuthSession({ ...cachedSession, legacyToken: undefined, user: data.user });
+    if (getLocalSessionId() !== session.sessionId) return null;
+    const data = await parseApiJson<{ user: AuthUserDto; exchanged?: boolean }>(res);
+    if (getLocalSessionId() === session.sessionId && (!session.legacyToken || data.exchanged)) {
+      setAuthSession({ ...session, legacyToken: undefined, user: data.user });
     }
     return data.user;
   } catch {

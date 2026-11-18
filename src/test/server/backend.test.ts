@@ -301,6 +301,29 @@ describe('Backend SOLID Architecture, DTOs, JWT Bearer & LGPD Compliance', () =>
       const cookie = setCookie.split(';')[0];
       const headers = { cookie, 'X-Estudae-Session': user.id };
       expect((await fetch(`${api}/me`, { headers })).status).toBe(200);
+      const bearer = cookie.slice('estudae_session='.length);
+      const migrationHeaders = {
+        Authorization: `Bearer ${bearer}`,
+        'X-Estudae-Session': 'exchange',
+        'Content-Type': 'application/json',
+      };
+      const exchange = await fetch(`${api}/me`, { headers: migrationHeaders });
+      expect(exchange.headers.get('set-cookie')).toContain('HttpOnly');
+      expect(await exchange.json()).toMatchObject({ exchanged: true, user: { id: user.id } });
+
+      const workspace = `http://127.0.0.1:${address.port}/api/study-data`;
+      const settings = { dailyGoalMinutes: 75, geminiApiKey: 'gemini-test-value' };
+      const save = await fetch(`${workspace}/batch`, {
+        method: 'POST',
+        headers: migrationHeaders,
+        body: JSON.stringify({ operations: [{ table: 'settings', action: 'patch', changes: settings }] }),
+      });
+      expect(save.status).toBe(200);
+      expect(await save.json()).toMatchObject({ ok: true });
+      const reload = await fetch(workspace, { headers });
+      expect(reload.status).toBe(200);
+      expect(await reload.json()).toMatchObject({ data: { settings: [settings] } });
+
       expect((await fetch(`${api}/logout`, { method: 'POST', headers: { cookie } })).status).toBe(403);
 
       const logout = await fetch(`${api}/logout`, { method: 'POST', headers });
