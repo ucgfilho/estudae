@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import {
   ResponsiveContainer,
   BarChart,
@@ -45,6 +45,9 @@ import {
 import { formatMinutes, formatPercent, formatInteger, EMPTY_VALUE } from '../lib/format';
 import { addDays, type DateKey } from '../lib/dates';
 import { toCsv, downloadFile } from '../services/backup';
+import type { Settings } from '../db/types';
+
+type ReportPreferences = Pick<Settings, 'reportTimeGranularity' | 'reportPeriodDays'>;
 
 export function ReportsScreen() {
   const today = useToday();
@@ -56,13 +59,32 @@ export function ReportsScreen() {
   const reviews = useReviews();
   const settings = useSettings();
 
-  const timeGranularity: Granularity = settings?.reportTimeGranularity ?? 'week';
-  const periodDays = settings?.reportPeriodDays ?? '60';
+  const [pendingPreferences, setPendingPreferences] = useState<ReportPreferences>({});
+  const latestSave = useRef<Partial<Record<keyof ReportPreferences, symbol>>>({});
+  const timeGranularity: Granularity = pendingPreferences.reportTimeGranularity ?? settings?.reportTimeGranularity ?? 'week';
+  const periodDays = pendingPreferences.reportPeriodDays ?? settings?.reportPeriodDays ?? '60';
   const [preferenceError, setPreferenceError] = useState<string | null>(null);
 
-  function saveReportPreference(patch: Parameters<typeof updateSettings>[0]) {
+  async function saveReportPreference<K extends keyof ReportPreferences>(key: K, value: NonNullable<ReportPreferences[K]>) {
+    const request = Symbol();
+    latestSave.current[key] = request;
+    const patch = { [key]: value };
+    setPendingPreferences((pending) => ({ ...pending, ...patch }));
     setPreferenceError(null);
-    void updateSettings(patch).catch((error: unknown) => setPreferenceError(errorMessage(error)));
+    try {
+      await updateSettings(patch);
+    } catch (error) {
+      if (latestSave.current[key] === request) setPreferenceError(errorMessage(error));
+    } finally {
+      if (latestSave.current[key] === request) {
+        delete latestSave.current[key];
+        setPendingPreferences((pending) => {
+          const remaining = { ...pending };
+          delete remaining[key];
+          return remaining;
+        });
+      }
+    }
   }
 
   const discMap = useMemo(() => new Map(disciplines.map((d) => [d.id, d])), [disciplines]);
@@ -194,7 +216,9 @@ export function ReportsScreen() {
           <Segmented
             label="Agrupamento do relatório"
             value={timeGranularity}
-            onChange={(value) => saveReportPreference({ reportTimeGranularity: value })}
+            onChange={(value) => {
+              if (value !== timeGranularity) void saveReportPreference('reportTimeGranularity', value);
+            }}
             options={[
               { value: 'day', label: 'Diário' },
               { value: 'week', label: 'Semanal' },
@@ -208,7 +232,9 @@ export function ReportsScreen() {
           <Segmented
             label="Período do relatório"
             value={periodDays}
-            onChange={(value) => saveReportPreference({ reportPeriodDays: value })}
+            onChange={(value) => {
+              if (value !== periodDays) void saveReportPreference('reportPeriodDays', value);
+            }}
             options={[
               { value: '30', label: '30 dias' },
               { value: '60', label: '60 dias' },
@@ -240,12 +266,14 @@ export function ReportsScreen() {
                     name="Tempo Realizado"
                     fill="var(--primary)"
                     radius={[4, 4, 0, 0]}
+                    isAnimationActive={false}
                   />
                   <Bar
                     dataKey="plannedMinutes"
                     name="Tempo Planejado"
                     fill="var(--accent)"
                     radius={[4, 4, 0, 0]}
+                    isAnimationActive={false}
                   />
                 </BarChart>
               </ResponsiveContainer>
@@ -280,6 +308,7 @@ export function ReportsScreen() {
                     strokeWidth={2}
                     dot={{ r: 4 }}
                     activeDot={{ r: 6 }}
+                    isAnimationActive={false}
                   />
                 </LineChart>
               </ResponsiveContainer>

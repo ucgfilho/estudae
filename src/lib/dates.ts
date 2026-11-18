@@ -27,6 +27,18 @@ const timeFormatter = new Intl.DateTimeFormat('en-GB', {
   hourCycle: 'h23',
 });
 
+const shortDateFormatter = new Intl.DateTimeFormat(LOCALE, {
+  day: '2-digit',
+  month: '2-digit',
+  timeZone: 'UTC',
+});
+
+const monthYearFormatter = new Intl.DateTimeFormat(LOCALE, {
+  month: 'long',
+  year: 'numeric',
+  timeZone: 'UTC',
+});
+
 const DATE_KEY_RE = /^\d{4}-\d{2}-\d{2}$/;
 const DAY_MS = 86_400_000;
 
@@ -135,11 +147,11 @@ export function formatLongDate(key: DateKey): string {
 }
 
 export function formatShortDate(key: DateKey): string {
-  return formatDate(key, { day: '2-digit', month: '2-digit' });
+  return isValidDateKey(key) ? shortDateFormatter.format(keyToUTCDate(key)) : '—';
 }
 
 export function formatMonthYear(key: DateKey): string {
-  return formatDate(key, { month: 'long', year: 'numeric' });
+  return isValidDateKey(key) ? monthYearFormatter.format(keyToUTCDate(key)) : '—';
 }
 
 export function formatWeekdayShort(key: DateKey): string {
