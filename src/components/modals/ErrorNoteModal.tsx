@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, type FormEvent } from 'react';
+import { useState, useEffect, useMemo, useRef, type FormEvent } from 'react';
 import { Edit2, Layers, Plus, Trash2 } from 'lucide-react';
 import { Dialog } from '../ui/Dialog';
 import { Button, IconButton } from '../ui/Button';
@@ -104,8 +104,18 @@ export function ErrorNoteModal({
   const [flashcardModalOpen, setFlashcardModalOpen] = useState(false);
   const [cardToEdit, setCardToEdit] = useState<ErrorFlashcard | null>(null);
 
+  const formKey = questionLogId ? `log:${questionLogId}` : noteToEdit ? `note:${noteToEdit.id}` : 'new';
+  const initializedForm = useRef<string | null>(null);
+
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      initializedForm.current = null;
+      return;
+    }
+
+    // As consultas do banco continuam atualizando enquanto o usuário escreve.
+    if (initializedForm.current === formKey) return;
+    initializedForm.current = formKey;
 
     if (effectiveNote) {
       setDisciplineId(effectiveNote.disciplineId);
@@ -145,7 +155,7 @@ export function ErrorNoteModal({
       setScheduleReviews(true);
     }
     setError(null);
-  }, [open, effectiveNote, defaultDate, defaultDisciplineId, defaultTopicId, disciplines, mockExam?.id]);
+  }, [open, formKey, effectiveNote, defaultDate, defaultDisciplineId, defaultTopicId, disciplines, mockExam?.id]);
 
   const filteredTopics = topics.filter(
     (t) => t.disciplineId === disciplineId && t.active && !t.parentTopicId

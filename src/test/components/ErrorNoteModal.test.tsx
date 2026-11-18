@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { db, resetDatabase } from '../../db/db';
 import { ErrorNoteModal } from '../../components/modals/ErrorNoteModal';
@@ -13,6 +13,28 @@ import { todayKey } from '../../lib/dates';
 describe('ErrorNoteModal - Dropdown de simulados', () => {
   beforeEach(async () => {
     await resetDatabase(db);
+  });
+
+  it('preserva a explicação em andamento quando os dados do caderno são atualizados', async () => {
+    const { rerender } = render(<ErrorNoteModal open onClose={() => {}} />);
+
+    const explanation = screen.getByPlaceholderText(/explique com suas palavras/i);
+    await userEvent.type(explanation, 'Explicação em andamento');
+
+    await act(async () => {
+      await createMockExam({
+        title: 'Novo simulado',
+        questionCount: 1,
+        optionCount: 4,
+        answerKey: { 1: 'A' },
+      });
+    });
+
+    expect(explanation).toHaveValue('Explicação em andamento');
+
+    rerender(<ErrorNoteModal open={false} onClose={() => {}} />);
+    rerender(<ErrorNoteModal open onClose={() => {}} />);
+    expect(screen.getByPlaceholderText(/explique com suas palavras/i)).toHaveValue('');
   });
 
   it('renders dropdown with completed mock exams and allows selection', async () => {
