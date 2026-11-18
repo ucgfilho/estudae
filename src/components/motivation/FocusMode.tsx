@@ -2,9 +2,8 @@ import { useEffect, useRef } from 'react';
 import { Coffee, Minimize2, Pause, Play, Square } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { DisciplineDot } from '../ui/Display';
-import { ProgressRing } from './ProgressRing';
+import { StudyTimerDisplay } from './StudyTimerDisplay';
 import type { TimerState } from '../../db/types';
-import { formatClock, formatMinutes } from '../../lib/format';
 
 interface FocusModeProps {
   timer: TimerState;
@@ -33,6 +32,7 @@ export function FocusMode({ timer, elapsed, disciplineName, disciplineColor, top
 
   useEffect(() => {
     const el = ref.current;
+    const previousFocus = document.activeElement;
     el?.querySelector<HTMLElement>('[data-autofocus]')?.focus();
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -54,7 +54,10 @@ export function FocusMode({ timer, elapsed, disciplineName, disciplineColor, top
       }
     };
     document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      if (previousFocus instanceof HTMLElement && previousFocus.isConnected) previousFocus.focus();
+    };
   }, [onExit]);
 
   return (
@@ -63,61 +66,56 @@ export function FocusMode({ timer, elapsed, disciplineName, disciplineColor, top
       role="dialog"
       aria-modal="true"
       aria-label="Modo foco"
-      className="fixed inset-0 z-50 flex flex-col items-center justify-center max-lg:justify-start gap-6 overflow-y-auto bg-canvas p-6 pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))] text-center animate-fade-in"
+      className="fixed inset-0 z-50 flex flex-col overflow-y-auto overscroll-contain bg-surface px-5 pt-[max(1.25rem,env(safe-area-inset-top))] pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:px-10"
     >
-      <div className="space-y-1">
-        <div className="flex items-center justify-center gap-2 text-base font-semibold text-fg">
-          <DisciplineDot color={disciplineColor} />
-          {disciplineName}
-        </div>
-        {topicTitle && <p className="text-sm text-fg-muted">{topicTitle}</p>}
-        {timer.objective && <p className="mx-auto max-w-lg text-sm text-fg-muted">{timer.objective}</p>}
-      </div>
-
-      <ProgressRing
-        value={elapsed}
-        max={planned || 1}
-        label="Tempo decorrido da sessão em relação ao planejado"
-        size={Math.min(320, typeof window !== 'undefined' ? window.innerWidth - 64 : 320)}
-        stroke={14}
-      >
-        <div>
-          <div className="font-mono text-4xl min-[380px]:text-5xl font-bold tracking-tight text-fg tabular-nums sm:text-6xl">{formatClock(elapsed)}</div>
-          <div className="mt-1 text-xs text-fg-subtle">
-            {running ? 'Em foco' : 'Pausado'} · meta {formatMinutes(Math.round(planned / 60))}
-          </div>
-        </div>
-      </ProgressRing>
-
-      <p className="min-h-5 text-sm font-medium text-fg-muted" aria-live="polite">
-        {reached ? (
-          <span className="inline-flex items-center gap-1.5 text-success">
-            <Coffee className="size-4" aria-hidden /> Meta atingida. Pausa de 5 min recomendada antes do próximo bloco.
-          </span>
-        ) : remainingMin <= 5 && planned > 0 ? (
-          `Reta final: faltam ${remainingMin} min.`
-        ) : null}
-      </p>
-
-      <div className="flex flex-wrap items-center justify-center gap-3">
-        {running ? (
-          <Button data-autofocus variant="secondary" icon={<Pause className="size-4" aria-hidden />} onClick={onPause}>
-            Pausar
-          </Button>
-        ) : (
-          <Button data-autofocus variant="primary" icon={<Play className="size-4" aria-hidden />} onClick={onResume}>
-            Continuar
-          </Button>
-        )}
-        <Button variant="primary" icon={<Square className="size-4" aria-hidden />} onClick={onFinish} loading={loading}>
-          Finalizar e Salvar
-        </Button>
+      <header className="flex shrink-0 flex-wrap items-center justify-between gap-2">
+        <p className="text-sm font-medium text-fg-muted">Modo foco</p>
         <Button variant="ghost" icon={<Minimize2 className="size-4" aria-hidden />} onClick={onExit}>
           Sair do modo foco
         </Button>
+      </header>
+
+      <div className="mx-auto my-auto flex w-full max-w-2xl flex-col items-center gap-7 py-8 text-center sm:gap-9">
+        <div className="max-w-md space-y-1">
+          <p className="mb-3 text-xs font-medium text-fg-muted">{running ? 'Em foco' : 'Sessão pausada'}</p>
+          <h2 className="flex items-center justify-center gap-2 text-base font-semibold text-fg sm:text-lg">
+            <DisciplineDot color={disciplineColor} />
+            {disciplineName}
+          </h2>
+          {topicTitle && <p className="text-sm text-fg-muted">{topicTitle}</p>}
+          {timer.objective && timer.objective.trim() !== topicTitle && (
+            <p className="text-sm text-fg-muted">{timer.objective}</p>
+          )}
+        </div>
+
+        <StudyTimerDisplay elapsed={elapsed} planned={planned} />
+
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          <Button
+            data-autofocus
+            variant="primary"
+            icon={running ? <Pause className="size-4" aria-hidden /> : <Play className="size-4" aria-hidden />}
+            onClick={running ? onPause : onResume}
+          >
+            {running ? 'Pausar' : 'Continuar'}
+          </Button>
+          <Button variant="secondary" icon={<Square className="size-4" aria-hidden />} onClick={onFinish} loading={loading}>
+            Finalizar e salvar
+          </Button>
+        </div>
+
+        <p className="min-h-5 text-sm font-medium text-fg-muted" aria-live="polite">
+          {reached ? (
+            <span className="inline-flex items-center gap-1.5 text-success">
+              <Coffee className="size-4" aria-hidden /> Meta atingida. Faça uma pausa de 5 min antes do próximo bloco.
+            </span>
+          ) : remainingMin <= 5 && planned > 0 ? (
+            `Reta final: faltam ${remainingMin} min.`
+          ) : null}
+        </p>
       </div>
 
-      <p className="hidden lg:block text-[11px] text-fg-subtle">
+      <p className="hidden shrink-0 text-center text-xs text-fg-subtle lg:block">
         <kbd className="rounded border border-border bg-surface-muted px-1.5 py-0.5 font-mono text-[10px]">Espaço</kbd> pausa/retoma ·{' '}
         <kbd className="rounded border border-border bg-surface-muted px-1.5 py-0.5 font-mono text-[10px]">Esc</kbd> sai do modo foco
       </p>

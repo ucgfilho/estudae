@@ -115,7 +115,7 @@ export function Header({
               <span className="hidden sm:inline">
                 {timer.status === 'paused' ? 'Pausado' : 'Em foco'}
               </span>
-              <span className="tabular-nums font-mono">{formatClock(timerSeconds)}</span>
+              <span className="timer-numerals">{formatClock(timerSeconds)}</span>
             </button>
           )}
 

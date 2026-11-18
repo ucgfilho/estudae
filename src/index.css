@@ -1,6 +1,42 @@
 @import 'tailwindcss';
 @import './fonts.css';
 
+.timer-numerals {
+  font-family: 'SF Pro Display', 'SF Pro', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: normal;
+}
+
+.study-timer-progress {
+  appearance: none;
+  height: 0.25rem;
+  overflow: hidden;
+  border: 0;
+  border-radius: 9999px;
+  background: var(--border);
+}
+
+.study-timer-progress::-webkit-progress-bar { background: var(--border); }
+.study-timer-progress::-webkit-progress-value { background: var(--primary); border-radius: 9999px; }
+.study-timer-progress::-moz-progress-bar { background: var(--primary); border-radius: 9999px; }
+
+/* Mesmo feedback nos botões compartilhados e nos controles nativos da interface. */
+:where(button, [role='button'], input:is([type='button'], [type='submit'], [type='reset'])) {
+  transition: background-color 120ms ease-out, color 120ms ease-out, border-color 120ms ease-out,
+    box-shadow 120ms ease-out, filter 120ms ease-out, opacity 120ms ease-out;
+}
+
+@media (hover: hover) {
+  :where(button, [role='button'], input:is([type='button'], [type='submit'], [type='reset'])):not(:disabled, [aria-disabled='true']):hover {
+    filter: brightness(0.97);
+  }
+}
+
+:where(button, [role='button'], input:is([type='button'], [type='submit'], [type='reset'])):not(:disabled, [aria-disabled='true']):active {
+  filter: brightness(0.92);
+  transition-duration: 65ms;
+}
+
 @theme inline {
   --color-canvas: var(--canvas);
   --color-surface: var(--surface);

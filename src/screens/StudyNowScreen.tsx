@@ -1,5 +1,5 @@
 import { CycleRecommendation } from '../components/CycleRecommendation';
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   Play,
   Pause,
@@ -14,13 +14,14 @@ import {
   Flame,
 } from 'lucide-react';
 import { Button, IconButton } from '../components/ui/Button';
-import { Card, PageHeader, ProgressBar, Badge, Alert, DisciplineDot } from '../components/ui/Display';
+import { Card, PageHeader, ProgressBar, Alert, DisciplineDot } from '../components/ui/Display';
 import { Field, Input, Select, Textarea } from '../components/ui/Form';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { TopicModal } from '../components/modals/TopicModal';
 import { QuestionModal } from '../components/modals/QuestionModal';
 import { ErrorNoteModal } from '../components/modals/ErrorNoteModal';
 import { FocusMode } from '../components/motivation/FocusMode';
+import { StudyTimerDisplay } from '../components/motivation/StudyTimerDisplay';
 import {
   useDisciplines,
   useTopics,
@@ -41,7 +42,7 @@ import {
 import { elapsedSeconds, hasReachedGoal } from '../domain/timer';
 import { studyStreak } from '../domain/metrics';
 import { dailyProgress, nextPendingToday } from '../domain/motivation';
-import { formatClock, formatMinutes } from '../lib/format';
+import { formatMinutes } from '../lib/format';
 import type { StudySession } from '../db/types';
 import { errorMessage, cn } from '../lib/utils';
 import { todayKey } from '../lib/dates';
@@ -77,6 +78,7 @@ export function StudyNowScreen() {
   const [justFinishedSession, setJustFinishedSession] = useState<StudySession | null>(null);
   const [goalBannerDismissed, setGoalBannerDismissed] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
+  const exitFocusMode = useCallback(() => setFocusMode(false), []);
 
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -122,17 +124,14 @@ export function StudyNowScreen() {
   useEffect(() => {
     if (!activeTimer) return;
     const onKeyDown = (e: KeyboardEvent) => {
-      if (
-        e.code === 'Space' &&
-        (e.target as HTMLElement).tagName !== 'INPUT' &&
-        (e.target as HTMLElement).tagName !== 'TEXTAREA'
-      ) {
-        e.preventDefault();
-        if (activeTimer.status === 'running') {
-          void pauseTimer();
-        } else {
-          void resumeTimer();
-        }
+      if (e.code !== 'Space' || e.repeat || e.defaultPrevented) return;
+      if (e.target instanceof HTMLElement && e.target.closest('input, textarea, select, button, [role="button"], [contenteditable]:not([contenteditable="false"])')) return;
+
+      e.preventDefault();
+      if (activeTimer.status === 'running') {
+        void pauseTimer();
+      } else {
+        void resumeTimer();
       }
     };
     window.addEventListener('keydown', onKeyDown);
@@ -142,6 +141,12 @@ export function StudyNowScreen() {
   // Timer calculations
   const elapsed = activeTimer ? elapsedSeconds(activeTimer, now) : 0;
   const reached = activeTimer ? hasReachedGoal(elapsed, activeTimer.plannedSeconds) : false;
+
+  const running = activeTimer?.status === 'running';
+  const timerDiscipline = activeTimer ? discMap.get(activeTimer.disciplineId) : undefined;
+  const timerDisciplineName = timerDiscipline?.name ??
+    (activeTimer?.disciplineId === 'simulado' ? 'Simulado Geral BNB' : 'Sessão de estudo');
+  const timerDisciplineColor = timerDiscipline?.color ?? 'var(--primary)';
 
   // Daily progress (post-session summary)
   const dailyGoal = settings?.dailyGoalMinutes ?? 120;
@@ -272,121 +277,65 @@ export function StudyNowScreen() {
       {/* ACTIVE RUNNING TIMER VIEW */}
       {activeTimer ? (
         <div className="space-y-6">
-          <Card
-            title={
-              <div className="flex items-center gap-2">
-                <span
-                  className={cn(
-                    'inline-flex size-2.5 rounded-full',
-                    activeTimer.status === 'running' ? 'bg-primary' : 'bg-warning'
-                  )}
-                  aria-hidden
-                />
-                <span>
-                  {activeTimer.status === 'running' ? 'Sessão em andamento' : 'Sessão pausada'}
+          <Card bodyClassName="sm:px-8">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-fg-muted">
+                <span className="inline-flex items-center gap-2 font-semibold text-fg">
+                  <span className={cn('size-1.5 rounded-full', running ? 'bg-primary' : 'bg-warning')} aria-hidden />
+                  {running ? 'Sessão em andamento' : 'Sessão pausada'}
                 </span>
+                <span aria-hidden>·</span>
+                <span>{activeTimer.cycleStudy ? 'Sessão do ciclo de estudos' : activeTimer.sessionId ? 'Sessão planejada' : 'Sessão avulsa'}</span>
               </div>
-            }
-            actions={
-              <div className="flex items-center gap-2">
-                <Badge tone={activeTimer.status === 'running' ? 'primary' : 'warning'}>
-                  {activeTimer.cycleStudy ? 'Sessão do ciclo de estudos' : activeTimer.sessionId ? 'Sessão planejada' : 'Sessão avulsa'}
-                </Badge>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  icon={<Maximize2 className="size-4" aria-hidden />}
-                  onClick={() => setFocusMode(true)}
-                >
-                  Modo foco
-                </Button>
-              </div>
-            }
-          >
-            <div className="flex flex-col items-center justify-center py-6 text-center space-y-4">
-              {/* Disciplina e assunto em linhas separadas, sem repetir o assunto. */}
-              <div className="flex flex-col items-center gap-1">
-                {discMap.get(activeTimer.disciplineId) ? (
-                  <div className="flex items-center gap-1.5 font-semibold text-fg text-base">
-                    <DisciplineDot color={discMap.get(activeTimer.disciplineId)!.color} />
-                    {discMap.get(activeTimer.disciplineId)!.name}
-                  </div>
-                ) : activeTimer.disciplineId === 'simulado' ? (
-                  <div className="flex items-center gap-1.5 font-semibold text-fg text-base">
-                    <DisciplineDot color="#1E40AF" />
-                    Simulado Geral BNB
-                  </div>
-                ) : null}
+              <Button
+                variant="ghost"
+                size="sm"
+                icon={<Maximize2 className="size-4" aria-hidden />}
+                onClick={() => setFocusMode(true)}
+              >
+                Modo foco
+              </Button>
+            </div>
+
+            <div className="mx-auto flex max-w-2xl flex-col items-center gap-6 px-1 py-8 text-center sm:gap-7 sm:py-12">
+              <div className="max-w-md space-y-1">
+                <h2 className="flex items-center justify-center gap-2 text-base font-semibold text-fg">
+                  <DisciplineDot color={timerDisciplineColor} />
+                  {timerDisciplineName}
+                </h2>
                 {activeTopicTitle && <p className="text-sm text-fg-muted">{activeTopicTitle}</p>}
+                {activeTimer.objective && activeTimer.objective.trim() !== activeTopicTitle && (
+                  <p className="text-sm text-fg-muted">{activeTimer.objective}</p>
+                )}
               </div>
 
-              {activeTimer.objective && activeTimer.objective.trim() !== activeTopicTitle && (
-                <p className="max-w-md text-sm text-fg-muted font-medium">
-                  {activeTimer.objective}
-                </p>
+              <StudyTimerDisplay elapsed={elapsed} planned={activeTimer.plannedSeconds} />
+
+              {reached && !goalBannerDismissed && (
+                <div className="flex items-center gap-2 rounded-lg bg-success-soft px-3 py-1 text-left text-xs font-medium text-success">
+                  <Sparkles className="size-4 shrink-0" aria-hidden />
+                  <span>Meta atingida. Finalize a sessão ou faça uma pausa de 5 min.</span>
+                  <IconButton
+                    label="Fechar aviso"
+                    icon={<X className="size-3.5" />}
+                    size="sm"
+                    onClick={() => setGoalBannerDismissed(true)}
+                    className="text-success"
+                  />
+                </div>
               )}
 
-              {/* Big Digital Clock Display */}
-              <div className="py-2">
-                <div className="text-5xl min-[380px]:text-6xl sm:text-7xl font-mono font-bold tracking-tight text-fg tabular-nums">
-                  {formatClock(elapsed)}
-                </div>
-                <div className="mt-2 text-xs text-fg-subtle">
-                  Meta planejada: {formatMinutes(Math.round(activeTimer.plannedSeconds / 60))} (
-                  {formatClock(activeTimer.plannedSeconds)})
-                </div>
-              </div>
-
-              {/* Progress Bar & Goal Reached Notification */}
-              <div className="w-full max-w-md space-y-2">
-                <ProgressBar
-                  value={elapsed}
-                  max={activeTimer.plannedSeconds || 1}
-                  label="Tempo decorrido da sessão"
-                  tone={reached ? 'success' : 'primary'}
-                  showOverflow
-                />
-
-                {reached && !goalBannerDismissed && (
-                  <div className="relative rounded-lg bg-success-soft p-2.5 pr-9 text-xs font-semibold text-success flex items-center justify-center gap-1.5 animate-pop">
-                    <Sparkles className="size-4 shrink-0" aria-hidden />
-                    <span>Meta planejada atingida. Finalize agora ou faça uma pausa de 5 min antes de seguir.</span>
-                    <IconButton
-                      label="Fechar aviso"
-                      icon={<X className="size-3.5" />}
-                      size="sm"
-                      onClick={() => setGoalBannerDismissed(true)}
-                      className="absolute top-1.5 right-1.5 shrink-0 text-success opacity-75 hover:opacity-100"
-                    />
-                  </div>
-                )}
-              </div>
-
-              {/* Action Controls */}
-              <div className="flex flex-wrap items-center justify-center gap-3 pt-4">
-                {activeTimer.status === 'running' ? (
-                  <Button
-                    variant="secondary"
-                    size="md"
-                    icon={<Pause className="size-4" />}
-                    onClick={handlePause}
-                  >
-                    Pausar
-                  </Button>
-                ) : (
-                  <Button
-                    variant="primary"
-                    size="md"
-                    icon={<Play className="size-4" />}
-                    onClick={handleResume}
-                  >
-                    Continuar
-                  </Button>
-                )}
-
+              <div className="flex flex-wrap items-center justify-center gap-2">
                 <Button
                   variant="primary"
-                  size="md"
+                  icon={running ? <Pause className="size-4" /> : <Play className="size-4" />}
+                  onClick={running ? handlePause : handleResume}
+                >
+                  {running ? 'Pausar' : 'Continuar'}
+                </Button>
+
+                <Button
+                  variant="secondary"
                   icon={<Square className="size-4" />}
                   onClick={handleFinish}
                   loading={loading}
@@ -412,7 +361,7 @@ export function StudyNowScreen() {
             </div>
 
             {/* Quick study notes during session */}
-            <div className="mt-6 border-t border-border pt-4">
+            <div className="mx-auto w-full max-w-2xl border-t border-border pt-5">
               <Field label="Notas rápidas durante o estudo" hint="Suas anotações serão salvas junto com o registro da sessão.">
                 <Textarea
                   rows={3}
@@ -726,17 +675,14 @@ export function StudyNowScreen() {
         <FocusMode
           timer={activeTimer}
           elapsed={elapsed}
-          disciplineName={
-            discMap.get(activeTimer.disciplineId)?.name ??
-            (activeTimer.disciplineId === 'simulado' ? 'Simulado Geral BNB' : 'Sessão de estudo')
-          }
-          disciplineColor={discMap.get(activeTimer.disciplineId)?.color ?? '#1E40AF'}
-          topicTitle={activeTimer.topicId ? topicMap.get(activeTimer.topicId)?.title : null}
+          disciplineName={timerDisciplineName}
+          disciplineColor={timerDisciplineColor}
+          topicTitle={activeTopicTitle}
           loading={loading}
           onPause={handlePause}
           onResume={handleResume}
           onFinish={handleFinish}
-          onExit={() => setFocusMode(false)}
+          onExit={exitFocusMode}
         />
       )}
 
