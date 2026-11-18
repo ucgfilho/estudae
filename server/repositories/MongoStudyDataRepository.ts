@@ -3,6 +3,8 @@ import { ConflictError } from '../errors/AppError';
 import { DEFAULT_DISCIPLINES, DEFAULT_SETTINGS } from '../../src/db/seed';
 import {
   SETTINGS_ID,
+  summarizeContestWorkspace,
+  type ContestWorkspaceSummary,
   type DataTableName,
   type Discipline,
   type ErrorNote,
@@ -318,6 +320,20 @@ export class MongoStudyDataRepository implements IStudyDataRepository {
     return this.decryptAndDeserializeWorkspace(ctx.ownerId, doc.encryptedPayload);
   }
 
+  public async listContestWorkspaces(userId: string): Promise<ContestWorkspaceSummary[]> {
+    const { ownerId } = parseTenantScope(userId);
+    const summaries: ContestWorkspaceSummary[] = [];
+    for await (const doc of this.collection().find({ ownerId })) {
+      const { scopeId } = assertWorkspaceDocumentOwnership(doc, doc._id);
+      const workspace = this.decryptAndDeserializeWorkspace(ownerId, doc.encryptedPayload);
+      const summary = summarizeContestWorkspace(
+        scopeId, workspace.settings[0], workspace.disciplines.length, workspace.topics.length,
+      );
+      if (summary) summaries.push(summary);
+    }
+    return summaries;
+  }
+
   public async replaceWorkspace(
     userId: string,
     workspace: StudyWorkspaceDto,
@@ -393,7 +409,9 @@ export class MongoStudyDataRepository implements IStudyDataRepository {
       const workspace = this.decryptAndDeserializeWorkspace(ctx.ownerId, doc.encryptedPayload);
 
       for (const op of operations) {
-        if (op.action === 'clear') {
+        if (op.action === 'patch') {
+          workspace.settings = [{ ...(workspace.settings[0] ?? DEFAULT_SETTINGS), ...op.changes }];
+        } else if (op.action === 'clear') {
           (workspace[op.table] as unknown[]) = [];
         } else if (op.action === 'delete') {
           const idSet = new Set(op.ids);
@@ -408,7 +426,7 @@ export class MongoStudyDataRepository implements IStudyDataRepository {
           for (const item of validated) {
             if (indexMap.has(item.id)) {
               const idx = indexMap.get(item.id)!;
-              currentList[idx] = item;
+              currentList[idx] = op.table === 'settings' ? { ...currentList[idx], ...item } : item;
             } else {
               currentList.push(item);
               indexMap.set(item.id, currentList.length - 1);

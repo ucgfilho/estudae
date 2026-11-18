@@ -13,6 +13,10 @@ export class StudyDataController {
     this.studyDataService = studyDataService;
   }
 
+  public async listContestWorkspaces(user: AuthenticatedUser) {
+    return this.studyDataService.listContestWorkspaces(user.id);
+  }
+
   public async getWorkspace(user: AuthenticatedUser): Promise<{ status: number; data: { data: StudyWorkspaceDto } }> {
     const workspace = await this.studyDataService.getWorkspace(user.id);
     return { status: 200, data: { data: workspace } };

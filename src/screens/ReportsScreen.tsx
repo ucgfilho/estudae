@@ -18,6 +18,8 @@ import {
   CheckCircle,
   FileSpreadsheet,
 } from 'lucide-react';
+import { updateSettings } from '../services/settings';
+import { errorMessage } from '../lib/utils';
 import { Button } from '../components/ui/Button';
 import { Card, PageHeader, StatCard, Segmented, EmptyState, DisciplineDot, Badge } from '../components/ui/Display';
 import {
@@ -44,34 +46,6 @@ import { formatMinutes, formatPercent, formatInteger, EMPTY_VALUE } from '../lib
 import { addDays, type DateKey } from '../lib/dates';
 import { toCsv, downloadFile } from '../services/backup';
 
-const REPORTS_STORAGE_KEY = 'bnb:reports:preferences';
-
-function loadReportsPreferences(): { timeGranularity: Granularity; periodDays: '30' | '60' | '90' | 'all' } {
-  try {
-    const raw = localStorage.getItem(REPORTS_STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (parsed.timeGranularity && parsed.periodDays) {
-        return {
-          timeGranularity: parsed.timeGranularity,
-          periodDays: parsed.periodDays,
-        };
-      }
-    }
-  } catch {
-    /* armazenamento indisponível ou corrompido: usa padrões */
-  }
-  return { timeGranularity: 'week', periodDays: '60' };
-}
-
-function saveReportsPreferences(timeGranularity: Granularity, periodDays: '30' | '60' | '90' | 'all') {
-  try {
-    localStorage.setItem(REPORTS_STORAGE_KEY, JSON.stringify({ timeGranularity, periodDays }));
-  } catch {
-    /* armazenamento indisponível: silencia */
-  }
-}
-
 export function ReportsScreen() {
   const today = useToday();
 
@@ -82,9 +56,14 @@ export function ReportsScreen() {
   const reviews = useReviews();
   const settings = useSettings();
 
-  const initialPrefs = useMemo(() => loadReportsPreferences(), []);
-  const [timeGranularity, setTimeGranularity] = useState<Granularity>(initialPrefs.timeGranularity);
-  const [periodDays, setPeriodDays] = useState<'30' | '60' | '90' | 'all'>(initialPrefs.periodDays);
+  const timeGranularity: Granularity = settings?.reportTimeGranularity ?? 'week';
+  const periodDays = settings?.reportPeriodDays ?? '60';
+  const [preferenceError, setPreferenceError] = useState<string | null>(null);
+
+  function saveReportPreference(patch: Parameters<typeof updateSettings>[0]) {
+    setPreferenceError(null);
+    void updateSettings(patch).catch((error: unknown) => setPreferenceError(errorMessage(error)));
+  }
 
   const discMap = useMemo(() => new Map(disciplines.map((d) => [d.id, d])), [disciplines]);
 
@@ -207,6 +186,7 @@ export function ReportsScreen() {
         />
       </div>
 
+      {preferenceError && <p role="alert" className="text-sm text-danger">{preferenceError}</p>}
       {/* Granularity & Time Filter Bar */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3">
         <div className="flex flex-wrap items-center gap-2">
@@ -214,10 +194,7 @@ export function ReportsScreen() {
           <Segmented
             label="Agrupamento do relatório"
             value={timeGranularity}
-            onChange={(v) => {
-              setTimeGranularity(v);
-              saveReportsPreferences(v, periodDays);
-            }}
+            onChange={(value) => saveReportPreference({ reportTimeGranularity: value })}
             options={[
               { value: 'day', label: 'Diário' },
               { value: 'week', label: 'Semanal' },
@@ -231,11 +208,7 @@ export function ReportsScreen() {
           <Segmented
             label="Período do relatório"
             value={periodDays}
-            onChange={(v) => {
-              const next = v as '30' | '60' | '90' | 'all';
-              setPeriodDays(next);
-              saveReportsPreferences(timeGranularity, next);
-            }}
+            onChange={(value) => saveReportPreference({ reportPeriodDays: value })}
             options={[
               { value: '30', label: '30 dias' },
               { value: '60', label: '60 dias' },

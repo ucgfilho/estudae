@@ -8,6 +8,9 @@ import { todayKey } from '../../lib/dates';
 import { useCelebrationsEnabled } from '../../hooks/useCelebrationPrefs';
 import { Confetti } from '../motivation/Confetti';
 import { getActiveContestScopeId, getAuthSession } from '../../services/auth';
+import { db } from '../../db/db';
+import { updateSettings } from '../../services/settings';
+import { SETTINGS_ID } from '../../db/types';
 import { resolveReviewDisplayTitle } from '../../services/performance';
 import type { Discipline, ErrorFlashcard, ErrorNote, ReviewTask } from '../../db/types';
 
@@ -60,10 +63,13 @@ function firstPassFinished(state: Progress): boolean {
     state.reviewIds.every(id => state.completedReviewIds.includes(id));
 }
 
-function loadProgress(reviews: ReviewTask[]): Progress {
+function loadProgress(reviews: ReviewTask[], notes: ReadonlyMap<string, ErrorNote>): Progress {
   const initial = initialProgress(reviews);
   try {
-    const saved = JSON.parse(localStorage.getItem(storageKey()) ?? 'null');
+    const remoteDraft = db.settings.getSync(SETTINGS_ID)?.flashcardDraft;
+    const saved = JSON.parse(remoteDraft?.date === todayKey()
+      ? remoteDraft.progress
+      : localStorage.getItem(storageKey()) ?? 'null');
     if ((saved?.version === 2 || saved?.version === 3) &&
         Array.isArray(saved.completedReviewIds) &&
         Array.isArray(saved.missedFlashcards) && Array.isArray(saved.redoQueue)) {
@@ -75,6 +81,18 @@ function loadProgress(reviews: ReviewTask[]): Progress {
         reviewIds: saved.version === 3 && Array.isArray(saved.reviewIds)
           ? saved.reviewIds : [...new Set([...saved.completedReviewIds, ...initial.reviewIds])],
       };
+      if (remoteDraft?.date === todayKey()) {
+        const cards = new Map<string, ErrorFlashcard>();
+        for (const note of notes.values()) {
+          for (const card of note.flashcards ?? []) cards.set(card.id, card);
+        }
+        const restoreCards = (items: MissedFlashcard[]) => items.flatMap((item) => {
+          const card = cards.get(item.card.id);
+          return card ? [{ ...item, card }] : [];
+        });
+        restored.missedFlashcards = restoreCards(restored.missedFlashcards);
+        restored.redoQueue = restoreCards(restored.redoQueue);
+      }
       // Pending tasks after a finished round belong to a new session, including
       // a task explicitly reopened with the same ID.
       if (firstPassFinished(restored) && reviews.length > 0) return initial;
@@ -86,10 +104,11 @@ function loadProgress(reviews: ReviewTask[]): Progress {
 
 /** Review tasks and retry attempts have separate progress; retries never reschedule tasks. */
 export function FlashcardDeck({ reviews, notes, disciplines, onComplete }: Props) {
-  const [state, setState] = useState(() => loadProgress(reviews));
+  const [state, setState] = useState(() => loadProgress(reviews, notes));
+  const lastSavedState = useRef(state);
   const [animating, setAnimating] = useState(false);
   const busy = useRef(false);
-  const [enabled] = useCelebrationsEnabled();
+  const enabled = useCelebrationsEnabled();
   const { cardIndex, reviewStats, streak, totalHits,
     totalCardsAnswered, picked, missedFlashcards, redoQueue,
     redoDone, sessionCompleted } = state;
@@ -116,8 +135,23 @@ export function FlashcardDeck({ reviews, notes, disciplines, onComplete }: Props
   const correct = !!picked && picked === card?.answer;
 
   useEffect(() => {
-    try { localStorage.setItem(storageKey(), JSON.stringify(state)); }
+    if (state === lastSavedState.current) return;
+    lastSavedState.current = state;
+    const progress = JSON.stringify(state);
+    try { localStorage.setItem(storageKey(), progress); }
     catch { /* Continue reviewing when browser storage is unavailable. */ }
+    if (getAuthSession()) {
+      const cardReferences = (items: MissedFlashcard[]) => items.map((item) => ({
+        ...item, card: { id: item.card.id },
+      }));
+      const remoteProgress = JSON.stringify({
+        ...state,
+        missedFlashcards: cardReferences(state.missedFlashcards),
+        redoQueue: cardReferences(state.redoQueue),
+      });
+      void updateSettings({ flashcardDraft: { date: todayKey(), progress: remoteProgress } })
+        .catch((error: unknown) => console.error('Falha ao sincronizar o progresso dos flashcards:', error));
+    }
   }, [state]);
 
   const answer = (choice: 'certo' | 'errado') => {

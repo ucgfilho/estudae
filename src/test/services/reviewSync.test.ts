@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { db, ensureSeed } from '../../db/db';
 import { DEFAULT_SETTINGS } from '../../db/seed';
-import { DATA_TABLES, type DataTableName, type ReviewTask } from '../../db/types';
+import { DATA_TABLES, type DataTableName, type ReviewTask, type Settings } from '../../db/types';
 import {
   getWorkspaceCacheKey, hasUnsyncedChanges, retryPendingMutations,
   setActiveContestScopeId, setAuthSession, syncBatchMutationsToApi, waitForPendingSync,
@@ -22,7 +22,8 @@ let requests: { url: string; init?: RequestInit }[];
 
 function apply(operations: RemoteTableMutation[]) {
   for (const op of operations) {
-    if (op.action === 'clear') server[op.table] = [];
+    if (op.action === 'patch') server.settings = [{ ...(server.settings[0] as Settings), ...op.changes }];
+    else if (op.action === 'clear') server[op.table] = [];
     else if (op.action === 'delete') server[op.table] = (server[op.table] as { id: string }[]).filter((r) => !op.ids.includes(r.id));
     else {
       const rows = new Map((server[op.table] as { id: string }[]).map((r) => [r.id, r]));
@@ -49,7 +50,7 @@ beforeEach(async () => {
     requests.push({ url, init });
     if (offline) throw new TypeError('Offline');
     if (url.endsWith('/batch')) apply(JSON.parse(String(init?.body)).operations);
-    return new Response(JSON.stringify({ data: server }), { status: 200 });
+    return new Response(JSON.stringify({ ok: true, data: server }), { status: 200 });
   }) as typeof fetch;
   setAuthSession({ token: 'sync-test-real-token', tokenType: 'Bearer', expiresIn: 600,
     user: { id: 'sync-user', name: 'Teste', email, createdAt: '2026-01-01T00:00:00Z' } });

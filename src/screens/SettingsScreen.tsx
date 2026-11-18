@@ -15,7 +15,6 @@ import { Card, PageHeader, Alert } from '../components/ui/Display';
 import { Field, Input, Checkbox } from '../components/ui/Form';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { useSettings } from '../hooks/useData';
-import { useCelebrationsEnabled } from '../hooks/useCelebrationPrefs';
 import { updateSettings } from '../services/settings';
 import { deleteUserAccount } from '../services/auth';
 import {
@@ -35,7 +34,7 @@ import { DateInput } from '../components/ui/DateInput';
 
 export function SettingsScreen() {
   const settings = useSettings();
-  const [celebrationsEnabled, setCelebrationsEnabled] = useCelebrationsEnabled();
+  const [celebrationsEnabled, setCelebrationsEnabled] = useState(true);
 
   // Settings form states
   const [dailyGoalMinutes, setDailyGoalMinutes] = useState('120');
@@ -67,6 +66,7 @@ export function SettingsScreen() {
 
   useEffect(() => {
     if (settings) {
+      setCelebrationsEnabled(settings.celebrationsEnabled ?? true);
       setDailyGoalMinutes(String(settings.dailyGoalMinutes));
       setWeeklyGoalMinutes(String(settings.weeklyGoalMinutes));
       setDailyQuestionGoal(settings.dailyQuestionGoal ? String(settings.dailyQuestionGoal) : '');
@@ -112,6 +112,7 @@ export function SettingsScreen() {
     setLoading(true);
     try {
       await updateSettings({
+        celebrationsEnabled,
         dailyGoalMinutes: daily,
         weeklyGoalMinutes: weekly,
         accuracyGoal: accuracy,
@@ -119,7 +120,7 @@ export function SettingsScreen() {
         topicCompletionGoal: topicGoal,
         reviewIntervals: intervalsParsed.value,
         examDate: examDate.trim() || null,
-        geminiApiKey: geminiApiKey.trim(),
+        ...(geminiApiKey.trim() !== (settings?.geminiApiKey ?? '') && { geminiApiKey: geminiApiKey.trim() }),
       });
       setActionSuccess('Configurações e metas salvas.');
     } catch (err) {
@@ -342,7 +343,7 @@ export function SettingsScreen() {
             checked={celebrationsEnabled}
             onChange={(e) => setCelebrationsEnabled(e.target.checked)}
             label="Animações de celebração ao concluir metas"
-            description="Mostra confetes nas conquistas. Os avisos continuam ativos sem as animações. A mudança é aplicada na hora."
+            description="Mostra confetes nas conquistas. Os avisos continuam ativos sem as animações."
           />
         </div>
       </Card>

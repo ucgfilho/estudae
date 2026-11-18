@@ -203,6 +203,7 @@ CREATE TABLE IF NOT EXISTS user_settings (
   distribution_json TEXT NOT NULL,
   gemini_api_key TEXT NULL,
   ai_provider TEXT NOT NULL DEFAULT 'builtin' CHECK (ai_provider IN ('builtin', 'gemini')),
+  preferences_json TEXT NOT NULL DEFAULT '{}',
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 

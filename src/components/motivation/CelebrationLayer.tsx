@@ -73,7 +73,7 @@ export function CelebrationLayer() {
   const today = useToday();
   const disciplines = useDisciplines();
   const activeTimer = useActiveTimer();
-  const [enabled] = useCelebrationsEnabled();
+  const enabled = useCelebrationsEnabled();
 
   const sessions = useSessions();
   const logs = useQuestionLogs();

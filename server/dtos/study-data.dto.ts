@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { workspacePreferenceFields } from '../../src/db/settingsFields';
 import {
   DATA_TABLES,
   type DataTableName,
@@ -178,7 +179,10 @@ export const settingsDtoSchema = z.object({
   contestName: z.string().optional(),
   contestRole: z.string().optional(),
   editalFileName: z.string().nullable().optional(),
+  ...workspacePreferenceFields,
 });
+
+const settingsPatchSchema = settingsDtoSchema.omit({ id: true, theme: true }).partial().strict();
 
 const questionNumberKey = z.string().regex(/^(?:[1-9]\d?|[1-4]\d{2}|500)$/, 'Chave de questão inválida (esperado 1..500).');
 const answerKeyValueSchema = z.enum(['A', 'B', 'C', 'D', 'E', 'X']);
@@ -238,6 +242,11 @@ export interface StudyWorkspaceDto {
 export const tableNameSchema = z.enum(DATA_TABLES);
 
 export const tableMutationOperationSchema = z.discriminatedUnion('action', [
+  z.object({
+    table: z.literal('settings'),
+    action: z.literal('patch'),
+    changes: settingsPatchSchema,
+  }),
   z.object({
     table: tableNameSchema,
     action: z.literal('upsert'),

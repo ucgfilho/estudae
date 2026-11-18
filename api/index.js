@@ -139,6 +139,9 @@ var StudyDataController = class {
 	constructor(studyDataService) {
 		this.studyDataService = studyDataService;
 	}
+	async listContestWorkspaces(user) {
+		return this.studyDataService.listContestWorkspaces(user.id);
+	}
 	async getWorkspace(user) {
 		return {
 			status: 200,
@@ -36219,23 +36222,6 @@ function superRefine(fn, params) {
 	return /* @__PURE__ */ _superRefine(fn, params);
 }
 //#endregion
-//#region src/db/types.ts
-var ACTIVE_TIMER_ID = "active";
-var SETTINGS_ID = "settings";
-/** Tabelas incluídas em backup, sincronização e restauração. */
-var DATA_TABLES = [
-	"disciplines",
-	"topics",
-	"sessions",
-	"timer",
-	"questionLogs",
-	"errorNotes",
-	"reviews",
-	"weeklyPlans",
-	"settings",
-	"mockExams"
-];
-//#endregion
 //#region src/lib/dates.ts
 /**
 * Utilitários de data.
@@ -36270,6 +36256,62 @@ function isValidTime(value) {
 function keyToUTCDate(key) {
 	return /* @__PURE__ */ new Date(`${key}T00:00:00Z`);
 }
+//#endregion
+//#region src/db/settingsFields.ts
+var workspacePreferenceFields = {
+	celebrationsEnabled: boolean().optional(),
+	reportTimeGranularity: _enum([
+		"day",
+		"week",
+		"month"
+	]).optional(),
+	reportPeriodDays: _enum([
+		"30",
+		"60",
+		"90",
+		"all"
+	]).optional(),
+	flashcardDraft: object({
+		date: string().refine(isValidDateKey),
+		progress: string().max(5e5)
+	}).optional(),
+	contestExamBoard: string().optional(),
+	contestCreatedAt: string().optional(),
+	contestHidden: boolean().optional()
+};
+//#endregion
+//#region src/db/types.ts
+var ACTIVE_TIMER_ID = "active";
+var SETTINGS_ID = "settings";
+function summarizeContestWorkspace(id, settings, disciplineCount, topicCount) {
+	if (settings?.contestHidden) return null;
+	return {
+		id,
+		disciplineCount,
+		topicCount,
+		settings: {
+			contestId: settings?.contestId,
+			contestName: settings?.contestName,
+			contestRole: settings?.contestRole,
+			editalFileName: settings?.editalFileName,
+			contestExamBoard: settings?.contestExamBoard,
+			contestCreatedAt: settings?.contestCreatedAt
+		}
+	};
+}
+/** Tabelas incluídas em backup, sincronização e restauração. */
+var DATA_TABLES = [
+	"disciplines",
+	"topics",
+	"sessions",
+	"timer",
+	"questionLogs",
+	"errorNotes",
+	"reviews",
+	"weeklyPlans",
+	"settings",
+	"mockExams"
+];
 //#endregion
 //#region server/errors/AppError.ts
 var AppError = class extends Error {
@@ -36497,8 +36539,13 @@ var settingsDtoSchema = object({
 	contestId: string().optional(),
 	contestName: string().optional(),
 	contestRole: string().optional(),
-	editalFileName: string().nullable().optional()
+	editalFileName: string().nullable().optional(),
+	...workspacePreferenceFields
 });
+var settingsPatchSchema = settingsDtoSchema.omit({
+	id: true,
+	theme: true
+}).partial().strict();
 var questionNumberKey = string().regex(/^(?:[1-9]\d?|[1-4]\d{2}|500)$/, "Chave de questão inválida (esperado 1..500).");
 var answerKeyValueSchema = _enum([
 	"A",
@@ -36549,6 +36596,11 @@ var studyWorkspaceDtoSchema = object({
 });
 var tableNameSchema = _enum(DATA_TABLES);
 var batchTransactionRequestSchema = object({ operations: array(discriminatedUnion("action", [
+	object({
+		table: literal("settings"),
+		action: literal("patch"),
+		changes: settingsPatchSchema
+	}),
 	object({
 		table: tableNameSchema,
 		action: literal("upsert"),
@@ -36891,6 +36943,7 @@ CREATE TABLE IF NOT EXISTS user_settings (
   contest_name TEXT NULL,
   contest_role TEXT NULL,
   edital_file_name TEXT NULL,
+  preferences_json TEXT NOT NULL DEFAULT '{}',
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
@@ -36933,6 +36986,7 @@ var SqliteDatabaseClient = class {
 			this.db.exec("PRAGMA synchronous = NORMAL;");
 		}
 		this.db.exec(RELATIONAL_SCHEMA_SQL);
+		if (!this.db.prepare("PRAGMA table_info(user_settings)").all().some((column) => column.name === "preferences_json")) this.db.exec("ALTER TABLE user_settings ADD COLUMN preferences_json TEXT NOT NULL DEFAULT '{}';");
 		try {
 			this.db.exec("ALTER TABLE timer_states ADD COLUMN cycle_study INTEGER NULL;");
 		} catch {}
@@ -37789,6 +37843,17 @@ var MongoStudyDataRepository = class {
 		const ctx = assertWorkspaceDocumentOwnership(doc, userId);
 		return this.decryptAndDeserializeWorkspace(ctx.ownerId, doc.encryptedPayload);
 	}
+	async listContestWorkspaces(userId) {
+		const { ownerId } = parseTenantScope(userId);
+		const summaries = [];
+		for await (const doc of this.collection().find({ ownerId })) {
+			const { scopeId } = assertWorkspaceDocumentOwnership(doc, doc._id);
+			const workspace = this.decryptAndDeserializeWorkspace(ownerId, doc.encryptedPayload);
+			const summary = summarizeContestWorkspace(scopeId, workspace.settings[0], workspace.disciplines.length, workspace.topics.length);
+			if (summary) summaries.push(summary);
+		}
+		return summaries;
+	}
 	async replaceWorkspace(userId, workspace) {
 		const ctx = parseTenantScope(userId);
 		const rlsFilter = buildWorkspaceRlsFilter(userId);
@@ -37845,7 +37910,11 @@ var MongoStudyDataRepository = class {
 			if (!doc) throw new ConflictError("Workspace indisponível. Tente novamente.");
 			const ctx = assertWorkspaceDocumentOwnership(doc, userId);
 			const workspace = this.decryptAndDeserializeWorkspace(ctx.ownerId, doc.encryptedPayload);
-			for (const op of operations) if (op.action === "clear") workspace[op.table] = [];
+			for (const op of operations) if (op.action === "patch") workspace.settings = [{
+				...workspace.settings[0] ?? DEFAULT_SETTINGS,
+				...op.changes
+			}];
+			else if (op.action === "clear") workspace[op.table] = [];
 			else if (op.action === "delete") {
 				const idSet = new Set(op.ids);
 				workspace[op.table] = workspace[op.table].filter((item) => !idSet.has(item.id));
@@ -37855,7 +37924,10 @@ var MongoStudyDataRepository = class {
 				const indexMap = new Map(currentList.map((item, idx) => [item.id, idx]));
 				for (const item of validated) if (indexMap.has(item.id)) {
 					const idx = indexMap.get(item.id);
-					currentList[idx] = item;
+					currentList[idx] = op.table === "settings" ? {
+						...currentList[idx],
+						...item
+					} : item;
 				} else {
 					currentList.push(item);
 					indexMap.set(item.id, currentList.length - 1);
@@ -38086,8 +38158,23 @@ var SqlStudyDataRepository = class {
 			mockExams: this.getMockExams(userId)
 		};
 	}
+	listContestWorkspaces(userId) {
+		const prefix = `${userId}::contest::`;
+		return this.db.all(`SELECT s.user_id,
+          (SELECT COUNT(*) FROM disciplines d WHERE d.user_id = s.user_id) AS discipline_count,
+          (SELECT COUNT(*) FROM topics t WHERE t.user_id = s.user_id) AS topic_count
+       FROM user_settings s WHERE s.user_id = ? OR substr(s.user_id, 1, ?) = ?`, [
+			userId,
+			prefix.length,
+			prefix
+		]).flatMap((row) => {
+			const summary = summarizeContestWorkspace(row.user_id === userId ? "default" : row.user_id.slice(prefix.length), this.getSettingsList(row.user_id)[0], row.discipline_count, row.topic_count);
+			return summary ? [summary] : [];
+		});
+	}
 	replaceWorkspace(userId, workspace) {
 		this.db.transaction(() => {
+			this.ensureUserSeed(userId);
 			for (const table of DATA_TABLES) this.clearTableInternal(userId, table);
 			this.upsertDisciplines(userId, workspace.disciplines);
 			this.upsertTopics(userId, workspace.topics);
@@ -38118,7 +38205,12 @@ var SqlStudyDataRepository = class {
 	}
 	applyBatch(userId, operations) {
 		this.db.transaction(() => {
-			for (const op of operations) if (op.action === "clear") this.clearTableInternal(userId, op.table);
+			this.ensureUserSeed(userId);
+			for (const op of operations) if (op.action === "patch") this.upsertSettings(userId, [{
+				...this.getSettingsList(userId)[0] ?? DEFAULT_SETTINGS,
+				...op.changes
+			}]);
+			else if (op.action === "clear") this.clearTableInternal(userId, op.table);
 			else if (op.action === "delete") this.deleteFromTableInternal(userId, op.table, op.ids);
 			else if (op.action === "upsert") {
 				const validated = validateTableRecords(op.table, op.records);
@@ -38170,7 +38262,10 @@ var SqlStudyDataRepository = class {
 				this.upsertWeeklyPlans(userId, records);
 				break;
 			case "settings":
-				this.upsertSettings(userId, records);
+				this.upsertSettings(userId, records.map((item) => ({
+					...this.getSettingsList(userId)[0],
+					...item
+				})));
 				break;
 			case "mockExams": this.upsertMockExams(userId, records);
 		}
@@ -38479,8 +38574,8 @@ var SqlStudyDataRepository = class {
            daily_question_goal, accuracy_goal, topic_completion_goal,
            review_intervals_json, theme, exam_date, schedule_start_date,
            schedule_weeks, distribution_json, gemini_api_key, ai_provider,
-           contest_id, contest_name, contest_role, edital_file_name
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           contest_id, contest_name, contest_role, edital_file_name, preferences_json
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(user_id) DO UPDATE SET
            id = excluded.id,
            daily_goal_minutes = excluded.daily_goal_minutes,
@@ -38499,7 +38594,8 @@ var SqlStudyDataRepository = class {
            contest_id = excluded.contest_id,
            contest_name = excluded.contest_name,
            contest_role = excluded.contest_role,
-           edital_file_name = excluded.edital_file_name`, [
+           edital_file_name = excluded.edital_file_name,
+           preferences_json = excluded.preferences_json`, [
 			userId,
 			SETTINGS_ID,
 			s.dailyGoalMinutes,
@@ -38518,7 +38614,8 @@ var SqlStudyDataRepository = class {
 			s.contestId ?? null,
 			s.contestName ?? null,
 			s.contestRole ?? null,
-			s.editalFileName ?? null
+			s.editalFileName ?? null,
+			JSON.stringify(Object.fromEntries(Object.keys(workspacePreferenceFields).map((field) => [field, s[field]])))
 		]);
 	}
 	upsertMockExams(userId, items) {
@@ -38745,13 +38842,14 @@ var SqlStudyDataRepository = class {
               accuracy_goal, topic_completion_goal, review_intervals_json,
               theme, exam_date, schedule_start_date, schedule_weeks,
               distribution_json, gemini_api_key, ai_provider,
-              contest_id, contest_name, contest_role, edital_file_name
+              contest_id, contest_name, contest_role, edital_file_name, preferences_json
        FROM user_settings
        WHERE user_id = ?`, [userId]);
 		if (!row) return [];
 		const parsedDist = JSON.parse(row.distribution_json);
 		const hasCustomContest = Boolean(row.contest_id && row.contest_id !== "bnb-ti");
 		const settingsObj = {
+			...JSON.parse(row.preferences_json || "{}"),
 			id: SETTINGS_ID,
 			dailyGoalMinutes: row.daily_goal_minutes,
 			weeklyGoalMinutes: row.weekly_goal_minutes,
@@ -39265,6 +39363,9 @@ var StudyDataService = class {
 	async getWorkspace(userId) {
 		return this.repository.getWorkspace(userId);
 	}
+	async listContestWorkspaces(userId) {
+		return this.repository.listContestWorkspaces(userId);
+	}
 	async executeBatch(userId, rawBody) {
 		const dto = parseBatchRequestDto(rawBody);
 		await this.repository.applyBatch(userId, dto.operations);
@@ -39347,6 +39448,10 @@ function createAppContainer(overrides = {}) {
 			}
 		};
 		studyDataRepository = {
+			async listContestWorkspaces(userId) {
+				const { mongoStudyRepo } = await mongoInitPromise;
+				return mongoStudyRepo.listContestWorkspaces(userId);
+			},
 			async ensureUserSeed(userId) {
 				const { mongoStudyRepo } = await mongoInitPromise;
 				return mongoStudyRepo.ensureUserSeed(userId);
@@ -39542,6 +39647,10 @@ async function handleApiRequest(container, req, res) {
 		if (method === "DELETE" && pathname === "/api/auth/me") {
 			const result = await container.authController.deleteAccount(user);
 			sendJson(res, result.status, result.data);
+			return true;
+		}
+		if (method === "GET" && pathname === "/api/study-data/contests") {
+			sendJson(res, 200, { contests: await container.studyDataController.listContestWorkspaces(user) });
 			return true;
 		}
 		const rawContestHeader = req.headers["x-contest-id"];

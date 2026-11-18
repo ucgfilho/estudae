@@ -154,6 +154,12 @@ export async function handleApiRequest(
       return true;
     }
 
+    if (method === 'GET' && pathname === '/api/study-data/contests') {
+      const contests = await container.studyDataController.listContestWorkspaces(user);
+      sendJson(res, 200, { contests });
+      return true;
+    }
+
     // Suporte a múltiplos concursos por usuário via cabeçalho X-Contest-Id (validado contra bypass de RLS)
     const rawContestHeader = req.headers['x-contest-id'];
     const contestIdHeader = (Array.isArray(rawContestHeader) ? rawContestHeader[0] : rawContestHeader)?.trim();

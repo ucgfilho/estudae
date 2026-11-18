@@ -1,14 +1,16 @@
 import { Suspense, lazy, useEffect, useState } from 'react';
 import { AuthScreen } from './screens/AuthScreen';
 import { ContestSelectorScreen } from './screens/ContestSelectorScreen';
-import { ensureSeed } from './db/db';
+import { db, ensureSeed } from './db/db';
 import {
   getAuthSession,
+  getActiveContestScopeId,
+  setActiveContestScopeId,
   subscribeAuth,
   TEST_BYPASS_TOKEN,
   type AuthSessionDto,
 } from './services/auth';
-import { syncActiveContestMetadataFromDb } from './services/contests';
+import { getUserContests, refreshUserContests, syncActiveContestMetadataFromDb } from './services/contests';
 import { LoadingState } from './components/ui/Display';
 import { ToastProvider } from './components/ui/Toast';
 
@@ -42,15 +44,32 @@ export function App() {
       return;
     }
     setInitialized(false);
-    ensureSeed()
+    let cancelled = false;
+    const load = async () => {
+      try {
+        await refreshUserContests();
+      } catch (err) {
+        console.error('Falha ao carregar concursos da conta:', err);
+      }
+      if (cancelled) return;
+      const contests = getUserContests();
+      if (!contests.some((contest) => contest.id === getActiveContestScopeId())) {
+        db.clearMemory();
+        setActiveContestScopeId(contests[0]?.id ?? 'default');
+      }
+      await ensureSeed();
+    };
+    void load()
       .then(() => {
+        if (cancelled) return;
         syncActiveContestMetadataFromDb();
         setInitialized(true);
       })
       .catch((err) => {
         console.error('Falha ao inicializar os dados do usuário:', err);
-        setInitialized(true);
+        if (!cancelled) setInitialized(true);
       });
+    return () => { cancelled = true; };
   }, [activeToken]);
 
   useEffect(() => {
@@ -58,6 +77,9 @@ export function App() {
     const refresh = () => {
       if (document.visibilityState === 'visible') {
         void ensureSeed().catch((err) => console.error('Falha ao atualizar dados:', err));
+        if (showContestSelector) {
+          void refreshUserContests().catch((err) => console.error('Falha ao atualizar concursos:', err));
+        }
       }
     };
     window.addEventListener('online', refresh);
@@ -68,7 +90,7 @@ export function App() {
       window.removeEventListener('focus', refresh);
       document.removeEventListener('visibilitychange', refresh);
     };
-  }, [activeToken]);
+  }, [activeToken, showContestSelector]);
 
   if (!session) {
     return (

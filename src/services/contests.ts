@@ -9,7 +9,11 @@ import {
 } from '../domain/contests';
 import { createId } from '../lib/utils';
 import {
+  fetchContestWorkspaces,
   getActiveContestScopeId,
+  getAuthToken,
+  syncBatchMutationsToApi,
+  TEST_BYPASS_TOKEN,
   getAuthSession,
   replaceUserWorkspaceInApi,
   setActiveContestScopeId,
@@ -129,6 +133,37 @@ export function saveUserContests(contests: UserContestProfile[]): void {
     // Ignore storage errors
   }
   notifyContestListeners();
+}
+
+export async function refreshUserContests(): Promise<void> {
+  const token = getAuthToken();
+  const rows = await fetchContestWorkspaces();
+  if (!rows?.length || token !== getAuthToken()) return;
+
+  const cached = new Map(getUserContests().map((contest) => [contest.id, contest]));
+  const contests = rows.map(({ id, settings, disciplineCount, topicCount }) => {
+    const templateId = settings.contestId || 'bnb-ti';
+    const template = getContestCatalogItem(templateId);
+    const local = cached.get(id);
+    const name = settings.contestName || template?.name || 'Concurso Público';
+    const createdAt = settings.contestCreatedAt || local?.createdAt || '';
+    const examBoard = settings.contestExamBoard || local?.examBoard || template?.banca || '';
+    if (!settings.contestExamBoard && local?.examBoard && local.templateId === templateId && local.examBoard !== template?.banca) {
+      void syncBatchMutationsToApi([
+        { table: 'settings', action: 'patch', changes: { contestExamBoard: local.examBoard } },
+      ], id);
+    }
+    return {
+      id, templateId, name, examBoard, createdAt, disciplineCount, topicCount,
+      shortName: computeShortName(name, template?.sigla),
+      role: settings.contestRole || template?.role || 'Cargo Geral',
+      category: template?.category || 'Personalizado',
+      accentColor: template?.color || '#1e40af',
+      editalFileName: settings.editalFileName ?? null,
+      lastAccessedAt: local?.lastAccessedAt || createdAt,
+    };
+  });
+  saveUserContests(contests.sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id)));
 }
 
 function buildDefaultContestProfileFromMemory(): UserContestProfile {
@@ -268,8 +303,7 @@ export async function createAndActivateContest(
     ? 'default'
     : `contest_${createId().replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 16)}`;
 
-  setActiveContestScopeId(contestScopeId);
-
+  const createdAt = new Date().toISOString();
   const newSettings: Settings = {
     ...DEFAULT_SETTINGS,
     id: SETTINGS_ID,
@@ -280,6 +314,8 @@ export async function createAndActivateContest(
     contestId: input.templateId,
     contestName,
     contestRole,
+    contestExamBoard: examBoard,
+    contestCreatedAt: createdAt,
     editalFileName: input.editalFileName ?? null,
   };
 
@@ -296,10 +332,13 @@ export async function createAndActivateContest(
     mockExams: [],
   };
 
+  const token = getAuthToken();
+  if (token && token !== TEST_BYPASS_TOKEN && !await replaceUserWorkspaceInApi(workspacePayload, contestScopeId)) {
+    throw new Error('O servidor não confirmou a criação do concurso. Tente novamente.');
+  }
+  if (token !== getAuthToken()) throw new Error('A sessão mudou durante a criação do concurso.');
+  setActiveContestScopeId(contestScopeId);
   db.replaceAllFromBackup(workspacePayload);
-  db.persistLocalWorkspaceCache();
-  await replaceUserWorkspaceInApi(db.exportWorkspaceSnapshot());
-  await waitForPendingSync();
 
   const newProfile: UserContestProfile = {
     id: contestScopeId,
@@ -313,8 +352,8 @@ export async function createAndActivateContest(
     editalFileName: input.editalFileName ?? null,
     disciplineCount: disciplines.length,
     topicCount: topics.length,
-    createdAt: new Date().toISOString(),
-    lastAccessedAt: new Date().toISOString(),
+    createdAt,
+    lastAccessedAt: createdAt,
   };
 
   const updatedList = options.isInitialRegistration
@@ -335,6 +374,12 @@ export async function deleteContestProfile(contestId: string): Promise<void> {
     throw new Error('Sua conta precisa manter pelo menos um concurso ativo.');
   }
   const filtered = list.filter((c) => c.id !== contestId);
+  if (filtered.length === list.length) return;
+  if (!await syncBatchMutationsToApi([
+    { table: 'settings', action: 'patch', changes: { contestHidden: true } },
+  ], contestId)) {
+    throw new Error('O servidor não confirmou a remoção do concurso. Tente novamente.');
+  }
   saveUserContests(filtered);
 
   const session = getAuthSession();

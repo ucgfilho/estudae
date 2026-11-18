@@ -32,6 +32,10 @@ export class StudyDataService implements IStudyDataService {
     return this.repository.getWorkspace(userId);
   }
 
+  public async listContestWorkspaces(userId: string) {
+    return this.repository.listContestWorkspaces(userId);
+  }
+
   public async executeBatch(userId: string, rawBody: unknown): Promise<StudyWorkspaceDto> {
     const dto = parseBatchRequestDto(rawBody);
     await this.repository.applyBatch(userId, dto.operations);

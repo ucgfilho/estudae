@@ -3,6 +3,7 @@
  * estratégia de migração por `schemaVersion`.
  */
 import { z } from 'zod';
+import { workspacePreferenceFields } from '../db/settingsFields';
 import {
   DATA_TABLES,
   db,
@@ -11,7 +12,7 @@ import {
   type DataTableName,
 } from '../db/db';
 import { isValidDateKey, isValidTime } from '../lib/dates';
-import { replaceUserWorkspaceInApi, waitForPendingSync } from './auth';
+import { getAuthToken, replaceUserWorkspaceInApi, TEST_BYPASS_TOKEN, waitForPendingSync } from './auth';
 
 export type { DataTableName };
 
@@ -118,6 +119,15 @@ const errorNoteSchema = z.object({
   errorDate: dateKey,
   status: z.enum(['revisar', 'revisado', 'dominado']),
   nextReviewDate: nullableDateKey,
+  mockExamId: z.string().max(128).nullable().optional(),
+  mockExamTitle: z.string().max(500).nullable().optional(),
+  flashcards: z.array(z.object({
+    id: z.string().min(1),
+    statement: z.string().max(20_000),
+    answer: z.enum(['certo', 'errado']),
+    explanation: z.string().max(20_000),
+    createdAt: z.string(),
+  })).max(100).optional(),
   createdAt: iso,
   updatedAt: iso,
 });
@@ -132,6 +142,7 @@ const reviewSchema = z.object({
   intervalDays: nonNegInt,
   status: z.enum(['pendente', 'concluida']),
   completedAt: z.string().nullable(),
+  flashcardStats: z.object({ hits: nonNegInt, misses: nonNegInt }).nullable().optional(),
   createdAt: iso,
 });
 
@@ -147,6 +158,7 @@ const weeklyPlanSchema = z.object({
 });
 
 const settingsSchema = z.object({
+  ...workspacePreferenceFields,
   id: z.literal('settings'),
   dailyGoalMinutes: z.number().int().min(0),
   weeklyGoalMinutes: z.number().int().min(0),
@@ -162,6 +174,10 @@ const settingsSchema = z.object({
   distribution: z.record(z.string(), nonNegInt),
   geminiApiKey: z.string().optional(),
   aiProvider: z.enum(['builtin', 'gemini']).optional(),
+  contestId: z.string().optional(),
+  contestName: z.string().optional(),
+  contestRole: z.string().optional(),
+  editalFileName: z.string().nullable().optional(),
 });
 
 const questionNumberKey = z.string().regex(/^(?:[1-9]\d?|[1-4]\d{2}|500)$/);
@@ -291,10 +307,13 @@ export async function restoreBackup(backup: BackupFile): Promise<void> {
     })),
   };
 
+  const token = getAuthToken();
+  if (token && token !== TEST_BYPASS_TOKEN && !await replaceUserWorkspaceInApi(restoredData)) {
+    throw new Error('O servidor não confirmou a restauração do backup. Tente novamente.');
+  }
   db.replaceAllFromBackup(restoredData);
   await ensureLocalDefaults(db);
   db.persistLocalWorkspaceCache();
-  await replaceUserWorkspaceInApi(db.exportWorkspaceSnapshot());
   await waitForPendingSync();
 }
 

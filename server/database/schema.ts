@@ -205,6 +205,7 @@ CREATE TABLE IF NOT EXISTS user_settings (
   contest_name TEXT NULL,
   contest_role TEXT NULL,
   edital_file_name TEXT NULL,
+  preferences_json TEXT NOT NULL DEFAULT '{}',
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 

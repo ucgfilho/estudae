@@ -24,6 +24,9 @@ export class SqliteDatabaseClient implements IDatabaseClient {
       this.db.exec('PRAGMA synchronous = NORMAL;');
     }
     this.db.exec(RELATIONAL_SCHEMA_SQL);
+    if (!this.db.prepare('PRAGMA table_info(user_settings)').all().some((column) => column.name === 'preferences_json')) {
+      this.db.exec("ALTER TABLE user_settings ADD COLUMN preferences_json TEXT NOT NULL DEFAULT '{}';");
+    }
     try {
       this.db.exec('ALTER TABLE timer_states ADD COLUMN cycle_study INTEGER NULL;');
     } catch { /* Coluna já presente em bancos novos ou migrados. */ }

@@ -3,6 +3,7 @@ import { SETTINGS_ID, type Settings } from '../db/types';
 import { DEFAULT_SETTINGS } from '../db/seed';
 import { isValidDateKey } from '../lib/dates';
 import { ValidationError } from './sessions';
+import { getActiveContestScopeId, getAuthToken, syncBatchMutationsToApi } from './auth';
 
 export async function getSettings(): Promise<Settings> {
   const settings = await db.settings.get(SETTINGS_ID);
@@ -24,9 +25,18 @@ export function validateSettingsPatch(patch: Partial<Settings>): string | null {
   return null;
 }
 
-export async function updateSettings(patch: Partial<Omit<Settings, 'id'>>): Promise<void> {
+export async function updateSettings({ theme: _theme, ...patch }: Partial<Omit<Settings, 'id'>>): Promise<void> {
   const error = validateSettingsPatch(patch);
   if (error) throw new ValidationError(error);
-  const current = await getSettings();
-  await db.settings.put({ ...current, ...patch, theme: 'light', id: SETTINGS_ID });
+  const token = getAuthToken();
+  const scope = getActiveContestScopeId();
+  const current = db.settings.getSync(SETTINGS_ID) ?? await getSettings();
+  if (token !== getAuthToken() || scope !== getActiveContestScopeId()) {
+    throw new Error('O concurso ou a sessão mudou antes do salvamento.');
+  }
+  const result = syncBatchMutationsToApi([{ table: 'settings', action: 'patch', changes: patch }], scope);
+  db.applyLocalSettings({ ...current, ...patch, theme: 'light', id: SETTINGS_ID });
+  if (!await result) {
+    throw new Error('O servidor não confirmou o salvamento. Confira sua conexão e salve novamente.');
+  }
 }

@@ -1,8 +1,11 @@
 import { DEFAULT_DISCIPLINES, DEFAULT_SETTINGS } from '../../src/db/seed';
+import { workspacePreferenceFields } from '../../src/db/settingsFields';
 import {
   ACTIVE_TIMER_ID,
   DATA_TABLES,
   SETTINGS_ID,
+  summarizeContestWorkspace,
+  type ContestWorkspaceSummary,
   type DataTableName,
   type Discipline,
   type ErrorNote,
@@ -89,8 +92,27 @@ export class SqlStudyDataRepository implements IStudyDataRepository {
     };
   }
 
+  public listContestWorkspaces(userId: string): ContestWorkspaceSummary[] {
+    const prefix = `${userId}::contest::`;
+    const rows = this.db.all<{ user_id: string; discipline_count: number; topic_count: number }>(
+      `SELECT s.user_id,
+          (SELECT COUNT(*) FROM disciplines d WHERE d.user_id = s.user_id) AS discipline_count,
+          (SELECT COUNT(*) FROM topics t WHERE t.user_id = s.user_id) AS topic_count
+       FROM user_settings s WHERE s.user_id = ? OR substr(s.user_id, 1, ?) = ?`,
+      [userId, prefix.length, prefix],
+    );
+    return rows.flatMap((row) => {
+      const id = row.user_id === userId ? 'default' : row.user_id.slice(prefix.length);
+      const summary = summarizeContestWorkspace(
+        id, this.getSettingsList(row.user_id)[0], row.discipline_count, row.topic_count,
+      );
+      return summary ? [summary] : [];
+    });
+  }
+
   public replaceWorkspace(userId: string, workspace: StudyWorkspaceDto): StudyWorkspaceDto {
     this.db.transaction(() => {
+      this.ensureUserSeed(userId);
       for (const table of DATA_TABLES) {
         this.clearTableInternal(userId, table);
       }
@@ -130,8 +152,11 @@ export class SqlStudyDataRepository implements IStudyDataRepository {
 
   public applyBatch(userId: string, operations: readonly TableMutationOperationDto[]): void {
     this.db.transaction(() => {
+      this.ensureUserSeed(userId);
       for (const op of operations) {
-        if (op.action === 'clear') {
+        if (op.action === 'patch') {
+          this.upsertSettings(userId, [{ ...(this.getSettingsList(userId)[0] ?? DEFAULT_SETTINGS), ...op.changes }]);
+        } else if (op.action === 'clear') {
           this.clearTableInternal(userId, op.table);
         } else if (op.action === 'delete') {
           this.deleteFromTableInternal(userId, op.table, op.ids);
@@ -192,7 +217,10 @@ export class SqlStudyDataRepository implements IStudyDataRepository {
         this.upsertWeeklyPlans(userId, records as WeeklyPlan[]);
         break;
       case 'settings':
-        this.upsertSettings(userId, records as Settings[]);
+        this.upsertSettings(userId, (records as Settings[]).map((item) => ({
+          ...this.getSettingsList(userId)[0],
+          ...item,
+        })));
         break;
       case 'mockExams':
         this.upsertMockExams(userId, records as MockExam[]);
@@ -557,8 +585,8 @@ export class SqlStudyDataRepository implements IStudyDataRepository {
            daily_question_goal, accuracy_goal, topic_completion_goal,
            review_intervals_json, theme, exam_date, schedule_start_date,
            schedule_weeks, distribution_json, gemini_api_key, ai_provider,
-           contest_id, contest_name, contest_role, edital_file_name
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           contest_id, contest_name, contest_role, edital_file_name, preferences_json
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(user_id) DO UPDATE SET
            id = excluded.id,
            daily_goal_minutes = excluded.daily_goal_minutes,
@@ -577,7 +605,8 @@ export class SqlStudyDataRepository implements IStudyDataRepository {
            contest_id = excluded.contest_id,
            contest_name = excluded.contest_name,
            contest_role = excluded.contest_role,
-           edital_file_name = excluded.edital_file_name`,
+           edital_file_name = excluded.edital_file_name,
+           preferences_json = excluded.preferences_json`,
         [
           userId,
           SETTINGS_ID,
@@ -598,6 +627,8 @@ export class SqlStudyDataRepository implements IStudyDataRepository {
           s.contestName ?? null,
           s.contestRole ?? null,
           s.editalFileName ?? null,
+          JSON.stringify(Object.fromEntries(Object.keys(workspacePreferenceFields)
+            .map((field) => [field, s[field as keyof Settings]]))),
         ],
       );
     }
@@ -1002,12 +1033,13 @@ export class SqlStudyDataRepository implements IStudyDataRepository {
       contest_name: string | null;
       contest_role: string | null;
       edital_file_name: string | null;
+      preferences_json: string;
     }>(
       `SELECT daily_goal_minutes, weekly_goal_minutes, daily_question_goal,
               accuracy_goal, topic_completion_goal, review_intervals_json,
               theme, exam_date, schedule_start_date, schedule_weeks,
               distribution_json, gemini_api_key, ai_provider,
-              contest_id, contest_name, contest_role, edital_file_name
+              contest_id, contest_name, contest_role, edital_file_name, preferences_json
        FROM user_settings
        WHERE user_id = ?`,
       [userId],
@@ -1016,6 +1048,7 @@ export class SqlStudyDataRepository implements IStudyDataRepository {
     const parsedDist = JSON.parse(row.distribution_json) as Record<string, number>;
     const hasCustomContest = Boolean(row.contest_id && row.contest_id !== 'bnb-ti');
     const settingsObj: Settings = {
+      ...JSON.parse(row.preferences_json || '{}'),
       id: SETTINGS_ID,
       dailyGoalMinutes: row.daily_goal_minutes,
       weeklyGoalMinutes: row.weekly_goal_minutes,

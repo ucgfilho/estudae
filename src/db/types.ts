@@ -245,6 +245,40 @@ export interface Settings {
   contestRole?: string;
   /** Nome do arquivo de edital verticalizado enviado pelo usuário. */
   editalFileName?: string | null;
+  celebrationsEnabled?: boolean;
+  reportTimeGranularity?: 'day' | 'week' | 'month';
+  reportPeriodDays?: '30' | '60' | '90' | 'all';
+  flashcardDraft?: { date: DateKey; progress: string };
+  contestExamBoard?: string;
+  contestCreatedAt?: string;
+  contestHidden?: boolean;
+}
+
+export interface ContestWorkspaceSummary {
+  id: string;
+  settings: Pick<Settings, 'contestId' | 'contestName' | 'contestRole' | 'editalFileName' | 'contestExamBoard' | 'contestCreatedAt'>;
+  disciplineCount: number;
+  topicCount: number;
+}
+
+export function summarizeContestWorkspace(
+  id: string,
+  settings: Settings | undefined,
+  disciplineCount: number,
+  topicCount: number,
+): ContestWorkspaceSummary | null {
+  if (settings?.contestHidden) return null;
+  return {
+    id, disciplineCount, topicCount,
+    settings: {
+      contestId: settings?.contestId,
+      contestName: settings?.contestName,
+      contestRole: settings?.contestRole,
+      editalFileName: settings?.editalFileName,
+      contestExamBoard: settings?.contestExamBoard,
+      contestCreatedAt: settings?.contestCreatedAt,
+    },
+  };
 }
 
 /**

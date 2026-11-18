@@ -105,6 +105,10 @@ export function createAppContainer(overrides: Partial<ServerEnv> = {}): AppConta
     };
 
     studyDataRepository = {
+      async listContestWorkspaces(userId) {
+        const { mongoStudyRepo } = await mongoInitPromise;
+        return mongoStudyRepo.listContestWorkspaces(userId);
+      },
       async ensureUserSeed(userId: string) {
         const { mongoStudyRepo } = await mongoInitPromise;
         return mongoStudyRepo.ensureUserSeed(userId);

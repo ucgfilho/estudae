@@ -363,6 +363,13 @@ export class AppDatabase {
     return this[name] as unknown as MemoryTable<{ id: string }>;
   }
 
+  public applyLocalSettings(settings: Settings): void {
+    this.settings.replaceAllSilent([settings]);
+    this.versionCounter++;
+    this.persistLocalWorkspaceCache();
+    this.notifyListeners();
+  }
+
   public subscribe(listener: () => void): () => void {
     this.listeners.add(listener);
     return () => {
@@ -680,7 +687,7 @@ export async function ensureLocalDefaults(database: AppDatabase = db): Promise<v
             : { ...DEFAULT_SETTINGS.distribution, ...settings.distribution },
         };
         if (JSON.stringify(merged) !== JSON.stringify(settings)) {
-          await database.settings.put(merged);
+          database.applyLocalSettings(merged);
         }
       }
 
@@ -822,6 +829,7 @@ async function runEnsureSeed(database: AppDatabase): Promise<void> {
         database.hydrateFromWorkspace(localEnvelope.data);
       }
     } catch (err) {
+      if (token !== getAuthToken() || scope !== getActiveContestScopeId()) return;
       if (localEnvelope) {
         database.hydrateFromWorkspace(localEnvelope.data);
       }

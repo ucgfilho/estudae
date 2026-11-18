@@ -1,4 +1,4 @@
-import type { DataTableName } from '../../src/db/types';
+import type { ContestWorkspaceSummary, DataTableName } from '../../src/db/types';
 import type { StudyWorkspaceDto, TableMutationOperationDto } from '../dtos/study-data.dto';
 
 /**
@@ -7,6 +7,7 @@ import type { StudyWorkspaceDto, TableMutationOperationDto } from '../dtos/study
  */
 export interface IStudyDataRepository {
   ensureUserSeed(userId: string): Promise<void> | void;
+  listContestWorkspaces(userId: string): Promise<ContestWorkspaceSummary[]> | ContestWorkspaceSummary[];
   getWorkspace(userId: string): Promise<StudyWorkspaceDto> | StudyWorkspaceDto;
   replaceWorkspace(userId: string, workspace: StudyWorkspaceDto): Promise<StudyWorkspaceDto> | StudyWorkspaceDto;
   resetWorkspace(userId: string): Promise<StudyWorkspaceDto> | StudyWorkspaceDto;
