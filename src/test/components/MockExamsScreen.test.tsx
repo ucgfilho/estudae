@@ -62,19 +62,18 @@ describe('Simulados screen', () => {
     expect(create).toBeEnabled();
   });
 
-  it('suggests the exam name from the exam file name', async () => {
+  it('suggests the exam name from the key file name', async () => {
     const user = userEvent.setup();
     await openScreen();
-    await user.upload(screen.getByLabelText('Prova'), new File(['%PDF'], 'Prova BNB 2024.pdf', { type: 'application/pdf' }));
-    expect(screen.getByLabelText(/nome do simulado/i)).toHaveValue('Prova BNB 2024');
-    expect(screen.getByText('Prova BNB 2024.pdf')).toBeInTheDocument();
+    await user.upload(screen.getByLabelText('Gabarito'), new File(['1 A'], 'Gabarito BNB 2024.txt', { type: 'text/plain' }));
+    expect(screen.getByLabelText(/nome do simulado/i)).toHaveValue('Gabarito BNB 2024');
   });
 
   it('does not overwrite a name already typed', async () => {
     const user = userEvent.setup();
     await openScreen();
     await user.type(screen.getByLabelText(/nome do simulado/i), 'Meu nome');
-    await user.upload(screen.getByLabelText('Prova'), new File(['%PDF'], 'outra.pdf', { type: 'application/pdf' }));
+    await user.upload(screen.getByLabelText('Gabarito'), new File(['1 A'], 'outro.txt', { type: 'text/plain' }));
     expect(screen.getByLabelText(/nome do simulado/i)).toHaveValue('Meu nome');
   });
 
@@ -129,7 +128,6 @@ describe('Simulados screen', () => {
     await openScreen();
 
     await user.type(screen.getByLabelText(/nome do simulado/i), 'Simulado BNB 01');
-    await user.upload(screen.getByLabelText('Prova'), new File(['%PDF'], 'prova.pdf', { type: 'application/pdf' }));
     await user.upload(
       screen.getByLabelText('Gabarito'),
       new File(['1-A\n2-B\n3-C\n4-D\n5-E\n6-A'], 'gabarito.txt', { type: 'text/plain' }),

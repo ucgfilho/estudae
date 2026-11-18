@@ -22,7 +22,6 @@ const stripExtension = (name: string) => name.replace(/\.[^.]+$/, '');
 export function ExamSetup({ disciplines, onCreated }: ExamSetupProps) {
   const [title, setTitle] = useState('');
   const [date, setDate] = useState(() => todayKey());
-  const [examFile, setExamFile] = useState<File | null>(null);
   const [keyFile, setKeyFile] = useState<File | null>(null);
   const [keyText, setKeyText] = useState('');
   const [optionCount, setOptionCount] = useState(5);
@@ -39,11 +38,6 @@ export function ExamSetup({ disciplines, onCreated }: ExamSetupProps) {
   const dateOk = isValidDateKey(date);
   const ready = keyOk && nameOk && dateOk && rangeErrors.length === 0;
 
-  const onExamFile = (file: File | null) => {
-    setExamFile(file);
-    if (file && !title.trim()) setTitle(stripExtension(file.name));
-  };
-
   const onKeyFile = async (file: File | null) => {
     setKeyFile(file);
     setFileError(null);
@@ -51,6 +45,9 @@ export function ExamSetup({ disciplines, onCreated }: ExamSetupProps) {
     if (!file) {
       setKeyText('');
       return;
+    }
+    if (!title.trim()) {
+      setTitle(stripExtension(file.name));
     }
     try {
       setKeyText(await readFileText(file));
@@ -78,7 +75,7 @@ export function ExamSetup({ disciplines, onCreated }: ExamSetupProps) {
       const exam = await createMockExam({
         title,
         date,
-        examFileName: examFile?.name ?? null,
+        examFileName: null,
         keyFileName: keyFile?.name ?? null,
         answerKey: parsed.key,
         questionCount: parsed.questionCount,
@@ -99,24 +96,16 @@ export function ExamSetup({ disciplines, onCreated }: ExamSetupProps) {
   ];
 
   return (
-    <Card title="Enviar prova e gabarito" description="Seus arquivos são lidos no próprio navegador e não são enviados a nenhum servidor.">
+    <Card title="Enviar gabarito" description="Seus arquivos são lidos no próprio navegador e não são enviados a nenhum servidor.">
       <div className="flex flex-col gap-5">
-        <div className="grid gap-4 md:grid-cols-2">
-          <FileDropzone
-            label="Prova"
-            hint="PDF ou outro formato — fica só como referência"
-            file={examFile}
-            onFile={onExamFile}
-          />
-          <FileDropzone
-            label="Gabarito"
-            hint="PDF, TXT ou CSV com as respostas certas"
-            accept=".pdf,.txt,.csv,text/plain,application/pdf"
-            file={keyFile}
-            required
-            onFile={(f) => void onKeyFile(f)}
-          />
-        </div>
+        <FileDropzone
+          label="Gabarito"
+          hint="PDF, TXT ou CSV com as respostas certas"
+          accept=".pdf,.txt,.csv,text/plain,application/pdf"
+          file={keyFile}
+          required
+          onFile={(f) => void onKeyFile(f)}
+        />
 
         {fileError && <Alert tone="danger" onClose={() => setFileError(null)}>{fileError}</Alert>}
 
