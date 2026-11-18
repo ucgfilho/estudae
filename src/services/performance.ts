@@ -138,9 +138,6 @@ function validateErrorNote(input: ErrorNoteInput): void {
   if (!input.disciplineId) throw new ValidationError('Selecione a disciplina.');
   if (!isValidDateKey(input.errorDate)) throw new ValidationError('Informe uma data de erro válida.');
   if (input.nextReviewDate !== null && !isValidDateKey(input.nextReviewDate)) throw new ValidationError('Informe uma data de revisão válida.');
-  if (!input.sourceReference.trim() && !input.explanation.trim()) {
-    throw new ValidationError('Informe a referência da questão ou a explicação do aprendizado.');
-  }
 }
 
 /**

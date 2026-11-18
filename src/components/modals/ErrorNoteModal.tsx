@@ -197,11 +197,6 @@ export function ErrorNoteModal({
       ? `${selectedExam.title} · ${effectiveQuestionRef}`
       : effectiveQuestionRef;
 
-    if (!finalSourceRef && !explanation.trim()) {
-      setError('Informe a referência da questão ou a explicação do aprendizado.');
-      return;
-    }
-
     const input: ErrorNoteInput = {
       disciplineId,
       topicId: topicId || null,
@@ -350,13 +345,12 @@ export function ErrorNoteModal({
           </Field>
         </div>
 
-        <Field label="Explicação correta / Resumo do aprendizado" required hint="Qual era a pegadinha ou conceito fundamental que causou o erro?">
+        <Field label="Explicação correta / Resumo do aprendizado" hint="Opcional: qual era a pegadinha ou conceito fundamental que causou o erro?">
           <RichTextEditor
             rows={6}
             placeholder="Explique com suas palavras o porquê da alternativa correta e o que você aprendeu com o erro..."
             value={explanation}
             onChange={setExplanation}
-            required
           />
         </Field>
 
