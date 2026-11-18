@@ -1,4 +1,4 @@
-import { getServerEnv, type ServerEnv } from './config/env';
+import { getServerEnv, validateServerEnv, type ServerEnv } from './config/env';
 import { AuthController } from './controllers/AuthController';
 import { StudyDataController } from './controllers/StudyDataController';
 import { getMongoDb } from './database/mongoClient';
@@ -18,6 +18,7 @@ import { MongoUserRepository } from './repositories/MongoUserRepository';
 import { SqlStudyDataRepository } from './repositories/SqlStudyDataRepository';
 import { SqlUserRepository } from './repositories/SqlUserRepository';
 import { JwtTokenService } from './security/JwtTokenService';
+import { AuthControls, mongoAuthState, sqliteAuthState, type AuthState } from './security/AuthState';
 import { PasswordHasher } from './security/PasswordHasher';
 import { SensitiveDataCipher } from './security/SensitiveDataCipher';
 import { AuthService } from './services/AuthService';
@@ -34,6 +35,7 @@ export interface AppContainer {
   authService: IAuthService;
   studyDataService: IStudyDataService;
   authGuard: BearerAuthGuard;
+  authControls: AuthControls;
   authController: AuthController;
   studyDataController: StudyDataController;
   seedReady: Promise<string>;
@@ -50,8 +52,10 @@ export function createAppContainer(overrides: Partial<ServerEnv> = {}): AppConta
     ...overrides,
   };
 
+  validateServerEnv(env);
+
   const passwordHasher = new PasswordHasher();
-  const sensitiveDataCipher = new SensitiveDataCipher(env.jwtSecret);
+  const sensitiveDataCipher = new SensitiveDataCipher(env.dataEncryptionKey);
   const tokenService = new JwtTokenService({
     secret: env.jwtSecret,
     issuer: env.jwtIssuer,
@@ -62,11 +66,7 @@ export function createAppContainer(overrides: Partial<ServerEnv> = {}): AppConta
   let userRepository: IUserRepository;
   let studyDataRepository: IStudyDataRepository;
   let dbClient: IDatabaseClient | undefined;
-
-  let resolveDbReady: () => void = () => {};
-  const dbReadyPromise = new Promise<void>((resolve) => {
-    resolveDbReady = resolve;
-  });
+  let authState: Promise<AuthState>;
 
   if (env.mongoUri) {
     // Modo MongoDB Cloud (Atlas) com RLS e Criptografia Autenticada em Repouso
@@ -75,10 +75,11 @@ export function createAppContainer(overrides: Partial<ServerEnv> = {}): AppConta
       const mongoUserRepo = new MongoUserRepository(db, sensitiveDataCipher);
       const mongoStudyRepo = new MongoStudyDataRepository(db, sensitiveDataCipher);
       await Promise.all([mongoUserRepo.initIndexes(), mongoStudyRepo.initIndexes()]);
-      return { mongoUserRepo, mongoStudyRepo };
+      return { mongoUserRepo, mongoStudyRepo, db };
     };
 
     const mongoInitPromise = initMongo();
+    authState = mongoInitPromise.then(({ db }) => mongoAuthState(db));
 
     // Repositório proxy que aguarda conexão
     userRepository = {
@@ -147,18 +148,12 @@ export function createAppContainer(overrides: Partial<ServerEnv> = {}): AppConta
       },
     };
 
-    mongoInitPromise
-      .then(() => resolveDbReady())
-      .catch(() => {
-        // Resolve readiness so request handlers can surface a clean error instead of hanging
-        resolveDbReady();
-      });
   } else {
     // Fallback SQLite local
     dbClient = new SqliteDatabaseClient(env.dbPath);
+    authState = Promise.resolve(sqliteAuthState(dbClient));
     userRepository = new SqlUserRepository(dbClient);
     studyDataRepository = new SqlStudyDataRepository(dbClient, sensitiveDataCipher);
-    resolveDbReady();
   }
 
   const authService = new AuthService(
@@ -169,15 +164,12 @@ export function createAppContainer(overrides: Partial<ServerEnv> = {}): AppConta
   );
   const studyDataService = new StudyDataService(studyDataRepository);
 
-  const authGuard = new BearerAuthGuard(
-    tokenService,
-    userRepository,
-    !env.mongoUri && Boolean(process.env.VERCEL),
-  );
+  const authGuard = new BearerAuthGuard(tokenService, userRepository);
+  const authControls = new AuthControls(authState, env.jwtSecret, env.isVercel, env.trustedProxyIps);
   const authController = new AuthController(authService);
   const studyDataController = new StudyDataController(studyDataService);
 
-  const seedReady = dbReadyPromise.then(() =>
+  const seedReady = authState.then(() =>
     ensureDefaultUserAndFirefoxData({
       userRepository,
       studyDataRepository,
@@ -200,6 +192,7 @@ export function createAppContainer(overrides: Partial<ServerEnv> = {}): AppConta
     authService,
     studyDataService,
     authGuard,
+    authControls,
     authController,
     studyDataController,
     seedReady,

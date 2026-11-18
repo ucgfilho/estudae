@@ -12,7 +12,7 @@ import {
   type DataTableName,
 } from '../db/db';
 import { isValidDateKey, isValidTime } from '../lib/dates';
-import { getAuthToken, replaceUserWorkspaceInApi, TEST_BYPASS_TOKEN, waitForPendingSync } from './auth';
+import { getLocalSessionId, replaceUserWorkspaceInApi, TEST_LOCAL_SESSION_ID, waitForPendingSync } from './auth';
 
 export type { DataTableName };
 
@@ -307,8 +307,8 @@ export async function restoreBackup(backup: BackupFile): Promise<void> {
     })),
   };
 
-  const token = getAuthToken();
-  if (token && token !== TEST_BYPASS_TOKEN && !await replaceUserWorkspaceInApi(restoredData)) {
+  const sessionId = getLocalSessionId();
+  if (sessionId && sessionId !== TEST_LOCAL_SESSION_ID && !await replaceUserWorkspaceInApi(restoredData)) {
     throw new Error('O servidor não confirmou a restauração do backup. Tente novamente.');
   }
   db.replaceAllFromBackup(restoredData);
@@ -321,7 +321,10 @@ export async function restoreBackup(backup: BackupFile): Promise<void> {
 
 function csvCell(value: unknown): string {
   if (value === null || value === undefined) return '';
-  const text = String(value);
+  const raw = String(value);
+  const text = typeof value === 'string' && /^(?:[\s\uFEFF]*[=+\-@＝＋－＠]|[\t\r\n])/.test(raw)
+    ? `'${raw}`
+    : raw;
   return /[";\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
 }
 

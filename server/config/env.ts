@@ -1,16 +1,6 @@
-import { createHash } from 'node:crypto';
+import { isIP } from 'node:net';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-
-function deriveDeterministicFallbackSecret(): string {
-  const seed = [
-    'bnb-estudos-jwt-hs256-fallback-v1',
-    process.env.DEFAULT_USER_EMAIL ?? '',
-    process.env.VERCEL_PROJECT_ID ?? '',
-    process.env.VERCEL_GIT_REPO_SLUG ?? 'estudos-bnb',
-  ].join(':');
-  return createHash('sha256').update(seed).digest('hex');
-}
 
 function loadDotEnvIfNeeded(): void {
   try {
@@ -40,6 +30,9 @@ export interface ServerEnv {
   mongoUri: string;
   seedFilePath: string;
   jwtSecret: string;
+  dataEncryptionKey: string;
+  isVercel: boolean;
+  trustedProxyIps: string[];
   jwtIssuer: string;
   jwtAudience: string;
   jwtExpiresInSeconds: number;
@@ -51,28 +44,41 @@ export interface ServerEnv {
 export function getServerEnv(): ServerEnv {
   loadDotEnvIfNeeded();
 
-  const rawSecret = process.env.JWT_SECRET?.trim();
-  const jwtSecret =
-    rawSecret && rawSecret.length >= 16 ? rawSecret : deriveDeterministicFallbackSecret();
-
-  const defaultDbPath = process.env.VERCEL
-    ? '/tmp/bnb_estudos.sqlite'
-    : resolve(process.cwd(), 'data', 'bnb_estudos.sqlite');
-
   return {
     port: Number(process.env.PORT ?? 3000),
     nodeEnv: process.env.NODE_ENV ?? 'development',
-    dbPath: process.env.DB_PATH ?? defaultDbPath,
+    dbPath: process.env.DB_PATH ?? resolve(process.cwd(), 'data', 'bnb_estudos.sqlite'),
     mongoUri: (process.env.MONGODB_URI ?? '').trim(),
     seedFilePath:
-      process.env.SEED_FILE_PATH ??
+      process.env.SEED_FILE_PATH?.trim() ||
       resolve(process.cwd(), 'data', 'initial-workspace.seed.json'),
-    jwtSecret,
+    jwtSecret: process.env.JWT_SECRET?.trim() ?? '',
+    dataEncryptionKey: process.env.DATA_ENCRYPTION_KEY?.trim() ?? process.env.JWT_SECRET?.trim() ?? '',
+    isVercel: process.env.VERCEL === '1',
+    trustedProxyIps: (process.env.TRUSTED_PROXY_IPS ?? '').split(',').map((ip) => ip.trim()).filter(Boolean),
     jwtIssuer: process.env.JWT_ISSUER ?? 'bnb-estudos-api',
     jwtAudience: process.env.JWT_AUDIENCE ?? 'bnb-estudos-client',
-    jwtExpiresInSeconds: Number(process.env.JWT_EXPIRES_IN ?? 60 * 60 * 24 * 7), // 7 days
+    jwtExpiresInSeconds: Number(process.env.JWT_EXPIRES_IN ?? 86_400),
     defaultUserEmail: (process.env.DEFAULT_USER_EMAIL ?? '').trim(),
     defaultUserPassword: process.env.DEFAULT_USER_PASSWORD ?? '',
     defaultUserName: (process.env.DEFAULT_USER_NAME ?? '').trim(),
   };
+}
+
+export function validateServerEnv(env: ServerEnv): void {
+  if (Buffer.byteLength(env.jwtSecret) < 32) {
+    throw new Error('JWT_SECRET deve conter um segredo aleatório de pelo menos 32 bytes.');
+  }
+  if (Buffer.byteLength(env.dataEncryptionKey) < 32) {
+    throw new Error('DATA_ENCRYPTION_KEY deve conter pelo menos 32 bytes.');
+  }
+  if (!Number.isSafeInteger(env.jwtExpiresInSeconds) || env.jwtExpiresInSeconds < 1 || env.jwtExpiresInSeconds > 604_800) {
+    throw new Error('JWT_EXPIRES_IN deve estar entre 1 e 604800 segundos.');
+  }
+  if (env.isVercel && !env.mongoUri) {
+    throw new Error('MONGODB_URI é obrigatória no Vercel para persistir contas e controles de sessão.');
+  }
+  if (env.trustedProxyIps.some((ip) => !isIP(ip))) {
+    throw new Error('TRUSTED_PROXY_IPS aceita apenas endereços IP separados por vírgulas.');
+  }
 }

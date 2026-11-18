@@ -3,7 +3,7 @@ import { SETTINGS_ID, type Settings } from '../db/types';
 import { DEFAULT_SETTINGS } from '../db/seed';
 import { isValidDateKey } from '../lib/dates';
 import { ValidationError } from './sessions';
-import { getActiveContestScopeId, getAuthToken, syncBatchMutationsToApi } from './auth';
+import { getActiveContestScopeId, getLocalSessionId, syncBatchMutationsToApi } from './auth';
 
 export async function getSettings(): Promise<Settings> {
   const settings = await db.settings.get(SETTINGS_ID);
@@ -28,10 +28,10 @@ export function validateSettingsPatch(patch: Partial<Settings>): string | null {
 export async function updateSettings({ theme: _theme, ...patch }: Partial<Omit<Settings, 'id'>>): Promise<void> {
   const error = validateSettingsPatch(patch);
   if (error) throw new ValidationError(error);
-  const token = getAuthToken();
+  const sessionId = getLocalSessionId();
   const scope = getActiveContestScopeId();
   const current = db.settings.getSync(SETTINGS_ID) ?? await getSettings();
-  if (token !== getAuthToken() || scope !== getActiveContestScopeId()) {
+  if (sessionId !== getLocalSessionId() || scope !== getActiveContestScopeId()) {
     throw new Error('O concurso ou a sessão mudou antes do salvamento.');
   }
   const result = syncBatchMutationsToApi([{ table: 'settings', action: 'patch', changes: patch }], scope);

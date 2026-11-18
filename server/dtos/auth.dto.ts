@@ -89,6 +89,7 @@ export interface AuthResponseDto {
 
 export interface TokenPayloadDto {
   sub: string;
+  jti?: string;
   email: string;
   name: string;
   iat: number;

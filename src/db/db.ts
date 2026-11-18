@@ -2,13 +2,13 @@ import {
   fetchUserWorkspaceFromApi,
   getAuthSession,
   getActiveContestScopeId,
-  getAuthToken,
+  getLocalSessionId,
   getWorkspaceCacheKey,
   hasUnsyncedChanges,
   replaceUserWorkspaceInApi,
   retryPendingMutations,
   syncBatchMutationsToApi,
-  TEST_BYPASS_TOKEN,
+  TEST_LOCAL_SESSION_ID,
   waitForPendingSync,
   type RemoteTableMutation,
 } from '../services/auth';
@@ -396,11 +396,11 @@ export class AppDatabase {
   }
 
   public persistLocalWorkspaceCache(): void {
-    const token = getAuthToken();
+    const sessionId = getLocalSessionId();
     const session = getAuthSession();
     if (
-      !token ||
-      token === TEST_BYPASS_TOKEN ||
+      !sessionId ||
+      sessionId === TEST_LOCAL_SESSION_ID ||
       !session?.user?.email ||
       typeof window === 'undefined' ||
       !window.localStorage
@@ -558,11 +558,11 @@ export interface LocalWorkspaceCacheEnvelope {
 }
 
 function loadLocalWorkspaceCacheEnvelope(): LocalWorkspaceCacheEnvelope | null {
-  const token = getAuthToken();
+  const sessionId = getLocalSessionId();
   const session = getAuthSession();
   if (
-    !token ||
-    token === TEST_BYPASS_TOKEN ||
+    !sessionId ||
+    sessionId === TEST_LOCAL_SESSION_ID ||
     !session?.user?.email ||
     typeof window === 'undefined' ||
     !window.localStorage
@@ -617,7 +617,7 @@ const inFlightEnsureSeed = new Map<string, Promise<void>>();
 /** Carrega o banco da conta/concurso atual e aplica os padrões locais. */
 export async function ensureSeed(database: AppDatabase = db): Promise<void> {
   if (database !== db) return runEnsureSeed(database);
-  const key = `${getAuthToken() ?? ''}:${getActiveContestScopeId()}`;
+  const key = `${getLocalSessionId() ?? ''}:${getActiveContestScopeId()}`;
   const pending = inFlightEnsureSeed.get(key);
   if (pending) return pending;
   const run = runEnsureSeed(database).finally(() => inFlightEnsureSeed.delete(key));
@@ -772,12 +772,12 @@ export async function ensureLocalDefaults(database: AppDatabase = db): Promise<v
 }
 
 async function runEnsureSeed(database: AppDatabase): Promise<void> {
-  const token = getAuthToken();
+  const sessionId = getLocalSessionId();
   const scope = getActiveContestScopeId();
   const isRealAuthenticatedDb =
-    database === db && Boolean(token) && token !== TEST_BYPASS_TOKEN;
+    database === db && Boolean(sessionId) && sessionId !== TEST_LOCAL_SESSION_ID;
 
-  if (database === db && token) {
+  if (database === db && sessionId) {
     await waitForPendingSync();
     const localEnvelope = loadLocalWorkspaceCacheEnvelope();
     if (localEnvelope) {
@@ -790,7 +790,7 @@ async function runEnsureSeed(database: AppDatabase): Promise<void> {
       await retryPendingMutations();
       const version = database.getSnapshotVersion();
       const remoteWorkspace = await fetchUserWorkspaceFromApi();
-      if (token !== getAuthToken() || scope !== getActiveContestScopeId()) return;
+      if (sessionId !== getLocalSessionId() || scope !== getActiveContestScopeId()) return;
       // An edit made while the GET was in flight must not be replaced by its stale response.
       if (database.getSnapshotVersion() !== version) return runEnsureSeed(database);
       if (remoteWorkspace) {
@@ -829,7 +829,7 @@ async function runEnsureSeed(database: AppDatabase): Promise<void> {
         database.hydrateFromWorkspace(localEnvelope.data);
       }
     } catch (err) {
-      if (token !== getAuthToken() || scope !== getActiveContestScopeId()) return;
+      if (sessionId !== getLocalSessionId() || scope !== getActiveContestScopeId()) return;
       if (localEnvelope) {
         database.hydrateFromWorkspace(localEnvelope.data);
       }

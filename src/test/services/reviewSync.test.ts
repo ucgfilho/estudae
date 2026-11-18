@@ -3,7 +3,7 @@ import { db, ensureSeed } from '../../db/db';
 import { DEFAULT_SETTINGS } from '../../db/seed';
 import { DATA_TABLES, type DataTableName, type ReviewTask, type Settings } from '../../db/types';
 import {
-  getWorkspaceCacheKey, hasUnsyncedChanges, retryPendingMutations,
+  getAuthSession, getWorkspaceCacheKey, hasUnsyncedChanges, logoutUser, retryPendingMutations,
   setActiveContestScopeId, setAuthSession, syncBatchMutationsToApi, waitForPendingSync,
   type RemoteTableMutation,
 } from '../../services/auth';
@@ -52,7 +52,7 @@ beforeEach(async () => {
     if (url.endsWith('/batch')) apply(JSON.parse(String(init?.body)).operations);
     return new Response(JSON.stringify({ ok: true, data: server }), { status: 200 });
   }) as typeof fetch;
-  setAuthSession({ token: 'sync-test-real-token', tokenType: 'Bearer', expiresIn: 600,
+  setAuthSession({ sessionId: 'sync-test-real-token', expiresIn: 600,
     user: { id: 'sync-user', name: 'Teste', email, createdAt: '2026-01-01T00:00:00Z' } });
   await ensureSeed();
 });
@@ -68,6 +68,21 @@ afterEach(async () => {
 });
 
 describe('sincronização de revisões entre dispositivos', () => {
+  it('pede confirmação antes de descartar alterações locais na saída', async () => {
+    const key = `${getWorkspaceCacheKey(email)}:pending-batches`;
+    localStorage.setItem(key, JSON.stringify([{ id: 'pending', operations: [] }]));
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValueOnce(false).mockReturnValueOnce(true);
+
+    expect(await logoutUser()).toBe(false);
+    expect(localStorage.getItem(key)).not.toBeNull();
+    expect(requests.some(({ url }) => url.endsWith('/logout'))).toBe(false);
+
+    expect(await logoutUser()).toBe(true);
+    expect(localStorage.getItem(key)).toBeNull();
+    expect(getAuthSession()).toBeNull();
+    expect(confirm).toHaveBeenCalledTimes(2);
+  });
+
   it('carrega a conclusão do servidor mesmo com cache local pendente e a mesma quantidade de registros', async () => {
     const cached = localStorage.getItem(getWorkspaceCacheKey(email));
     const completed = { ...review, status: 'concluida', completedAt: '2026-11-17T10:00:00Z' };

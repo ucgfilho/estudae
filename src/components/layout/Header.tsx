@@ -14,8 +14,7 @@ import { ProfileModal } from '../profile/ProfileModal';
 import { AiAssistantWidget } from '../assistant/AiAssistantWidget';
 import { tierOf } from '../motivation/RankCard';
 import { useSettings, useActiveTimer, useNow, useSessions, useReviews } from '../../hooks/useData';
-import { getAuthSession, setAuthSession, subscribeAuth } from '../../services/auth';
-import { db } from '../../db/db';
+import { getAuthSession, logoutUser, subscribeAuth } from '../../services/auth';
 import { todayKey, formatLongDate } from '../../lib/dates';
 import { daysUntil } from '../../domain/metrics';
 import { computeRank } from '../../domain/rank';
@@ -23,6 +22,7 @@ import { elapsedSeconds } from '../../domain/timer';
 import { formatClock } from '../../lib/format';
 import { cn } from '../../lib/utils';
 import { BnbLogo } from '../ui/BnbLogo';
+import { useToast } from '../ui/Toast';
 import type { UserContestProfile } from '../../services/contests';
 
 interface HeaderProps {
@@ -41,6 +41,7 @@ export function Header({
   const now = useNow(1000, Boolean(timer && timer.status === 'running'));
   const today = todayKey(now);
   const navigate = useNavigate();
+  const toast = useToast();
 
   const rankState = useMemo(
     () => computeRank({ sessions, reviews, settings, today }),
@@ -61,8 +62,7 @@ export function Header({
   }, []);
 
   const handleLogout = () => {
-    db.clearMemory();
-    setAuthSession(null);
+    void logoutUser().catch(() => toast.error('Não foi possível encerrar a sessão. Tente novamente.'));
   };
 
   const examDaysLeft = daysUntil(settings?.examDate ?? null, today);

@@ -5,6 +5,10 @@ const KEY_LENGTH = 64;
 const SCRYPT_N = 16384;
 const SCRYPT_R = 8;
 const SCRYPT_P = 1;
+const SALT_LENGTH = 16;
+
+export const DUMMY_PASSWORD_HASH =
+  `$scrypt$${SCRYPT_N}$${SCRYPT_R}$${SCRYPT_P}$${'00'.repeat(SALT_LENGTH)}$${'00'.repeat(KEY_LENGTH)}`;
 
 function deriveKey(password: string, salt: Buffer, n = SCRYPT_N, r = SCRYPT_R, p = SCRYPT_P): Promise<Buffer> {
   return new Promise((resolve, reject) => {
@@ -21,7 +25,7 @@ function deriveKey(password: string, salt: Buffer, n = SCRYPT_N, r = SCRYPT_R, p
  */
 export class PasswordHasher implements IPasswordHasher {
   public async hash(plainPassword: string): Promise<string> {
-    const salt = randomBytes(16);
+    const salt = randomBytes(SALT_LENGTH);
     const derived = await deriveKey(plainPassword, salt);
     return `$scrypt$${SCRYPT_N}$${SCRYPT_R}$${SCRYPT_P}$${salt.toString('hex')}$${derived.toString('hex')}`;
   }

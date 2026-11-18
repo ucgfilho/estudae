@@ -1,5 +1,5 @@
 /// <reference types="vitest/config" />
-import { defineConfig, type Plugin } from 'vite';
+import { defineConfig, type Plugin, type PreviewServer } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 
@@ -24,22 +24,24 @@ function bnbApiServerPlugin(): Plugin {
     return initPromise;
   };
 
+  const configure = ({ middlewares }: Pick<PreviewServer, 'middlewares'>) => {
+    middlewares.use((req, res, next) => {
+      const pathname = req.url?.split('?')[0];
+      if (pathname !== '/api' && !pathname?.startsWith('/api/')) {
+        next();
+        return;
+      }
+      void getApi()
+        .then(({ container, handleApiRequest }) => handleApiRequest(container, req, res))
+        .then((handled) => { if (!handled) next(); })
+        .catch(next);
+    });
+  };
+
   return {
     name: 'bnb-api-server',
-    configureServer(server) {
-      server.middlewares.use(async (req, res, next) => {
-        const { container, handleApiRequest } = await getApi();
-        const handled = await handleApiRequest(container, req, res);
-        if (!handled) next();
-      });
-    },
-    configurePreviewServer(server) {
-      server.middlewares.use(async (req, res, next) => {
-        const { container, handleApiRequest } = await getApi();
-        const handled = await handleApiRequest(container, req, res);
-        if (!handled) next();
-      });
-    },
+    configureServer: configure,
+    configurePreviewServer: configure,
   };
 }
 

@@ -5,6 +5,9 @@ import { pathToFileURL } from 'node:url';
 import { handleApiRequest } from './app';
 import { createAppContainer } from './container';
 
+const CONTENT_SECURITY_POLICY =
+  "default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-vs0Xugz6O9PA3O7YmuAIXGf3fdcQOeeAmLNon767+JQ=' 'sha256-KOwqzc9GLJJwOHeyVHqQ+AHTFdGUscH+/fCfUwrUBnQ='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; worker-src 'self' blob:; connect-src 'self' https://generativelanguage.googleapis.com; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'";
+
 const MIME_TYPES: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'application/javascript; charset=utf-8',
@@ -30,7 +33,20 @@ function serveStaticFile(distDir: string, req: IncomingMessage, res: ServerRespo
     return;
   }
 
-  const safeRelPath = normalize(decodeURIComponent(rawUrl)).replace(/^(\.\.(\/|\\|$))+/, '');
+  let decodedUrl: string;
+  try {
+    decodedUrl = decodeURIComponent(rawUrl);
+  } catch {
+    res.statusCode = 400;
+    res.end('URL inválida.');
+    return;
+  }
+  if (decodedUrl.includes('\0')) {
+    res.statusCode = 400;
+    res.end('URL inválida.');
+    return;
+  }
+  const safeRelPath = normalize(decodedUrl).replace(/^(\.\.(\/|\\|$))+/, '');
   let targetPath = join(distDir, safeRelPath);
 
   if (!targetPath.startsWith(distDir)) {
@@ -56,6 +72,7 @@ function serveStaticFile(distDir: string, req: IncomingMessage, res: ServerRespo
   res.statusCode = 200;
   res.setHeader('Content-Type', contentType);
   res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Content-Security-Policy', CONTENT_SECURITY_POLICY);
   res.setHeader('X-Frame-Options', 'SAMEORIGIN');
   res.setHeader('Referrer-Policy', 'no-referrer-when-downgrade');
 
@@ -65,7 +82,9 @@ function serveStaticFile(distDir: string, req: IncomingMessage, res: ServerRespo
     res.setHeader('Cache-Control', 'no-cache');
   }
 
-  createReadStream(targetPath).pipe(res);
+  const file = createReadStream(targetPath);
+  file.on('error', (err) => res.destroy(err));
+  file.pipe(res);
 }
 
 export async function startServer(): Promise<void> {
@@ -74,11 +93,20 @@ export async function startServer(): Promise<void> {
 
   const distDir = resolve(process.cwd(), 'dist');
 
-  const server = createServer(async (req, res) => {
-    const handled = await handleApiRequest(container, req, res);
-    if (!handled) {
-      serveStaticFile(distDir, req, res);
-    }
+  const server = createServer((req, res) => {
+    void handleApiRequest(container, req, res)
+      .then((handled) => {
+        if (!handled) serveStaticFile(distDir, req, res);
+      })
+      .catch((err: unknown) => {
+        console.error('[HTTP Error]', err);
+        if (res.headersSent) {
+          res.destroy();
+          return;
+        }
+        res.statusCode = 500;
+        res.end('Erro interno no servidor.');
+      });
   });
 
   server.listen(container.env.port, '0.0.0.0', () => {

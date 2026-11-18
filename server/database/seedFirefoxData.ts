@@ -1,22 +1,10 @@
-import { createHash } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { parseStudyWorkspaceDto, type StudyWorkspaceDto } from '../dtos/study-data.dto';
 import type { IPasswordHasher } from '../interfaces/IPasswordHasher';
 import type { IStudyDataRepository } from '../interfaces/IStudyDataRepository';
 import type { IUserRepository } from '../interfaces/IUserRepository';
-
-export function deterministicUserIdFromEmail(email: string): string {
-  const normalized = email.trim().toLowerCase();
-  const hex = createHash('sha256').update(`bnb-estudos-user-id:${normalized}`).digest('hex');
-  return [
-    hex.slice(0, 8),
-    hex.slice(8, 12),
-    `4${hex.slice(13, 16)}`,
-    `a${hex.slice(17, 20)}`,
-    hex.slice(20, 32),
-  ].join('-');
-}
 
 export interface SeedDefaultUserOptions {
   userRepository: IUserRepository;
@@ -75,7 +63,7 @@ export async function ensureDefaultUserAndFirefoxData(
   if (!user) {
     const passwordHash = await passwordHasher.hash(password);
     user = await userRepository.create({
-      id: deterministicUserIdFromEmail(email),
+      id: randomUUID(),
       name,
       email,
       passwordHash,

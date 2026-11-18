@@ -1,3 +1,5 @@
+import { createServer } from 'node:http';
+import { handleApiRequest } from '../../../server/app';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -21,6 +23,7 @@ import {
 import { MongoUserRepository } from '../../../server/repositories/MongoUserRepository';
 import { MongoStudyDataRepository } from '../../../server/repositories/MongoStudyDataRepository';
 import { SensitiveDataCipher } from '../../../server/security/SensitiveDataCipher';
+import { sqliteAuthState } from '../../../server/security/AuthState';
 import {
   parseTenantScope,
   assertValidOwnerId,
@@ -74,7 +77,9 @@ describe('Backend SOLID Architecture, DTOs, JWT Bearer & LGPD Compliance', () =>
       dbPath: ':memory:',
       mongoUri: '',
       seedFilePath: '__non_existent_seed__.json',
-      jwtSecret: 'test-secret-key-for-jwt-signing-and-aes256gcm-2026',
+      jwtSecret: 'test-secret-key-for-jwt-signing-only-2026',
+      dataEncryptionKey: 'test-secret-key-for-data-encryption-only-2026',
+      isVercel: false,
       defaultUserEmail: TEST_USER.email,
       defaultUserPassword: TEST_USER.password,
       defaultUserName: TEST_USER.name,
@@ -274,59 +279,79 @@ describe('Backend SOLID Architecture, DTOs, JWT Bearer & LGPD Compliance', () =>
     ).rejects.toThrow(UnauthorizedError);
   });
 
-  it('preserves session across serverless cold starts when starting or pausing a timer', async () => {
-    const loginRes = await container.authController.login({
-      email: TEST_USER.email,
-      password: TEST_USER.password,
-    });
-
-    // Simulate a second serverless instance cold-starting with a fresh ephemeral SQLite DB
-    const secondInstance = createAppContainer({
-      dbPath: ':memory:',
-      mongoUri: '',
-      seedFilePath: '__non_existent_seed__.json',
-      jwtSecret: 'test-secret-key-for-jwt-signing-and-aes256gcm-2026',
-      defaultUserEmail: TEST_USER.email,
-      defaultUserPassword: TEST_USER.password,
-      defaultUserName: TEST_USER.name,
-    });
-    await secondInstance.seedReady;
-
+  it('keeps browser credentials in a protected cookie and revokes them at logout', async () => {
+    container.env.nodeEnv = 'production';
+    const server = createServer((req, res) => { void handleApiRequest(container, req, res); });
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
     try {
-      const authUser = await secondInstance.authGuard.authenticate({
-        authorization: `Bearer ${loginRes.data.token}`,
+      const address = server.address();
+      if (!address || typeof address === 'string') throw new Error('Endereço do teste indisponível.');
+      const api = `http://127.0.0.1:${address.port}/api/auth`;
+      const login = await fetch(`${api}/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Estudae-Session': 'start' },
+        body: JSON.stringify(TEST_USER),
       });
-      expect(authUser.id).toBe(loginRes.data.user.id);
+      expect(login.status).toBe(200);
+      const { user, token } = await login.json();
+      expect(token).toBeUndefined();
+      const setCookie = login.headers.get('set-cookie')!;
+      expect(setCookie).toContain('HttpOnly; SameSite=Strict; Path=/api');
+      expect(setCookie).toContain('Secure');
+      const cookie = setCookie.split(';')[0];
+      const headers = { cookie, 'X-Estudae-Session': user.id };
+      expect((await fetch(`${api}/me`, { headers })).status).toBe(200);
+      expect((await fetch(`${api}/logout`, { method: 'POST', headers: { cookie } })).status).toBe(403);
 
-      const batchRes = await secondInstance.studyDataController.executeBatch(authUser, {
-        operations: [
-          {
-            table: 'timer',
-            action: 'upsert',
-            records: [
-              {
-                id: 'active',
-                sessionId: null,
-                status: 'running',
-                startedAt: 1793200000000,
-                firstStartedAt: 1793200000000,
-                accumulatedSeconds: 0,
-                plannedSeconds: 3600,
-                disciplineId: 'portugues',
-                topicId: null,
-                objective: 'Sessão de teste',
-                notes: '',
-                updatedAt: 1793200000000,
-              },
-            ],
-          },
-        ],
-      });
-      expect(batchRes.status).toBe(200);
-      expect(batchRes.data.data.timer).toHaveLength(1);
-      expect(batchRes.data.data.timer[0].status).toBe('running');
+      const logout = await fetch(`${api}/logout`, { method: 'POST', headers });
+      expect(logout.status).toBe(200);
+      expect(logout.headers.get('set-cookie')).toContain('Max-Age=0');
+      expect((await fetch(`${api}/me`, { headers })).status).toBe(401);
     } finally {
-      secondInstance.dbClient?.close();
+      await new Promise<void>((resolve, reject) => server.close((err) => err ? reject(err) : resolve()));
+    }
+  });
+
+  it('requires a persistent account and rejects sessions from an earlier registration', async () => {
+    const input = { name: 'Conta temporária', email: 'temporaria@example.test', password: 'TemporaryPassword!' };
+    const first = await container.authController.register(input);
+    const headers = { authorization: `Bearer ${first.data.token}` };
+    const user = await container.authGuard.authenticate(headers);
+    await container.authController.deleteAccount(user);
+    await expect(container.authGuard.authenticate(headers)).rejects.toThrow(UnauthorizedError);
+    expect(await container.userRepository.findById(user.id)).toBeFalsy();
+
+    const recreated = await container.authController.register(input);
+    expect(recreated.data.user.id).not.toBe(user.id);
+    await expect(container.authGuard.authenticate(headers)).rejects.toThrow(UnauthorizedError);
+    expect(await container.authGuard.authenticate({ authorization: `Bearer ${recreated.data.token}` }))
+      .toMatchObject({ id: recreated.data.user.id });
+  });
+
+  it('rejects unsafe startup configuration', () => {
+    expect(() => createAppContainer({ ...container.env, jwtSecret: '' })).toThrow('JWT_SECRET');
+    expect(() => createAppContainer({ ...container.env, dataEncryptionKey: '' }))
+      .toThrow('DATA_ENCRYPTION_KEY');
+    expect(() => createAppContainer({ ...container.env, isVercel: true, mongoUri: '' })).toThrow('MONGODB_URI');
+  });
+
+  it('shares auth counters and revocations across connections to the same database', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'estudae-auth-'));
+    const path = join(dir, 'auth.sqlite');
+    const first = new SqliteDatabaseClient(path);
+    const second = new SqliteDatabaseClient(path);
+    try {
+      const firstState = sqliteAuthState(first);
+      const secondState = sqliteAuthState(second);
+      const expiresAt = Date.now() + 60_000;
+      expect(await firstState.increment('counter', expiresAt)).toBe(1);
+      expect(await secondState.increment('counter', expiresAt)).toBe(2);
+      await secondState.revoke('revoked', expiresAt);
+      expect(await firstState.isRevoked('revoked')).toBe(true);
+    } finally {
+      first.close();
+      second.close();
+      rmSync(dir, { recursive: true, force: true });
     }
   });
 

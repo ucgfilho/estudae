@@ -3,7 +3,7 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from '../../App';
 import { db, ensureSeed, resetDatabase } from '../../db/db';
-import { setAuthSession, TEST_BYPASS_TOKEN } from '../../services/auth';
+import { setAuthSession, TEST_LOCAL_SESSION_ID } from '../../services/auth';
 
 async function openScreen() {
   window.location.hash = '#/simulados';
@@ -14,8 +14,7 @@ async function openScreen() {
 describe('Simulados screen', () => {
   beforeEach(async () => {
     setAuthSession({
-      token: TEST_BYPASS_TOKEN,
-      tokenType: 'Bearer',
+      sessionId: TEST_LOCAL_SESSION_ID,
       expiresIn: 3600,
       user: {
         id: 'test-user',

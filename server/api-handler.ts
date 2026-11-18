@@ -6,9 +6,7 @@ let container: AppContainer | null = null;
 
 function getContainer(): AppContainer {
   if (!container) {
-    const isVercel = Boolean(process.env.VERCEL);
-    const dbPath = process.env.DB_PATH || (isVercel ? '/tmp/bnb_estudos.sqlite' : undefined);
-    container = createAppContainer(dbPath ? { dbPath } : {});
+    container = createAppContainer();
   }
   return container;
 }

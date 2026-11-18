@@ -20,6 +20,7 @@ import {
   createBackup,
   validateBackup,
   restoreBackup,
+  toCsv,
 } from '../../services/backup';
 import { completeReview, reconcileReviewsAndErrorNotes, saveErrorNote, saveQuestionLog, scheduleTopicReviews } from '../../services/performance';
 import { buildAssistantGroundingContext, clearGeminiModelsCache, processAssistantMessage } from '../../services/aiAssistant';
@@ -29,6 +30,11 @@ import { createTopic, deleteAllTopics } from '../../services/topics';
 describe('services/persistence & workflows', () => {
   beforeEach(async () => {
     await resetDatabase(db);
+  });
+
+  it('exporta texto potencialmente interpretável como fórmula e mantém números tipados', () => {
+    expect(toCsv(['Observação', 'Saldo'], [['@exemplo', -3], ['texto;com separador', 2]]))
+      .toBe("\uFEFFObservação;Saldo\r\n'@exemplo;-3\r\n\"texto;com separador\";2");
   });
 
   it('initializes with the 8 mandatory disciplines and default settings', async () => {
@@ -676,8 +682,7 @@ describe('services/persistence & workflows', () => {
 
       // 3. Authenticate as Vercel user where GET /api/study-data returns 0 sessions (stale server state)
       setAuthSession({
-        token: 'real-vercel-jwt-token',
-        tokenType: 'Bearer',
+        sessionId: 'real-vercel-jwt-token',
         expiresIn: 604800,
         user: {
           id: 'user-vercel-2',
@@ -734,8 +739,7 @@ describe('services/persistence & workflows', () => {
 
     try {
       setAuthSession({
-        token: 'real-vercel-jwt-token',
-        tokenType: 'Bearer',
+        sessionId: 'real-vercel-jwt-token',
         expiresIn: 604800,
         user: {
           id: 'user-vercel-topics',

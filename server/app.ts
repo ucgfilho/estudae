@@ -1,33 +1,41 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import type { AuthResponseDto } from './dtos/auth.dto';
 import type { AppContainer } from './container';
-import { AppError, DtoValidationError, NotFoundError, TooManyRequestsError } from './errors/AppError';
+import { AppError, DtoValidationError, ForbiddenError, NotFoundError, UnauthorizedError } from './errors/AppError';
 
 const MAX_BODY_BYTES = 10 * 1024 * 1024; // 10 MB
 
-const AUTH_RATE_LIMIT_WINDOW_MS = 60_000;
-const AUTH_RATE_LIMIT_MAX_ATTEMPTS = 25;
-const authRateMap = new Map<string, { count: number; resetAt: number }>();
+const BROWSER_SESSION_HEADER = 'x-estudae-session';
+const SESSION_COOKIE = 'estudae_session';
 
-function checkAuthRateLimit(req: IncomingMessage): void {
-  const forwarded = req.headers['x-forwarded-for'];
-  const rawIp =
-    (Array.isArray(forwarded) ? forwarded[0] : forwarded?.split(',')[0])?.trim() ||
-    req.socket?.remoteAddress ||
-    'local';
-  const now = Date.now();
-  const entry = authRateMap.get(rawIp);
-  if (!entry || now > entry.resetAt) {
-    authRateMap.set(rawIp, { count: 1, resetAt: now + AUTH_RATE_LIMIT_WINDOW_MS });
-    return;
-  }
-  entry.count += 1;
-  if (entry.count > AUTH_RATE_LIMIT_MAX_ATTEMPTS) {
-    throw new TooManyRequestsError();
+function sessionCookie(req: IncomingMessage): string | undefined {
+  return req.headers.cookie?.split(';').map((cookie) => cookie.trim())
+    .find((cookie) => cookie.startsWith(`${SESSION_COOKIE}=`))?.slice(SESSION_COOKIE.length + 1);
+}
+
+function setSessionCookie(container: AppContainer, res: ServerResponse, token: string, maxAge: number): void {
+  const secure = container.env.nodeEnv === 'production' || container.env.isVercel;
+  const attributes = `HttpOnly; SameSite=Strict; Path=/api; Max-Age=${maxAge}`;
+  res.setHeader('Set-Cookie', `${SESSION_COOKIE}=${token}; ${attributes}${secure ? '; Secure' : ''}`);
+}
+
+function checkBrowserWrite(req: IncomingMessage): void {
+  const site = req.headers['sec-fetch-site'];
+  if (typeof req.headers[BROWSER_SESSION_HEADER] !== 'string' || (site && site !== 'same-origin')) {
+    throw new ForbiddenError('Requisição de origem não permitida.');
   }
 }
 
-export function resetAuthRateLimiter(): void {
-  authRateMap.clear();
+function sendAuthResponse(
+  container: AppContainer, req: IncomingMessage, res: ServerResponse, status: number, data: AuthResponseDto,
+): void {
+  const exchange = req.headers[BROWSER_SESSION_HEADER] === 'exchange';
+  if (req.headers[BROWSER_SESSION_HEADER] === 'start' || exchange) {
+    setSessionCookie(container, res, data.token, data.expiresIn);
+    sendJson(res, status, { expiresIn: data.expiresIn, user: data.user, ...(exchange ? { exchanged: true } : {}) });
+    return;
+  }
+  sendJson(res, status, data);
 }
 
 function setSecurityHeaders(res: ServerResponse): void {
@@ -98,11 +106,11 @@ export async function handleApiRequest(
     return false;
   }
 
-  await container.seedReady;
-
   const method = (req.method ?? 'GET').toUpperCase();
 
   try {
+    await container.seedReady;
+
     if (method === 'OPTIONS') {
       setSecurityHeaders(res);
       res.statusCode = 204;
@@ -115,25 +123,62 @@ export async function handleApiRequest(
       return true;
     }
 
-    // Rotas públicas de Autenticação
-    if (method === 'POST' && pathname === '/api/auth/register') {
-      checkAuthRateLimit(req);
+    if (method === 'POST' && (pathname === '/api/auth/register' || pathname === '/api/auth/login')) {
+      if (req.headers[BROWSER_SESSION_HEADER] === 'start') checkBrowserWrite(req);
+      await container.authControls.limitOrigin(req);
       const body = await readJsonBody(req);
-      const result = await container.authController.register(body);
-      sendJson(res, result.status, result.data);
+      if (pathname === '/api/auth/login') await container.authControls.limitAccount(body);
+      const result = pathname === '/api/auth/register'
+        ? await container.authController.register(body)
+        : await container.authController.login(body);
+      sendAuthResponse(container, req, res, result.status, result.data);
       return true;
     }
 
-    if (method === 'POST' && pathname === '/api/auth/login') {
-      checkAuthRateLimit(req);
-      const body = await readJsonBody(req);
-      const result = await container.authController.login(body);
-      sendJson(res, result.status, result.data);
+    const cookie = sessionCookie(req);
+    const bearer = req.headers.authorization?.trim().match(/^Bearer\s+(.+)$/i)?.[1].trim();
+    const token = bearer ?? cookie;
+    const isLogout = method === 'POST' && pathname === '/api/auth/logout';
+
+    if (cookie && !req.headers.authorization && method !== 'GET') checkBrowserWrite(req);
+    if (isLogout) {
+      checkBrowserWrite(req);
+      if (token) {
+        try {
+          const payload = container.tokenService.verifyToken(token);
+          if (cookie && !req.headers.authorization && payload.sub !== req.headers[BROWSER_SESSION_HEADER]) {
+            throw new ForbiddenError('A conta da sessão mudou.');
+          }
+          await container.authControls.revoke(token, payload.exp * 1000);
+        } catch (err) {
+          if (!(err instanceof UnauthorizedError)) throw err;
+        }
+      }
+      setSessionCookie(container, res, '', 0);
+      sendJson(res, 200, { loggedOut: true });
       return true;
     }
 
-    // Todas as rotas abaixo exigem autenticação JWT Bearer
-    const user = await container.authGuard.authenticate(req.headers);
+    const user = await container.authGuard.authenticate(
+      cookie && !req.headers.authorization ? { authorization: `Bearer ${cookie}` } : req.headers,
+    );
+
+    if (bearer && req.headers[BROWSER_SESSION_HEADER] === 'exchange') {
+      const payload = container.tokenService.verifyToken(bearer);
+      if (payload.sub !== user.id || await container.authControls.isRevoked(bearer)) {
+        throw new UnauthorizedError('A sessão antiga não pode ser transferida.');
+      }
+      setSessionCookie(container, res, bearer, Math.max(0, payload.exp - Math.floor(Date.now() / 1000)));
+      sendJson(res, 200, { exchanged: true, user: await container.authService.getProfile(user.id) });
+      return true;
+    }
+
+    if (token && await container.authControls.isRevoked(token)) {
+      throw new UnauthorizedError('Sessão encerrada.');
+    }
+    if (cookie && !req.headers.authorization && user.id !== req.headers[BROWSER_SESSION_HEADER]) {
+      throw new UnauthorizedError('A conta da sessão mudou.');
+    }
 
     if (method === 'GET' && pathname === '/api/auth/me') {
       const result = await container.authController.me(user);
@@ -150,6 +195,7 @@ export async function handleApiRequest(
 
     if (method === 'DELETE' && pathname === '/api/auth/me') {
       const result = await container.authController.deleteAccount(user);
+      if (cookie && !req.headers.authorization) setSessionCookie(container, res, '', 0);
       sendJson(res, result.status, result.data);
       return true;
     }

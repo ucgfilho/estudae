@@ -11,9 +11,9 @@ import { createId } from '../lib/utils';
 import {
   fetchContestWorkspaces,
   getActiveContestScopeId,
-  getAuthToken,
+  getLocalSessionId,
   syncBatchMutationsToApi,
-  TEST_BYPASS_TOKEN,
+  TEST_LOCAL_SESSION_ID,
   getAuthSession,
   replaceUserWorkspaceInApi,
   setActiveContestScopeId,
@@ -136,9 +136,9 @@ export function saveUserContests(contests: UserContestProfile[]): void {
 }
 
 export async function refreshUserContests(): Promise<void> {
-  const token = getAuthToken();
+  const sessionId = getLocalSessionId();
   const rows = await fetchContestWorkspaces();
-  if (!rows?.length || token !== getAuthToken()) return;
+  if (!rows?.length || sessionId !== getLocalSessionId()) return;
 
   const cached = new Map(getUserContests().map((contest) => [contest.id, contest]));
   const contests = rows.map(({ id, settings, disciplineCount, topicCount }) => {
@@ -332,11 +332,11 @@ export async function createAndActivateContest(
     mockExams: [],
   };
 
-  const token = getAuthToken();
-  if (token && token !== TEST_BYPASS_TOKEN && !await replaceUserWorkspaceInApi(workspacePayload, contestScopeId)) {
+  const sessionId = getLocalSessionId();
+  if (sessionId && sessionId !== TEST_LOCAL_SESSION_ID && !await replaceUserWorkspaceInApi(workspacePayload, contestScopeId)) {
     throw new Error('O servidor não confirmou a criação do concurso. Tente novamente.');
   }
-  if (token !== getAuthToken()) throw new Error('A sessão mudou durante a criação do concurso.');
+  if (sessionId !== getLocalSessionId()) throw new Error('A sessão mudou durante a criação do concurso.');
   setActiveContestScopeId(contestScopeId);
   db.replaceAllFromBackup(workspacePayload);
 

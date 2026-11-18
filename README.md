@@ -77,13 +77,14 @@ retomada quando a API volta a responder.
    cp .env.example .env
    ```
 
-3. Para o uso padrão, mantenha o SQLite local e defina pelo menos um segredo
-   JWT:
+3. Para o uso padrão, mantenha o SQLite local. Gere dois segredos independentes
+   com `openssl rand -hex 32` e preencha as duas chaves no `.env`.
 
    ```dotenv
    PORT=8080
    NODE_ENV=development
-   JWT_SECRET=uma-chave-aleatoria-com-pelo-menos-32-bytes
+   JWT_SECRET=<primeiro-valor>
+   DATA_ENCRYPTION_KEY=<segundo-valor>
    ```
 
    O banco será criado em `data/bnb_estudos.sqlite` por padrão. Para usar
@@ -107,15 +108,30 @@ retomada quando a API volta a responder.
 | `PORT` | Não | Porta do servidor Node. O padrão é `3000`. |
 | `NODE_ENV` | Não | Ambiente de execução. |
 | `DB_PATH` | Não | Caminho do arquivo SQLite. |
-| `MONGODB_URI` | Não | URI do MongoDB Atlas; ativa o modo MongoDB. |
-| `JWT_SECRET` | Recomendada | Segredo usado para assinar tokens e criptografar dados sensíveis. |
+| `MONGODB_URI` | No Vercel | URI do MongoDB persistente. Fora do Vercel, quando ausente, o servidor usa SQLite. |
+| `JWT_SECRET` | Sim | Segredo aleatório de pelo menos 32 bytes, usado para assinar tokens. |
+| `DATA_ENCRYPTION_KEY` | Sim | Chave estável dos dados e índices cifrados, independente do segredo JWT. |
+| `TRUSTED_PROXY_IPS` | Não | IPs dos proxies que gerenciam `X-Forwarded-For`, separados por vírgulas. No Vercel, a identificação usa o cabeçalho gerenciado pela plataforma. |
 | `JWT_ISSUER` | Não | Emissor do token JWT. |
 | `JWT_AUDIENCE` | Não | Público do token JWT. |
-| `JWT_EXPIRES_IN` | Não | Validade do token em segundos; padrão de 7 dias. |
+| `JWT_EXPIRES_IN` | Não | Validade do token em segundos; padrão de 1 dia, com máximo de 7 dias. |
 | `SEED_FILE_PATH` | Não | Caminho do workspace inicial em JSON. |
 | `DEFAULT_USER_EMAIL` | Não | E-mail opcional do usuário inicial. |
 | `DEFAULT_USER_PASSWORD` | Não | Senha opcional do usuário inicial. |
 | `DEFAULT_USER_NAME` | Não | Nome do usuário inicial. |
+
+Ao atualizar uma instalação existente, configure `DATA_ENCRYPTION_KEY` com o
+valor efetivamente usado para cifrar os dados anteriormente. Se a instalação
+antiga derivava a chave a partir de `JWT_SECRET`, use o mesmo valor para manter
+o acesso aos dados. Preserve também o segredo de assinatura anterior para
+manter válidos os JWTs já emitidos. Gere uma chave de dados independente e um
+novo segredo de assinatura somente em uma migração planejada. Trocar a chave
+de dados requer recifrar os registros e reconstruir os índices cegos. Faça e
+verifique um backup antes da migração.
+
+Em produção, sirva a aplicação por HTTPS para que o navegador envie o cookie de
+sessão. Instâncias que atendem a mesma implantação devem compartilhar o banco
+e as chaves. Na hospedagem Vercel, configure o MongoDB antes de publicar.
 
 Nunca versionar `.env`, senhas, tokens ou chaves de APIs. O arquivo
 `.env.example` contém apenas valores ilustrativos.

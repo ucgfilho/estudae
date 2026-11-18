@@ -5,7 +5,7 @@ import { AuthScreen } from "../../screens/AuthScreen";
 import { resetDatabase } from "../../db/db";
 import {
   setAuthSession,
-  TEST_BYPASS_TOKEN,
+  TEST_LOCAL_SESSION_ID,
   type AuthSessionDto,
 } from "../../services/auth";
 import { parseEditalVerticalizado } from "../../domain/contests";
@@ -17,8 +17,7 @@ import {
 } from "../../services/contests";
 
 const REAL_SESSION: AuthSessionDto = {
-  token: "real-jwt-session-token",
-  tokenType: "Bearer",
+  sessionId: "real-jwt-session-token",
   expiresIn: 86400,
   user: {
     id: "user-estudae-1",
@@ -29,8 +28,7 @@ const REAL_SESSION: AuthSessionDto = {
 };
 
 const TEST_SESSION: AuthSessionDto = {
-  token: TEST_BYPASS_TOKEN,
-  tokenType: "Bearer",
+  sessionId: TEST_LOCAL_SESSION_ID,
   expiresIn: 86400,
   user: {
     id: "user-test-1",

@@ -1,4 +1,5 @@
-import { deterministicUserIdFromEmail } from '../database/seedFirefoxData';
+import { randomUUID } from 'node:crypto';
+import { DUMMY_PASSWORD_HASH } from '../security/PasswordHasher';
 import {
   parseLoginDto,
   parseRegisterDto,
@@ -57,7 +58,7 @@ export class AuthService implements IAuthService {
     const passwordHash = await this.passwordHasher.hash(dto.password);
     const now = new Date().toISOString();
     const user = await this.userRepository.create({
-      id: deterministicUserIdFromEmail(dto.email),
+      id: randomUUID(),
       name: dto.name,
       email: dto.email,
       passwordHash,
@@ -80,12 +81,9 @@ export class AuthService implements IAuthService {
   public async login(input: unknown): Promise<AuthResponseDto> {
     const dto = this.validateLoginDto(input);
     const user = await this.userRepository.findByEmail(dto.email);
-    if (!user) {
-      throw new UnauthorizedError('E-mail ou senha inválidos.');
-    }
-
-    const validPassword = await this.passwordHasher.verify(dto.password, user.passwordHash);
-    if (!validPassword) {
+    const passwordHash = user?.passwordHash ?? DUMMY_PASSWORD_HASH;
+    const validPassword = await this.passwordHasher.verify(dto.password, passwordHash);
+    if (!user || !validPassword) {
       throw new UnauthorizedError('E-mail ou senha inválidos.');
     }
 

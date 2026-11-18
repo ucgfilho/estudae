@@ -16,16 +16,13 @@ export interface AuthenticatedUser {
 export class BearerAuthGuard {
   private readonly tokenService: ITokenService;
   private readonly userRepository: IUserRepository;
-  private readonly allowStatelessRecovery: boolean;
 
   constructor(
     tokenService: ITokenService,
     userRepository: IUserRepository,
-    allowStatelessRecovery = false,
   ) {
     this.tokenService = tokenService;
     this.userRepository = userRepository;
-    this.allowStatelessRecovery = allowStatelessRecovery;
   }
 
   public async authenticate(headers: IncomingHttpHeaders): Promise<AuthenticatedUser> {
@@ -41,22 +38,7 @@ export class BearerAuthGuard {
     }
 
     const payload: TokenPayloadDto = this.tokenService.verifyToken(match[1].trim());
-    let user =
-      (await this.userRepository.findById(payload.sub)) ??
-      (await this.userRepository.findByEmail(payload.email));
-
-    if (!user && this.allowStatelessRecovery) {
-      const now = new Date().toISOString();
-      user = await this.userRepository.create({
-        id: payload.sub,
-        name: payload.name || payload.email.split('@')[0] || 'Titular da Conta',
-        email: payload.email,
-        passwordHash:
-          '$scrypt$16384$8$1$00000000000000000000000000000000$00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000',
-        createdAt: now,
-        updatedAt: now,
-      });
-    }
+    const user = await this.userRepository.findById(payload.sub);
 
     if (!user) {
       throw new UnauthorizedError('Usuário associado ao token não existe mais.');

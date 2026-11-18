@@ -18,7 +18,7 @@ it('shows the contest heading before synchronization and protects actions until 
   vi.spyOn(database, 'ensureSeed').mockReturnValue(initialization);
   const switchContest = vi.spyOn(contests, 'switchActiveContest').mockResolvedValue(contests.getUserContests()[0]);
   setAuthSession({
-    token: 'loading-test-token', tokenType: 'Bearer', expiresIn: 86400,
+    sessionId: 'loading-test-token', expiresIn: 86400,
     user: { id: 'loading-test', name: 'Teste', email: 'loading@example.test', createdAt: '2026-11-17T00:00:00Z' },
   });
 

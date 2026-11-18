@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { App } from '../../App';
 import { db, ensureSeed } from '../../db/db';
-import { setAuthSession, TEST_BYPASS_TOKEN } from '../../services/auth';
+import { setAuthSession, TEST_LOCAL_SESSION_ID } from '../../services/auth';
 import { todayKey } from '../../lib/dates';
 import type { StudySession } from '../../db/types';
 
@@ -36,8 +36,7 @@ describe('Celebration layer and daily mission', () => {
     await ensureSeed();
     localStorage.clear();
     setAuthSession({
-      token: TEST_BYPASS_TOKEN,
-      tokenType: 'Bearer',
+      sessionId: TEST_LOCAL_SESSION_ID,
       expiresIn: 3600,
       user: {
         id: 'test-user',

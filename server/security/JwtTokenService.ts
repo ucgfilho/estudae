@@ -1,4 +1,4 @@
-import { createHmac, timingSafeEqual } from 'node:crypto';
+import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
 import type { TokenPayloadDto } from '../dtos/auth.dto';
 import { UnauthorizedError } from '../errors/AppError';
 import type { ITokenService } from '../interfaces/ITokenService';
@@ -28,13 +28,14 @@ export class JwtTokenService implements ITokenService {
     this.config = config;
   }
 
-  public generateToken(payload: Omit<TokenPayloadDto, 'iat' | 'exp' | 'iss' | 'aud'>): {
+  public generateToken(payload: Omit<TokenPayloadDto, 'jti' | 'iat' | 'exp' | 'iss' | 'aud'>): {
     token: string;
     expiresIn: number;
   } {
     const nowSeconds = Math.floor(Date.now() / 1000);
-    const fullPayload: TokenPayloadDto = {
+    const fullPayload = {
       ...payload,
+      jti: randomUUID(),
       iat: nowSeconds,
       exp: nowSeconds + this.config.expiresInSeconds,
       iss: this.config.issuer,
@@ -77,18 +78,21 @@ export class JwtTokenService implements ITokenService {
       throw new UnauthorizedError('Conteúdo do token JWT inválido.');
     }
 
-    if (header.alg !== 'HS256') {
+    if (header?.alg !== 'HS256') {
       throw new UnauthorizedError('Algoritmo JWT não suportado.');
     }
 
     const nowSeconds = Math.floor(Date.now() / 1000);
-    if (typeof payload.exp !== 'number' || payload.exp <= nowSeconds) {
+    if (!payload || typeof payload.exp !== 'number' || payload.exp <= nowSeconds) {
       throw new UnauthorizedError('Sessão expirada. Faça login novamente.');
     }
     if (payload.iss !== this.config.issuer || payload.aud !== this.config.audience) {
       throw new UnauthorizedError('Emissor ou audiência do token JWT inválidos.');
     }
-    if (!payload.sub || !payload.email) {
+    if (
+      typeof payload.sub !== 'string' || !payload.sub ||
+      typeof payload.email !== 'string' || !payload.email
+    ) {
       throw new UnauthorizedError('Payload do token JWT incompleto.');
     }
 

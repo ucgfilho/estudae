@@ -9,8 +9,7 @@ import { startPlannedTimer } from '../../services/timer';
 import { todayKey } from '../../lib/dates';
 
 const TEST_SESSION = {
-  token: 'test-jwt-token',
-  tokenType: 'Bearer' as const,
+  sessionId: 'test-jwt-token',
   expiresIn: 3600,
   user: {
     id: 'user-test-1',

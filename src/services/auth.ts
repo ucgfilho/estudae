@@ -10,8 +10,8 @@ export interface AuthUserDto {
 }
 
 export interface AuthSessionDto {
-  token: string;
-  tokenType: 'Bearer';
+  sessionId: string;
+  legacyToken?: string;
   expiresIn: number;
   user: AuthUserDto;
 }
@@ -33,7 +33,9 @@ export type RemoteTableMutation =
   | { table: DataTableName; action: 'delete'; ids: string[] }
   | { table: DataTableName; action: 'clear' };
 
-const AUTH_STORAGE_KEY = 'bnb_auth_session_v1';
+const AUTH_STORAGE_KEY = 'bnb_auth_session_v2';
+const LEGACY_AUTH_STORAGE_KEY = 'bnb_auth_session_v1';
+const BROWSER_SESSION_HEADER = 'X-Estudae-Session';
 const ACTIVE_CONTEST_SCOPE_KEY = 'estudae_active_contest_scope_v1';
 
 type AuthListener = () => void;
@@ -41,6 +43,15 @@ const authListeners = new Set<AuthListener>();
 
 let cachedSession: AuthSessionDto | null = loadStoredSession();
 let activeContestScopeId: string = loadStoredContestScope();
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (event) => {
+    if (event.storageArea !== window.localStorage || event.key !== AUTH_STORAGE_KEY) return;
+    cachedSession = loadStoredSession();
+    activeContestScopeId = cachedSession ? loadStoredContestScope() : 'default';
+    notifyAuthListeners();
+  });
+}
 
 function loadStoredContestScope(): string {
   if (typeof window === 'undefined' || !window.localStorage) return 'default';
@@ -78,11 +89,16 @@ export function getWorkspaceCacheKey(email: string, scopeId = getActiveContestSc
 function loadStoredSession(): AuthSessionDto | null {
   if (typeof window === 'undefined' || !window.localStorage) return null;
   try {
-    const raw = window.localStorage.getItem(AUTH_STORAGE_KEY);
+    const raw = window.localStorage.getItem(AUTH_STORAGE_KEY) ?? window.localStorage.getItem(LEGACY_AUTH_STORAGE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as AuthSessionDto;
-    if (!parsed || typeof parsed.token !== 'string' || !parsed.user?.id) return null;
-    return parsed;
+    if (!parsed || !parsed.user?.id) return null;
+    if (typeof parsed.sessionId === 'string') return parsed;
+    const legacy = parsed as unknown as { token?: string } & AuthSessionDto;
+    if (typeof legacy.token === 'string') {
+      return { sessionId: createId(), legacyToken: legacy.token, expiresIn: parsed.expiresIn, user: parsed.user };
+    }
+    return null;
   } catch {
     return null;
   }
@@ -105,8 +121,8 @@ export function getAuthSession(): AuthSessionDto | null {
   return cachedSession;
 }
 
-export function getAuthToken(): string | null {
-  return cachedSession?.token ?? null;
+export function getLocalSessionId(): string | null {
+  return cachedSession?.sessionId ?? null;
 }
 
 export function setAuthSession(session: AuthSessionDto | null): void {
@@ -116,6 +132,7 @@ export function setAuthSession(session: AuthSessionDto | null): void {
     try {
       if (session) {
         window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(session));
+        window.localStorage.removeItem(LEGACY_AUTH_STORAGE_KEY);
       } else {
         activeContestScopeId = 'default';
         window.localStorage.removeItem(AUTH_STORAGE_KEY);
@@ -127,7 +144,7 @@ export function setAuthSession(session: AuthSessionDto | null): void {
           const keysToRemove: string[] = [];
           for (let i = 0; i < window.localStorage.length; i++) {
             const k = window.localStorage.key(i);
-            if (k && (k === cachePrefix || (k.startsWith(`${cachePrefix}::`) && !k.endsWith(':pending-batches')))) {
+            if (k && (k === cachePrefix || (k.startsWith(`${cachePrefix}::`) && !k.includes(':pending-batches')))) {
               keysToRemove.push(k);
             }
           }
@@ -143,14 +160,16 @@ export function setAuthSession(session: AuthSessionDto | null): void {
   notifyAuthListeners();
 }
 
-export function buildBearerHeaders(extra: Record<string, string> = {}): Record<string, string> {
-  const token = getAuthToken();
+export function buildSessionHeaders(extra: Record<string, string> = {}): Record<string, string> {
+  const session = getAuthSession();
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...extra,
   };
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
+  if (session) headers[BROWSER_SESSION_HEADER] = session.user.id;
+  if (session?.legacyToken) {
+    headers.Authorization = `Bearer ${session.legacyToken}`;
+    headers[BROWSER_SESSION_HEADER] = 'exchange';
   }
   if (activeContestScopeId && activeContestScopeId !== 'default' && !headers['X-Contest-Id']) {
     headers['X-Contest-Id'] = activeContestScopeId;
@@ -172,10 +191,12 @@ async function parseApiJson<T>(res: Response): Promise<T> {
 export async function loginWithCredentials(input: LoginInputDto): Promise<AuthSessionDto> {
   const res = await fetch('/api/auth/login', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', [BROWSER_SESSION_HEADER]: 'start' },
     body: JSON.stringify(input),
   });
-  const session = await parseApiJson<AuthSessionDto>(res);
+  const { user, expiresIn } = await parseApiJson<Pick<AuthSessionDto, 'user' | 'expiresIn'>>(res);
+  // O identificador local distingue operações em andamento entre sessões. A credencial é HttpOnly.
+  const session: AuthSessionDto = { sessionId: createId(), user, expiresIn };
   setAuthSession(session);
   return session;
 }
@@ -183,25 +204,27 @@ export async function loginWithCredentials(input: LoginInputDto): Promise<AuthSe
 export async function registerUserAccount(input: RegisterInputDto): Promise<AuthSessionDto> {
   const res = await fetch('/api/auth/register', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', [BROWSER_SESSION_HEADER]: 'start' },
     body: JSON.stringify(input),
   });
-  const session = await parseApiJson<AuthSessionDto>(res);
+  const { user, expiresIn } = await parseApiJson<Pick<AuthSessionDto, 'user' | 'expiresIn'>>(res);
+  // O identificador local distingue operações em andamento entre sessões. A credencial é HttpOnly.
+  const session: AuthSessionDto = { sessionId: createId(), user, expiresIn };
   setAuthSession(session);
   return session;
 }
 
 export async function verifyCurrentSession(): Promise<AuthUserDto | null> {
-  const token = getAuthToken();
-  if (!token) return null;
+  const session = getAuthSession();
+  if (!session) return null;
   try {
     const res = await fetch('/api/auth/me', {
       method: 'GET',
-      headers: buildBearerHeaders(),
+      headers: buildSessionHeaders(),
     });
     const data = await parseApiJson<{ user: AuthUserDto }>(res);
     if (cachedSession) {
-      setAuthSession({ ...cachedSession, user: data.user });
+      setAuthSession({ ...cachedSession, legacyToken: undefined, user: data.user });
     }
     return data.user;
   } catch {
@@ -216,9 +239,9 @@ export interface UpdateProfileInput {
 
 /** Atualiza nome e foto do perfil e mantém a sessão local em sincronia. */
 export async function updateUserProfile(input: UpdateProfileInput): Promise<AuthUserDto> {
-  const token = getAuthToken();
-  if (!token) throw new Error('Sessão expirada. Entre novamente.');
-  if (token === TEST_BYPASS_TOKEN) {
+  const sessionId = getLocalSessionId();
+  if (!sessionId) throw new Error('Sessão expirada. Entre novamente.');
+  if (sessionId === TEST_LOCAL_SESSION_ID) {
     if (cachedSession) {
       const user = { ...cachedSession.user, ...input, name: input.name?.trim() || cachedSession.user.name };
       setAuthSession({ ...cachedSession, user });
@@ -228,7 +251,7 @@ export async function updateUserProfile(input: UpdateProfileInput): Promise<Auth
   }
   const res = await fetch('/api/auth/me', {
     method: 'PATCH',
-    headers: buildBearerHeaders(),
+    headers: buildSessionHeaders(),
     body: JSON.stringify(input),
   });
   const data = await parseApiJson<{ user: AuthUserDto }>(res);
@@ -239,50 +262,85 @@ export async function updateUserProfile(input: UpdateProfileInput): Promise<Auth
 }
 
 export async function deleteUserAccount(): Promise<void> {
-  const token = getAuthToken();
+  const sessionId = getLocalSessionId();
   const previousEmail = cachedSession?.user?.email?.toLowerCase();
-  if (token && token !== TEST_BYPASS_TOKEN) {
+  if (sessionId && sessionId !== TEST_LOCAL_SESSION_ID) {
     const res = await fetch('/api/auth/me', {
       method: 'DELETE',
-      headers: buildBearerHeaders(),
+      headers: buildSessionHeaders(),
     });
     await parseApiJson<{ deleted: boolean }>(res);
   }
-  if (previousEmail && typeof window !== 'undefined' && window.localStorage) {
+  if (previousEmail) {
+    purgeWorkspaceStorage(previousEmail);
     try {
       window.localStorage.removeItem(`estudae_user_contests_v1:${previousEmail}`);
-      const prefix = getWorkspaceCacheKey(previousEmail, 'default');
-      for (const key of Object.keys(window.localStorage)) {
-        if (key === prefix || key.startsWith(`${prefix}:`)) window.localStorage.removeItem(key);
-      }
-      for (const key of volatileBatches.keys()) {
-        if (key.startsWith(`${prefix}:`)) volatileBatches.delete(key);
-      }
     } catch {
-      // Ignore storage errors
+      // Storage is optional.
     }
   }
   setAuthSession(null);
 }
 
-export const TEST_BYPASS_TOKEN = 'test-jwt-token';
+export async function logoutUser(): Promise<boolean> {
+  const session = getAuthSession();
+  if (!session) return true;
+  const email = session.user.email;
+  const workspaceKeys = getLocalWorkspaceKeys(email);
+  const pending = workspaceKeys.some((key) => key.includes(':pending-batches') && readPendingBatches(key).length > 0);
+  if (pending && !window.confirm('Há alterações de estudo não sincronizadas. Sair e descartar essas alterações deste dispositivo?')) {
+    return false;
+  }
+  if (session.sessionId !== TEST_LOCAL_SESSION_ID) {
+    const res = await fetch('/api/auth/logout', { method: 'POST', headers: buildSessionHeaders() });
+    if (!res.ok) throw new Error('Não foi possível encerrar a sessão. Tente novamente.');
+  }
+  if (getAuthSession()?.sessionId !== session.sessionId) return false;
+  purgeWorkspaceStorage(email);
+  setAuthSession(null);
+  return true;
+}
+
+function getLocalWorkspaceKeys(email: string): string[] {
+  const prefix = getWorkspaceCacheKey(email, 'default');
+  let keys = [...volatileBatches.keys()];
+  try {
+    keys = [...keys, ...Object.keys(window.localStorage)];
+  } catch {
+    // The in-memory queue remains available when storage is unavailable.
+  }
+  return [...new Set(keys)].filter((key) => key === prefix || key.startsWith(`${prefix}:`));
+}
+
+function purgeWorkspaceStorage(email: string): void {
+  for (const key of getLocalWorkspaceKeys(email)) {
+    volatileBatches.delete(key);
+    try {
+      window.localStorage.removeItem(key);
+    } catch {
+      // Storage is optional.
+    }
+  }
+}
+
+export const TEST_LOCAL_SESSION_ID = 'test-jwt-token';
 
 export async function fetchContestWorkspaces(): Promise<ContestWorkspaceSummary[] | null> {
-  const token = getAuthToken();
-  if (!token || token === TEST_BYPASS_TOKEN) return null;
-  const res = await fetch('/api/study-data/contests', { cache: 'no-store', headers: buildBearerHeaders() });
+  const sessionId = getLocalSessionId();
+  if (!sessionId || sessionId === TEST_LOCAL_SESSION_ID) return null;
+  const res = await fetch('/api/study-data/contests', { cache: 'no-store', headers: buildSessionHeaders() });
   const body = await parseApiJson<{ contests: ContestWorkspaceSummary[] }>(res);
   if (!Array.isArray(body.contests)) throw new Error('Resposta inválida ao carregar seus concursos.');
   return body.contests;
 }
 
 export async function fetchUserWorkspaceFromApi(): Promise<Record<DataTableName, unknown[]> | null> {
-  const token = getAuthToken();
-  if (!token || token === TEST_BYPASS_TOKEN) return null;
+  const sessionId = getLocalSessionId();
+  if (!sessionId || sessionId === TEST_LOCAL_SESSION_ID) return null;
   const res = await fetch('/api/study-data', {
     method: 'GET',
     cache: 'no-store',
-    headers: buildBearerHeaders(),
+    headers: buildSessionHeaders(),
   });
   const body = await parseApiJson<{ data: Record<DataTableName, unknown[]> }>(res);
   if (!body.data) throw new Error('Resposta inválida ao carregar os dados de estudo.');
@@ -331,9 +389,9 @@ export async function replaceUserWorkspaceInApi(
   workspace: Record<DataTableName, unknown[]>,
   scope = getActiveContestScopeId(),
 ): Promise<boolean> {
-  const token = getAuthToken();
-  if (!token || token === TEST_BYPASS_TOKEN) return false;
-  const headers = buildBearerHeaders({ 'X-Contest-Id': scope });
+  const sessionId = getLocalSessionId();
+  if (!sessionId || sessionId === TEST_LOCAL_SESSION_ID) return false;
+  const headers = buildSessionHeaders({ 'X-Contest-Id': scope });
   const key = pendingBatchKey(scope);
   const superseded = new Set(key ? readPendingBatches(key).map((batch) => batch.id) : []);
   return enqueueSyncTask(async () => {
@@ -395,17 +453,20 @@ function storePendingBatches(key: string, batches: PendingBatch[]): void {
 async function drainPendingBatches(
   key: string,
   headers: Record<string, string>,
+  sessionId: string,
   currentBatch?: PendingBatch,
   retryThroughId?: string,
 ): Promise<boolean> {
   let confirmed = true;
   for (const saved of readPendingBatches(key)) {
+    if (getLocalSessionId() !== sessionId) return false;
     const batch = saved.id === currentBatch?.id ? currentBatch : saved;
     try {
       const res = await fetch('/api/study-data/batch', {
         method: 'POST', headers, body: JSON.stringify({ operations: batch.operations }),
       });
       const body = await res.json().catch(() => null) as { ok?: boolean; error?: string } | null;
+      if (getLocalSessionId() !== sessionId) return false;
       if (!res.ok || body?.ok !== true) {
         if (res.status !== 400 && res.status !== 422) return false;
         // A rejected batch must not block valid writes. Keep it for recovery.
@@ -429,14 +490,15 @@ async function drainPendingBatches(
 /** Reenvia somente operações não confirmadas, sem substituir dados de outros dispositivos. */
 export async function retryPendingMutations(): Promise<void> {
   const key = pendingBatchKey();
-  const token = getAuthToken();
-  if (!key || !token || token === TEST_BYPASS_TOKEN) return;
+  const sessionId = getLocalSessionId();
+  if (!key || !sessionId || sessionId === TEST_LOCAL_SESSION_ID) return;
   const marker = unsyncedKey();
-  const headers = buildBearerHeaders();
+  const headers = buildSessionHeaders();
   const lastPending = readPendingBatches(key).at(-1)?.id;
   await enqueueSyncTask(async () => {
+    if (getLocalSessionId() !== sessionId) return;
     const pending = lastPending && readPendingBatches(key).some((batch) => batch.id === lastPending);
-    if (!pending || await drainPendingBatches(key, headers, undefined, lastPending)) {
+    if (!pending || await drainPendingBatches(key, headers, sessionId, undefined, lastPending)) {
       try { window.localStorage.removeItem(marker); } catch { /* Storage is optional. */ }
     }
   });
@@ -446,14 +508,14 @@ export async function syncBatchMutationsToApi(
   operations: readonly RemoteTableMutation[],
   scope = getActiveContestScopeId(),
 ): Promise<boolean> {
-  const token = getAuthToken();
+  const sessionId = getLocalSessionId();
   const key = pendingBatchKey(scope);
-  if (!token || token === TEST_BYPASS_TOKEN || !key || operations.length === 0) return true;
-  const headers = buildBearerHeaders({ 'X-Contest-Id': scope });
+  if (!sessionId || sessionId === TEST_LOCAL_SESSION_ID || !key || operations.length === 0) return true;
+  const headers = buildSessionHeaders({ 'X-Contest-Id': scope });
   const batch: PendingBatch = {
     id: createId(),
     operations: structuredClone([...operations]),
   };
   storePendingBatches(key, [...readPendingBatches(key), batch]);
-  return enqueueSyncTask(() => drainPendingBatches(key, headers, batch));
+  return enqueueSyncTask(() => drainPendingBatches(key, headers, sessionId, batch));
 }

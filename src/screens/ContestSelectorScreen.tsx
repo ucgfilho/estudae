@@ -17,10 +17,11 @@ import {
   switchActiveContest,
   type UserContestProfile,
 } from '../services/contests';
-import { getAuthSession, setAuthSession, subscribeAuth } from '../services/auth';
+import { getAuthSession, logoutUser, subscribeAuth } from '../services/auth';
 import { cn } from '../lib/utils';
 
 import { LoadingState } from '../components/ui/Display';
+import { useToast } from '../components/ui/Toast';
 
 const ProfileModal = lazy(() =>
   import('../components/profile/ProfileModal').then((mod) => ({ default: mod.ProfileModal }))
@@ -43,6 +44,7 @@ export function ContestSelectorScreen({ onSelectContest, initializing = false }:
   const [profileOpen, setProfileOpen] = useState(false);
   const [manageMode, setManageMode] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const toast = useToast();
 
   const activeScopeId = getActiveContestScopeId();
 
@@ -138,7 +140,9 @@ export function ContestSelectorScreen({ onSelectContest, initializing = false }:
           )}
           <button
             type="button"
-            onClick={() => setAuthSession(null)}
+            onClick={() => {
+              void logoutUser().catch(() => toast.error('Não foi possível encerrar a sessão. Tente novamente.'));
+            }}
             className="inline-flex control-height items-center gap-1.5 rounded-lg border border-border-strong bg-surface px-3 text-xs font-medium text-fg-muted hover:text-danger hover:border-danger/40 transition cursor-pointer"
           >
             <LogOut className="size-3.5" />

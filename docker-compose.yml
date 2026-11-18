@@ -13,6 +13,9 @@ services:
       - DB_PATH=/app/data/bnb_estudos.sqlite
       - SEED_FILE_PATH=/app/data/initial-workspace.seed.json
       - JWT_SECRET=${JWT_SECRET:-}
+      - DATA_ENCRYPTION_KEY=${DATA_ENCRYPTION_KEY:-}
+      - MONGODB_URI=${MONGODB_URI:-}
+      - TRUSTED_PROXY_IPS=${TRUSTED_PROXY_IPS:-}
       - DEFAULT_USER_EMAIL=${DEFAULT_USER_EMAIL:-}
       - DEFAULT_USER_PASSWORD=${DEFAULT_USER_PASSWORD:-}
       - DEFAULT_USER_NAME=${DEFAULT_USER_NAME:-}

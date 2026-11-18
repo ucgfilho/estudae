@@ -7,7 +7,7 @@ import {
   getActiveContestScopeId,
   setActiveContestScopeId,
   subscribeAuth,
-  TEST_BYPASS_TOKEN,
+  TEST_LOCAL_SESSION_ID,
   type AuthSessionDto,
 } from './services/auth';
 import { getUserContests, refreshUserContests, syncActiveContestMetadataFromDb } from './services/contests';
@@ -23,23 +23,26 @@ export function App() {
   const [initialized, setInitialized] = useState(false);
   const [showContestSelector, setShowContestSelector] = useState<boolean>(() => {
     const initial = getAuthSession();
-    return Boolean(initial && initial.token !== TEST_BYPASS_TOKEN);
+    return Boolean(initial && initial.sessionId !== TEST_LOCAL_SESSION_ID);
   });
 
   useEffect(() => {
+    let previousSessionId = getAuthSession()?.sessionId;
     return subscribeAuth(() => {
       const next = getAuthSession();
-      setSession(next);
-      if (next && next.token !== TEST_BYPASS_TOKEN) {
-        setShowContestSelector(true);
+      if (previousSessionId !== next?.sessionId) {
+        previousSessionId = next?.sessionId;
+        db.clearMemory();
+        setShowContestSelector(Boolean(next && next.sessionId !== TEST_LOCAL_SESSION_ID));
       }
+      setSession(next);
     });
   }, []);
 
-  const activeToken = session?.token ?? null;
+  const activeSessionId = session?.sessionId ?? null;
 
   useEffect(() => {
-    if (!activeToken) {
+    if (!activeSessionId) {
       setInitialized(true);
       return;
     }
@@ -70,10 +73,10 @@ export function App() {
         if (!cancelled) setInitialized(true);
       });
     return () => { cancelled = true; };
-  }, [activeToken]);
+  }, [activeSessionId]);
 
   useEffect(() => {
-    if (!activeToken || activeToken === TEST_BYPASS_TOKEN) return;
+    if (!activeSessionId || activeSessionId === TEST_LOCAL_SESSION_ID) return;
     const refresh = () => {
       if (document.visibilityState === 'visible') {
         void ensureSeed().catch((err) => console.error('Falha ao atualizar dados:', err));
@@ -90,7 +93,7 @@ export function App() {
       window.removeEventListener('focus', refresh);
       document.removeEventListener('visibilitychange', refresh);
     };
-  }, [activeToken, showContestSelector]);
+  }, [activeSessionId, showContestSelector]);
 
   if (!session) {
     return (
