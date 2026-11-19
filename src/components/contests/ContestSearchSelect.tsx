@@ -126,10 +126,10 @@ export function ContestSearchSelect({
             <div className="min-w-0">
               {selectedTemplate ? (
                 <>
-                  <div className="font-semibold text-fg truncate text-xs sm:text-sm">
+                  <div className="font-semibold text-fg wrap-anywhere text-xs sm:text-sm">
                     {selectedTemplate.name}
                   </div>
-                  <div className="text-[11px] text-fg-muted truncate">
+                  <div className="text-[11px] text-fg-muted wrap-anywhere">
                     {selectedTemplate.role} · Banca {selectedTemplate.banca}
                   </div>
                 </>
@@ -138,7 +138,7 @@ export function ContestSearchSelect({
                   <div className="font-medium text-fg text-xs sm:text-sm">
                     Selecione ou pesquise o seu concurso...
                   </div>
-                  <div className="text-[11px] text-fg-subtle truncate">
+                  <div className="text-[11px] text-fg-subtle wrap-anywhere">
                     Bancários, TI, Policiais, Fiscais, Tribunais, Administrativos ou Personalizado
                   </div>
                 </>
@@ -241,8 +241,8 @@ export function ContestSearchSelect({
                               {item.sigla.slice(0, 3)}
                             </span>
                             <div className="min-w-0">
-                              <div className="truncate font-medium">{item.name}</div>
-                              <div className="text-[11px] text-fg-muted truncate">
+                              <div className="wrap-anywhere font-medium">{item.name}</div>
+                              <div className="text-[11px] text-fg-muted wrap-anywhere">
                                 {item.role} · {item.banca}
                               </div>
                             </div>

@@ -358,7 +358,7 @@ export function ReportsScreen() {
                       {position}º
                     </span>
                     <DisciplineDot color={d.color} />
-                    <span className="font-medium text-sm text-fg truncate">{d.name}</span>
+                    <span className="font-medium text-sm text-fg wrap-anywhere">{d.name}</span>
                   </div>
                   <div className="flex items-center gap-3 text-xs shrink-0 ml-auto">
                     <span className="text-fg-subtle">{d.total} resolvidas</span>

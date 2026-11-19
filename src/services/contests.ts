@@ -7,6 +7,7 @@ import {
   parseEditalVerticalizado,
   type ContestCatalogItem,
 } from '../domain/contests';
+import { CONTEST_LIMIT_MESSAGE, MAX_USER_CONTESTS } from '../domain/contestLimit';
 import { createId } from '../lib/utils';
 import {
   fetchContestWorkspaces,
@@ -155,7 +156,7 @@ export async function refreshUserContests(): Promise<void> {
     }
     return {
       id, templateId, name, examBoard, createdAt, disciplineCount, topicCount,
-      shortName: computeShortName(name, template?.sigla),
+      shortName: computeShortName(name, templateId === 'custom' ? undefined : template?.sigla),
       role: settings.contestRole || template?.role || 'Cargo Geral',
       category: template?.category || 'Personalizado',
       accentColor: template?.color || '#1e40af',
@@ -263,6 +264,10 @@ export async function createAndActivateContest(
     db.persistLocalWorkspaceCache();
   }
 
+  if (!options.isInitialRegistration && getUserContests().length >= MAX_USER_CONTESTS) {
+    throw new Error(CONTEST_LIMIT_MESSAGE);
+  }
+
   const tpl: ContestCatalogItem | undefined = getContestCatalogItem(input.templateId);
   const contestName =
     (input.customName?.trim() || tpl?.name || 'Concurso Público').trim();
@@ -290,7 +295,7 @@ export async function createAndActivateContest(
   } else if (tpl) {
     const built = buildContestDefaultSyllabus(tpl.id);
     disciplines = built.disciplines;
-    topics = built.topics;
+    topics = input.templateId === 'custom' && !options.isInitialRegistration ? [] : built.topics;
     distribution = built.distribution;
   } else {
     disciplines = DEFAULT_DISCIPLINES.map((d) => ({ ...d }));
@@ -298,7 +303,6 @@ export async function createAndActivateContest(
     distribution = { ...DEFAULT_SETTINGS.distribution };
   }
 
-  const existingContests = getUserContests();
   const contestScopeId = options.isInitialRegistration
     ? 'default'
     : `contest_${createId().replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 16)}`;
@@ -334,6 +338,10 @@ export async function createAndActivateContest(
 
   const sessionId = getLocalSessionId();
   if (sessionId && sessionId !== TEST_LOCAL_SESSION_ID && !await replaceUserWorkspaceInApi(workspacePayload, contestScopeId)) {
+    if (!options.isInitialRegistration && sessionId === getLocalSessionId()) {
+      await refreshUserContests();
+      if (getUserContests().length >= MAX_USER_CONTESTS) throw new Error(CONTEST_LIMIT_MESSAGE);
+    }
     throw new Error('O servidor não confirmou a criação do concurso. Tente novamente.');
   }
   if (sessionId !== getLocalSessionId()) throw new Error('A sessão mudou durante a criação do concurso.');
@@ -344,7 +352,7 @@ export async function createAndActivateContest(
     id: contestScopeId,
     templateId: input.templateId,
     name: contestName,
-    shortName: computeShortName(contestName, tpl?.sigla),
+    shortName: computeShortName(contestName, input.templateId === 'custom' ? undefined : tpl?.sigla),
     role: contestRole,
     category,
     examBoard,
@@ -358,7 +366,7 @@ export async function createAndActivateContest(
 
   const updatedList = options.isInitialRegistration
     ? [newProfile]
-    : [...existingContests.filter((c) => c.id !== contestScopeId), newProfile];
+    : [...getUserContests().filter((c) => c.id !== contestScopeId), newProfile];
 
   saveUserContests(updatedList);
   notifyContestListeners();

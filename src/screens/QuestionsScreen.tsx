@@ -346,7 +346,7 @@ export function QuestionsScreen() {
                 <div className="flex items-center justify-between gap-2 text-xs font-medium">
                   <span className="flex items-center gap-1.5 min-w-0 flex-1">
                     <DisciplineDot color={d.color} />
-                    <span className="truncate">{d.name}</span>
+                    <span className="wrap-anywhere">{d.name}</span>
                   </span>
                   <span className="font-bold tabular-nums shrink-0">
                     {d.accuracy !== null ? formatPercent(d.accuracy) : EMPTY_VALUE}
@@ -390,9 +390,9 @@ export function QuestionsScreen() {
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5 font-semibold text-sm text-fg">
                           {d && <DisciplineDot color={d.color} />}
-                          <span className="truncate">{d?.name ?? '—'}</span>
+                          <span className="wrap-anywhere">{d?.name ?? '—'}</span>
                         </div>
-                        {t && <div className="mt-0.5 text-xs text-fg-subtle line-clamp-1">{t.title}</div>}
+                        {t && <div className="mt-0.5 text-xs text-fg-subtle wrap-anywhere">{t.title}</div>}
                       </div>
                       <div className="flex flex-col items-end gap-1 shrink-0">
                         <span className="text-[11px] font-medium text-fg-subtle tabular-nums">
@@ -438,7 +438,7 @@ export function QuestionsScreen() {
                     </div>
 
                     <div className="flex items-center justify-between gap-2 pt-1 border-t border-border/50">
-                      <span className="text-fg-muted truncate">
+                      <span className="text-fg-muted wrap-anywhere">
                         {log.source ? `Fonte: ${log.source}` : 'Sem banca/fonte'}
                       </span>
                       <div className="inline-flex shrink-0 items-center justify-end gap-1">
@@ -514,12 +514,12 @@ export function QuestionsScreen() {
                       <td className="py-2.5 px-2 xl:px-3 max-w-[165px] xl:max-w-[280px]">
                         <div className="flex items-center gap-1.5 font-medium text-fg">
                           {d && <DisciplineDot color={d.color} />}
-                          <span className="truncate">{d?.name ?? '—'}</span>
+                          <span className="wrap-anywhere">{d?.name ?? '—'}</span>
                         </div>
-                        {t && <div className="text-xs text-fg-subtle line-clamp-1">{t.title}</div>}
+                        {t && <div className="text-xs text-fg-subtle wrap-anywhere">{t.title}</div>}
                       </td>
                       <td className="py-2.5 px-2 xl:px-3 text-xs text-fg-muted max-w-[105px] xl:max-w-[220px]">
-                        <div className="truncate xl:line-clamp-2 xl:whitespace-normal">{log.source || '—'}</div>
+                        <div className="wrap-anywhere">{log.source || '—'}</div>
                       </td>
                       <td className="py-2.5 px-1.5 xl:px-3 text-center font-semibold tabular-nums">
                         {log.total}

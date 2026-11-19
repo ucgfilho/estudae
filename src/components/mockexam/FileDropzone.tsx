@@ -66,7 +66,7 @@ export function FileDropzone({ label, hint, accept, file, required, onFile }: Fi
           {file ? (
             <>
               <CheckCircle2 className="size-6 text-success" aria-hidden />
-              <span className="max-w-full truncate text-sm font-medium text-fg">{file.name}</span>
+              <span className="max-w-full wrap-anywhere text-sm font-medium text-fg">{file.name}</span>
               <span className="text-xs text-fg-muted">Clique para trocar o arquivo</span>
             </>
           ) : (

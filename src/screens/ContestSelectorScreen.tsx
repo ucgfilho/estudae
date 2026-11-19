@@ -18,6 +18,7 @@ import {
   type UserContestProfile,
 } from '../services/contests';
 import { getAuthSession, logoutUser, subscribeAuth } from '../services/auth';
+import { CONTEST_LIMIT_MESSAGE, MAX_USER_CONTESTS } from '../domain/contestLimit';
 import { cn } from '../lib/utils';
 
 import { LoadingState } from '../components/ui/Display';
@@ -46,6 +47,7 @@ export function ContestSelectorScreen({ onSelectContest, initializing = false }:
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const toast = useToast();
 
+  const atContestLimit = contests.length >= MAX_USER_CONTESTS;
   const activeScopeId = getActiveContestScopeId();
 
   useEffect(() => {
@@ -132,7 +134,7 @@ export function ContestSelectorScreen({ onSelectContest, initializing = false }:
               className="inline-flex control-height items-center gap-2 rounded-lg border border-border-strong bg-surface px-2.5 text-xs font-medium text-fg hover:border-primary/40 transition cursor-pointer"
             >
               <Avatar name={authUser.name || authUser.email} src={authUser.avatarUrl} size="sm" />
-              <span className="hidden sm:inline-block max-w-36 truncate font-semibold text-fg">
+              <span className="hidden sm:inline-block max-w-36 wrap-anywhere font-semibold text-fg">
                 {authUser.name}
               </span>
               <Pencil className="size-3 text-fg-subtle shrink-0" />
@@ -208,7 +210,7 @@ export function ContestSelectorScreen({ onSelectContest, initializing = false }:
 
                 {/* Emblema do concurso */}
                 <div
-                  className="size-20 sm:size-24 rounded-xl flex flex-col items-center justify-center text-white font-bold mb-3.5 relative overflow-hidden"
+                  className="w-20 sm:w-24 min-h-20 sm:min-h-24 p-2 rounded-xl flex flex-col items-center justify-center text-white font-bold mb-3.5 wrap-anywhere"
                   style={{
                     backgroundColor: contest.accentColor || '#1E40AF',
                   }}
@@ -221,10 +223,10 @@ export function ContestSelectorScreen({ onSelectContest, initializing = false }:
                   </span>
                 </div>
 
-                <div className="font-semibold text-base text-fg group-hover:text-primary transition-colors">
+                <div className="w-full wrap-anywhere font-semibold text-base text-fg group-hover:text-primary transition-colors">
                   {contest.name}
                 </div>
-                <div className="text-sm leading-relaxed text-fg-muted mt-1">{contest.role}</div>
+                <div className="w-full wrap-anywhere text-sm leading-relaxed text-fg-muted mt-1">{contest.role}</div>
 
                 <div className="mt-3 pt-3 border-t border-border w-full flex items-center justify-center gap-3 text-[11px] text-fg-subtle">
                   <span className="inline-flex items-center gap-1">
@@ -252,9 +254,10 @@ export function ContestSelectorScreen({ onSelectContest, initializing = false }:
           <button
             type="button"
             data-testid="new-contest-card-button"
-            disabled={initializing}
+            disabled={initializing || atContestLimit}
+            aria-describedby={atContestLimit ? "contest-limit" : undefined}
             onClick={() => setShowNewModal(true)}
-            className="group w-full max-w-[260px] min-[440px]:w-[calc(50%_-_0.5rem)] min-[440px]:max-w-[208px] sm:w-52 rounded-xl border border-dashed border-border-strong hover:border-primary bg-surface/50 hover:bg-primary-soft/15 p-5 flex flex-col items-center justify-center text-center transition-colors duration-150 cursor-pointer min-h-[210px]"
+            className="group w-full max-w-[260px] min-[440px]:w-[calc(50%_-_0.5rem)] min-[440px]:max-w-[208px] sm:w-52 rounded-xl border border-dashed border-border-strong hover:border-primary bg-surface/50 hover:bg-primary-soft/15 p-5 flex flex-col items-center justify-center text-center transition-colors duration-150 cursor-pointer min-h-[210px] disabled:cursor-not-allowed disabled:opacity-60"
           >
             <div className="size-20 sm:size-24 rounded-xl bg-surface-muted group-hover:bg-primary/15 text-fg-muted group-hover:text-primary flex items-center justify-center mb-3.5 transition-colors duration-150">
               <Plus className="size-9 stroke-[2]" />
@@ -263,10 +266,14 @@ export function ContestSelectorScreen({ onSelectContest, initializing = false }:
               Novo concurso
             </div>
             <div className="text-xs text-fg-muted mt-0.5">
-              Enviar outro edital verticalizado
+              {atContestLimit ? "Limite atingido" : "Adicionar à minha conta"}
             </div>
           </button>
         </div>
+
+        {atContestLimit && (
+          <p id="contest-limit" role="status" className="mt-4 text-sm text-fg-muted">{CONTEST_LIMIT_MESSAGE}</p>
+        )}
 
         {contests.length > 1 && (
           <div className="mt-8">

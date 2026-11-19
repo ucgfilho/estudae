@@ -245,12 +245,12 @@ export function OverviewScreen() {
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2 text-xs">
                         {disc && <DisciplineDot color={disc.color} />}
-                        <span className="font-medium text-fg-muted truncate">{disc?.name ?? 'Disciplina'}</span>
+                        <span className="font-medium text-fg-muted wrap-anywhere">{disc?.name ?? 'Disciplina'}</span>
                         <Badge tone={isOverdue ? 'danger' : 'warning'}>
                           {isOverdue ? 'Vencida' : 'Para hoje'}
                         </Badge>
                       </div>
-                      <p className="mt-0.5 truncate text-sm font-medium text-fg">{displayTitle}</p>
+                      <p className="mt-0.5 wrap-anywhere text-sm font-medium text-fg">{displayTitle}</p>
                     </div>
                     <Button
                       variant="secondary"
@@ -310,7 +310,7 @@ export function OverviewScreen() {
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2 text-xs">
                         {disc && <DisciplineDot color={disc.color} />}
-                        <span className="font-semibold text-fg truncate">
+                        <span className="font-semibold text-fg wrap-anywhere">
                           {disc?.name ?? (s.disciplineId === 'simulado' ? 'Simulado Geral BNB' : 'Sessão')}
                         </span>
                         <span className="text-warning font-medium tabular-nums">
@@ -318,7 +318,7 @@ export function OverviewScreen() {
                         </span>
                       </div>
                       {s.objective && (
-                        <p className="mt-0.5 truncate text-xs text-fg-muted">{s.objective}</p>
+                        <p className="mt-0.5 wrap-anywhere text-xs text-fg-muted">{s.objective}</p>
                       )}
                     </div>
                     <Button

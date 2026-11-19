@@ -89,8 +89,8 @@ export function SearchModal({ open, onClose }: SearchModalProps) {
                       className="w-full text-left p-2 max-lg:p-3 max-lg:min-h-11 rounded-lg hover:bg-surface-muted flex items-center justify-between gap-2 text-sm group"
                     >
                       <div className="min-w-0">
-                        <div className="font-medium text-fg truncate">{t.title}</div>
-                        <div className="text-xs text-fg-muted truncate">{d?.name}</div>
+                        <div className="font-medium text-fg wrap-anywhere">{t.title}</div>
+                        <div className="text-xs text-fg-muted wrap-anywhere">{d?.name}</div>
                       </div>
                       <ArrowRight className="size-4 text-fg-subtle shrink-0 opacity-0 max-lg:opacity-60 group-hover:opacity-100 transition-opacity" />
                     </button>
@@ -119,8 +119,8 @@ export function SearchModal({ open, onClose }: SearchModalProps) {
                       className="w-full text-left p-2 max-lg:p-3 max-lg:min-h-11 rounded-lg hover:bg-surface-muted flex items-center justify-between gap-2 text-sm group"
                     >
                       <div className="min-w-0">
-                        <div className="font-medium text-fg truncate">{s.objective || 'Sessão de estudo'}</div>
-                        <div className="text-xs text-fg-muted truncate">
+                        <div className="font-medium text-fg wrap-anywhere">{s.objective || 'Sessão de estudo'}</div>
+                        <div className="text-xs text-fg-muted wrap-anywhere">
                           {formatDate(s.date)} • {d?.name} ({s.plannedMinutes} min)
                         </div>
                       </div>
@@ -151,10 +151,10 @@ export function SearchModal({ open, onClose }: SearchModalProps) {
                       className="w-full text-left p-2 max-lg:p-3 max-lg:min-h-11 rounded-lg hover:bg-surface-muted flex items-center justify-between gap-2 text-sm group"
                     >
                       <div className="min-w-0">
-                        <div className="font-medium text-fg truncate">
-                          {e.sourceReference || e.explanation.slice(0, 60)}
+                        <div className="font-medium text-fg wrap-anywhere">
+                          {e.sourceReference || e.explanation}
                         </div>
-                        <div className="text-xs text-fg-muted truncate">{d?.name}</div>
+                        <div className="text-xs text-fg-muted wrap-anywhere">{d?.name}</div>
                       </div>
                       <ArrowRight className="size-4 text-fg-subtle shrink-0 opacity-0 max-lg:opacity-60 group-hover:opacity-100 transition-opacity" />
                     </button>

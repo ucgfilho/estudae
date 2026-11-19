@@ -159,7 +159,7 @@ export function RankCard(input: RankInput) {
                 className={cn('flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs', i === state.rankIndex ? 'border-primary bg-primary-soft font-semibold text-fg' : reached ? 'border-border text-fg' : 'border-border text-fg-subtle opacity-70')}
               >
                 <TIcon className={cn('size-3.5 shrink-0', reached ? t.color : 'text-fg-subtle')} aria-hidden />
-                <span className="truncate">{r.name}</span>
+                <span className="wrap-anywhere">{r.name}</span>
                 <span className="ml-auto tabular-nums text-[10px] text-fg-subtle">{formatInteger(r.minXp)}</span>
               </li>
             );
@@ -175,7 +175,7 @@ export function RankCard(input: RankInput) {
                   <li key={`${e.date}-${e.type}-${i}`} className="flex items-center gap-2 text-fg-muted">
                     <EIcon className={cn('size-3.5 shrink-0', st.tone)} aria-hidden />
                     <span className="tabular-nums">{formatDate(e.date)}</span>
-                    <span className="min-w-0 flex-1 truncate">{e.label}</span>
+                    <span className="min-w-0 flex-1 wrap-anywhere">{e.label}</span>
                     {e.delta !== 0 && <span className={cn('font-semibold tabular-nums', e.delta > 0 ? 'text-success' : 'text-danger')}>{e.delta > 0 ? '+' : '−'}{Math.abs(e.delta)}</span>}
                   </li>
                 );

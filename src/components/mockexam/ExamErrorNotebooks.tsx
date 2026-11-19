@@ -188,8 +188,8 @@ export function ExamErrorNotebooks({ exam, disciplines }: { exam: MockExam; disc
                         {d && <DisciplineDot color={d.color} />}
                         <span className="font-semibold text-sm text-fg">{d?.name ?? 'Disciplina'}</span>
                         {t && (
-                          <Badge tone="neutral" className="max-w-full truncate">
-                            <span className="truncate">{t.title}</span>
+                          <Badge tone="neutral" className="max-w-full wrap-anywhere">
+                            <span className="wrap-anywhere">{t.title}</span>
                           </Badge>
                         )}
                         <Badge tone="neutral" className="text-xs">

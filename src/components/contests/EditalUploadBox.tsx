@@ -22,6 +22,8 @@ interface EditalUploadBoxProps {
   onEditalTextChange: (text: string) => void;
   editalFileName: string | null;
   onEditalFileNameChange: (name: string | null) => void;
+  onReadingFileChange?: (reading: boolean) => void;
+  allowTemplate?: boolean;
   disabled?: boolean;
 }
 
@@ -32,6 +34,8 @@ export function EditalUploadBox({
   onEditalTextChange,
   editalFileName,
   onEditalFileNameChange,
+  onReadingFileChange,
+  allowTemplate = true,
   disabled = false,
 }: EditalUploadBoxProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -41,8 +45,8 @@ export function EditalUploadBox({
 
   const isUnlocked = Boolean(contestId);
   const template = useMemo(
-    () => (contestId ? getContestCatalogItem(contestId) : undefined),
-    [contestId],
+    () => (allowTemplate && contestId ? getContestCatalogItem(contestId) : undefined),
+    [allowTemplate, contestId],
   );
 
   const effectiveContestName =
@@ -81,6 +85,7 @@ export function EditalUploadBox({
     if (!file) return;
     setFileError(null);
     setReadingFile(true);
+    onReadingFileChange?.(true);
     try {
       const text = await readFileText(file);
       if (!text.trim()) {
@@ -92,6 +97,7 @@ export function EditalUploadBox({
       setFileError(errorMessage(err));
     } finally {
       setReadingFile(false);
+      onReadingFileChange?.(false);
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -138,7 +144,7 @@ export function EditalUploadBox({
             <FileText className="size-4" />
           </div>
           <div>
-            <div className="text-xs font-semibold text-fg">
+            <div className="text-xs font-semibold text-fg wrap-anywhere">
               Edital Verticalizado — {effectiveContestName}
             </div>
             <div className="text-[11px] text-fg-muted">
@@ -185,7 +191,7 @@ export function EditalUploadBox({
           <div className="flex items-center gap-2 min-w-0">
             <CheckCircle2 className="size-4 text-success shrink-0" />
             <div className="min-w-0">
-              <div className="font-semibold text-fg truncate">{editalFileName}</div>
+              <div className="font-semibold text-fg wrap-anywhere">{editalFileName}</div>
               <div className="text-[11px] text-fg-muted">
                 Edital processado: {parsedPreview?.disciplineCount ?? 0} disciplinas e{' '}
                 {parsedPreview?.topicCount ?? 0} tópicos disponíveis no ciclo

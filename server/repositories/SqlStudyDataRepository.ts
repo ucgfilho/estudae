@@ -1,3 +1,6 @@
+import { CONTEST_LIMIT_MESSAGE, MAX_USER_CONTESTS } from '../../src/domain/contestLimit';
+import { ConflictError, NotFoundError } from '../errors/AppError';
+import { parseTenantScope } from '../security/MongoRlsGuard';
 import { DEFAULT_DISCIPLINES, DEFAULT_SETTINGS } from '../../src/db/seed';
 import { workspacePreferenceFields } from '../../src/db/settingsFields';
 import {
@@ -95,6 +98,15 @@ export class SqlStudyDataRepository implements IStudyDataRepository {
     };
   }
 
+  public isContestActive(userId: string): boolean {
+    const settings = this.getSettingsList(userId)[0];
+    return Boolean(settings && !settings.contestHidden);
+  }
+
+  private assertContestNotHidden(userId: string): void {
+    if (this.getSettingsList(userId)[0]?.contestHidden) throw new NotFoundError('Concurso não encontrado.');
+  }
+
   public listContestWorkspaces(userId: string): ContestWorkspaceSummary[] {
     const prefix = `${userId}::contest::`;
     const rows = this.db.all<{ user_id: string; discipline_count: number; topic_count: number }>(
@@ -115,6 +127,13 @@ export class SqlStudyDataRepository implements IStudyDataRepository {
 
   public replaceWorkspace(userId: string, workspace: StudyWorkspaceDto): StudyWorkspaceDto {
     this.db.transaction(() => {
+      const { ownerId, scopeId } = parseTenantScope(userId);
+      const settings = this.getSettingsList(userId)[0];
+      if (settings?.contestHidden) throw new NotFoundError('Concurso não encontrado.');
+      if (!settings && scopeId !== 'default' && this.listContestWorkspaces(ownerId).length >= MAX_USER_CONTESTS) {
+        throw new ConflictError(CONTEST_LIMIT_MESSAGE);
+      }
+
       this.ensureUserSeed(userId);
       for (const table of DATA_TABLES) {
         this.clearTableInternal(userId, table);
@@ -136,6 +155,7 @@ export class SqlStudyDataRepository implements IStudyDataRepository {
 
   public resetWorkspace(userId: string): StudyWorkspaceDto {
     this.db.transaction(() => {
+      this.assertContestNotHidden(userId);
       for (const table of DATA_TABLES) {
         this.clearTableInternal(userId, table);
       }
@@ -155,6 +175,7 @@ export class SqlStudyDataRepository implements IStudyDataRepository {
 
   public applyBatch(userId: string, operations: readonly TableMutationOperationDto[]): void {
     this.db.transaction(() => {
+      this.assertContestNotHidden(userId);
       this.ensureUserSeed(userId);
       for (const op of operations) {
         if (op.action === 'patch') {
@@ -174,18 +195,21 @@ export class SqlStudyDataRepository implements IStudyDataRepository {
   public upsertTable(userId: string, table: DataTableName, records: readonly unknown[]): void {
     const validated = validateTableRecords(table, records);
     this.db.transaction(() => {
+      this.assertContestNotHidden(userId);
       this.upsertTableInternal(userId, table, validated);
     });
   }
 
   public deleteFromTable(userId: string, table: DataTableName, ids: readonly string[]): void {
     this.db.transaction(() => {
+      this.assertContestNotHidden(userId);
       this.deleteFromTableInternal(userId, table, ids);
     });
   }
 
   public clearTable(userId: string, table: DataTableName): void {
     this.db.transaction(() => {
+      this.assertContestNotHidden(userId);
       this.clearTableInternal(userId, table);
     });
   }

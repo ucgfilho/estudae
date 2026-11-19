@@ -281,7 +281,7 @@ export function DisciplinesScreen() {
                 )}
               >
                 <DisciplineDot color={d.color} className="size-2" />
-                <span className="truncate max-w-[180px]">{d.name}</span>
+                <span className="wrap-anywhere max-w-[180px]">{d.name}</span>
               </button>
             );
           })}
@@ -394,7 +394,7 @@ export function DisciplinesScreen() {
 
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-2">
-                            <span className="font-semibold text-sm text-fg">{topic.title}</span>
+                            <span className="font-semibold text-sm text-fg wrap-anywhere">{topic.title}</span>
                             <Badge
                               tone={
                                 topic.status === 'concluido' || topic.status === 'dominado'
@@ -410,7 +410,7 @@ export function DisciplinesScreen() {
                             {!topic.active && <Badge tone="danger">Desativado</Badge>}
                           </div>
                           {topic.notes && (
-                            <p className="mt-0.5 text-xs text-fg-muted line-clamp-1">{topic.notes}</p>
+                            <p className="mt-0.5 text-xs text-fg-muted wrap-anywhere">{topic.notes}</p>
                           )}
                         </div>
                       </div>
@@ -496,7 +496,7 @@ export function DisciplinesScreen() {
                           >
                             <div className="flex flex-wrap items-center gap-2 min-w-0">
                               <span className="touch-none" data-drag-handle><GripVertical className="size-3 text-fg-subtle cursor-grab shrink-0" /></span>
-                              <span className="font-medium text-fg break-words sm:truncate">{sub.title}</span>
+                              <span className="font-medium text-fg wrap-anywhere">{sub.title}</span>
                               <Badge
                                 tone={
                                   sub.status === 'concluido' || sub.status === 'dominado'
@@ -512,7 +512,7 @@ export function DisciplinesScreen() {
                             </div>
 
                             <div className="flex flex-wrap items-center justify-between gap-2 w-full sm:w-auto sm:flex-nowrap sm:justify-end sm:gap-1 shrink-0 self-stretch sm:self-center pt-1.5 sm:pt-0 border-t border-border/40 sm:border-t-0">
-                              <div className="w-full sm:w-28">
+                              <div className="w-full sm:w-32">
                                 <Select
                                   size="sm"
                                   value={sub.status}

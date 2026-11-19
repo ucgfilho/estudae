@@ -10,7 +10,6 @@ import {
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { CelebrationLayer } from '../motivation/CelebrationLayer';
-import { NewContestModal } from '../modals/NewContestModal';
 import { useActiveTimer, useDisciplines, useSettings } from '../../hooks/useData';
 import { elapsedSeconds } from '../../domain/timer';
 import { formatClock } from '../../lib/format';
@@ -57,7 +56,13 @@ function useWorkerTick(enabled: boolean): number {
 export function AppLayout({ onSwitchContestScreen }: AppLayoutProps) {
   const { pathname } = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [newContestModalOpen, setNewContestModalOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(
+    () => window.localStorage.getItem('estudae_sidebar_collapsed') === 'true',
+  );
+
+  useEffect(() => {
+    window.localStorage.setItem('estudae_sidebar_collapsed', String(sidebarCollapsed));
+  }, [sidebarCollapsed]);
   const activeTimer = useActiveTimer();
   const disciplines = useDisciplines();
   const settings = useSettings();
@@ -122,7 +127,8 @@ export function AppLayout({ onSwitchContestScreen }: AppLayoutProps) {
         onCloseMobile={() => setMobileMenuOpen(false)}
         activeContest={activeContest}
         contestCount={contestCount}
-        onOpenNewContest={() => setNewContestModalOpen(true)}
+        collapsed={sidebarCollapsed}
+        onToggleCollapsed={() => setSidebarCollapsed((collapsed) => !collapsed)}
         onSwitchContestScreen={onSwitchContestScreen}
       />
       <div className="flex flex-1 flex-col overflow-hidden min-w-0 lg:bg-[#1e3a8a]">
@@ -160,7 +166,7 @@ export function AppLayout({ onSwitchContestScreen }: AppLayoutProps) {
                 }
               >
                 <Icon className="size-5" aria-hidden="true" />
-                <span className="max-w-full truncate">{item.label}</span>
+                <span className="max-w-full wrap-anywhere">{item.label}</span>
               </NavLink>
             );
           })}
@@ -176,21 +182,12 @@ export function AppLayout({ onSwitchContestScreen }: AppLayoutProps) {
             )}
           >
             <Menu className="size-5" aria-hidden="true" />
-            <span className="max-w-full truncate">Mais</span>
+            <span className="max-w-full wrap-anywhere">Mais</span>
           </button>
         </nav>
       </div>
       <CelebrationLayer />
 
-      <NewContestModal
-        open={newContestModalOpen}
-        onClose={() => setNewContestModalOpen(false)}
-        onCreated={() => {
-          setNewContestModalOpen(false);
-          setActiveContest(getActiveContestProfile());
-          setContestCount(getUserContests().length);
-        }}
-      />
     </div>
   );
 }

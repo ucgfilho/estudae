@@ -273,7 +273,7 @@ export function FlashcardDeck({ reviews, notes, disciplines, onComplete }: Props
               {d && <DisciplineDot color={d.color} />}
               <span className="text-sm font-semibold text-fg">{d?.name}</span>
               <Badge tone="neutral">Ciclo de {current.intervalDays}d</Badge>
-              <span className="text-xs text-fg-muted truncate">{displayTitle}</span>
+              <span className="text-xs text-fg-muted wrap-anywhere">{displayTitle}</span>
             </div>
             <div className="my-4 flex-1 overflow-y-auto">
               {card ? (

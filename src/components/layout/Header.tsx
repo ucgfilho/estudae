@@ -71,20 +71,20 @@ export function Header({
 
   return (
     <>
-      <header className="sticky top-0 z-20 flex h-14 max-lg:h-[calc(3.5rem+env(safe-area-inset-top))] max-lg:pt-[env(safe-area-inset-top)] shrink-0 items-center justify-between gap-2 navigation-chrome bg-surface px-3 sm:px-6">
+      <header className="sticky top-0 z-20 flex min-h-14 py-1 max-lg:min-h-[calc(3.5rem+env(safe-area-inset-top))] max-lg:pt-[calc(0.25rem+env(safe-area-inset-top))] shrink-0 items-center justify-between gap-2 navigation-chrome bg-surface px-3 sm:px-6">
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <BnbLogo className={cn('size-7 shrink-0 lg:hidden rounded-lg', timer && 'max-sm:hidden')} />
 
           <div className={cn('min-w-0 lg:hidden', timer && 'max-sm:hidden')}>
             <p className="text-sm font-bold leading-tight">estudaê</p>
-            <p className="max-w-32 truncate text-xs text-fg-muted sm:max-w-48">
+            <p className="max-w-32 wrap-anywhere text-xs text-fg-muted sm:max-w-48">
               {activeContest?.name ?? 'Seu espaço de estudos'}
             </p>
           </div>
 
           <div className="hidden md:flex items-center gap-2">
-            <CalendarDays className="size-4 text-fg-subtle" />
-            <span className="text-xs sm:text-sm font-medium text-fg capitalize truncate">
+            <CalendarDays className="size-4 shrink-0 text-fg-subtle" />
+            <span className="text-xs sm:text-sm font-medium text-fg capitalize">
               {formatLongDate(today)}
             </span>
           </div>
@@ -139,7 +139,7 @@ export function Header({
                 <RankIcon className={cn('size-3.5', rankIconColor)} strokeWidth={2.5} aria-hidden="true" />
               </span>
               <Avatar name={authUser.name || authUser.email} src={authUser.avatarUrl} size="xs" />
-              <span className="hidden md:inline-block max-w-24 truncate font-medium text-fg">
+              <span className="hidden md:inline-block max-w-24 wrap-anywhere font-medium text-fg">
                 {authUser.name}
               </span>
               <Pencil className="hidden sm:block size-3 text-fg-subtle shrink-0" aria-hidden="true" />

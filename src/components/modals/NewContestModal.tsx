@@ -1,9 +1,7 @@
-import { useState } from 'react';
-import { Plus, Sparkles } from 'lucide-react';
+import { useId, useRef, useState, type FormEvent } from 'react';
 import { Dialog } from '../ui/Dialog';
 import { Button } from '../ui/Button';
 import { Alert } from '../ui/Display';
-import { ContestSearchSelect } from '../contests/ContestSearchSelect';
 import { EditalUploadBox } from '../contests/EditalUploadBox';
 import { createAndActivateContest, type UserContestProfile } from '../../services/contests';
 import { errorMessage } from '../../lib/utils';
@@ -15,55 +13,45 @@ interface NewContestModalProps {
 }
 
 export function NewContestModal({ open, onClose, onCreated }: NewContestModalProps) {
-  const [contestId, setContestId] = useState('');
+  const formId = useId();
+  const stageHeading = useRef<HTMLHeadingElement>(null);
+  const [step, setStep] = useState(1);
   const [customName, setCustomName] = useState('');
   const [customRole, setCustomRole] = useState('');
   const [editalText, setEditalText] = useState('');
   const [editalFileName, setEditalFileName] = useState<string | null>(null);
   const [examDate, setExamDate] = useState('');
+  const [readingFile, setReadingFile] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const resetForm = () => {
-    setContestId('');
-    setCustomName('');
-    setCustomRole('');
-    setEditalText('');
-    setEditalFileName(null);
-    setExamDate('');
-    setError(null);
-  };
+  const busy = loading || readingFile;
 
-  const handleClose = () => {
-    if (loading) return;
-    resetForm();
-    onClose();
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (busy) return;
     setError(null);
 
-    if (!contestId) {
-      setError('Escolha qual concurso você deseja criar antes de continuar.');
-      return;
-    }
-    if (contestId === 'custom' && !customName.trim()) {
-      setError('Informe o nome do concurso personalizado.');
+    if (step === 1) {
+      if (!customName.trim()) {
+        setError('Informe o nome do concurso.');
+        return;
+      }
+      setStep(2);
+      requestAnimationFrame(() => stageHeading.current?.focus());
       return;
     }
 
     setLoading(true);
     try {
       const created = await createAndActivateContest({
-        templateId: contestId,
-        customName: customName.trim() || undefined,
+        templateId: 'custom',
+        customName: customName.trim(),
         customRole: customRole.trim() || undefined,
         editalText: editalText.trim() || undefined,
         editalFileName,
         examDate: examDate || null,
       });
-      resetForm();
       onCreated(created);
     } catch (err) {
       setError(errorMessage(err));
@@ -75,77 +63,75 @@ export function NewContestModal({ open, onClose, onCreated }: NewContestModalPro
   return (
     <Dialog
       open={open}
-      onClose={handleClose}
-      title="Novo Concurso e Edital Verticalizado"
+      onClose={() => { if (!busy) onClose(); }}
+      title="Novo concurso"
       size="lg"
       footer={
         <>
-          <Button variant="secondary" onClick={handleClose} disabled={loading}>
-            Cancelar
-          </Button>
           <Button
-            variant="primary"
-            onClick={handleSubmit}
-            loading={loading}
-            disabled={!contestId}
-            icon={contestId ? <Sparkles className="size-4" /> : <Plus className="size-4" />}
+            onClick={step === 1 ? onClose : () => {
+              setError(null);
+              setStep(1);
+              requestAnimationFrame(() => stageHeading.current?.focus());
+            }}
+            disabled={busy}
           >
-            Criar Concurso e Iniciar Ciclo
+            {step === 1 ? 'Cancelar' : 'Voltar'}
+          </Button>
+          <Button type="submit" form={formId} variant="primary" loading={loading} disabled={busy}>
+            {step === 1 ? 'Continuar' : 'Criar concurso'}
           </Button>
         </>
       }
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <p className="text-xs text-fg-muted leading-relaxed">
-          Adicione outro concurso à sua conta. As disciplinas, o edital verticalizado, as questões
-          e o ciclo contínuo de estudos ficam separados dos demais.
-        </p>
+      <form id={formId} onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <p className="text-xs text-fg-muted">Etapa {step} de 2</p>
+          <h3 ref={stageHeading} tabIndex={-1} className="mt-1 section-title">
+            {step === 1 ? 'Dados do concurso' : 'Edital verticalizado'}
+          </h3>
+        </div>
 
-        {error && (
-          <Alert tone="danger" onClose={() => setError(null)}>
-            {error}
-          </Alert>
+        {error && <Alert tone="danger" onClose={() => setError(null)}>{error}</Alert>}
+
+        {step === 1 && (
+          <div className="space-y-4">
+            <label className="block space-y-1 text-sm font-medium">
+              <span>Nome do concurso</span>
+              <input
+                value={customName}
+                onChange={(event) => setCustomName(event.target.value)}
+                className="input-base"
+                required
+              />
+            </label>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="block space-y-1 text-sm font-medium">
+                <span>Cargo (opcional)</span>
+                <input value={customRole} onChange={(event) => setCustomRole(event.target.value)} className="input-base" />
+              </label>
+              <label className="block space-y-1 text-sm font-medium">
+                <span>Data prevista da prova (opcional)</span>
+                <input type="date" value={examDate} onChange={(event) => setExamDate(event.target.value)} className="input-base" />
+              </label>
+            </div>
+          </div>
         )}
 
-        <ContestSearchSelect
-          value={contestId}
-          onChange={(id) => {
-            setContestId(id);
-            setError(null);
-          }}
-          customName={customName}
-          onCustomNameChange={setCustomName}
-          customRole={customRole}
-          onCustomRoleChange={setCustomRole}
-          disabled={loading}
-          label="1. Escolha o concurso que deseja adicionar"
-        />
-
-        <div className="space-y-1.5">
-          <div className="text-xs font-medium text-fg">
-            2. Envie o Edital Verticalizado (liberado após escolher o concurso)
-          </div>
+        <div hidden={step !== 2}>
+          <p className="mb-3 text-sm text-fg-muted">
+            O envio é opcional. Você também pode cadastrar disciplinas e tópicos no painel.
+          </p>
           <EditalUploadBox
-            contestId={contestId}
+            contestId="custom"
             customContestName={customName}
             editalText={editalText}
             onEditalTextChange={setEditalText}
             editalFileName={editalFileName}
             onEditalFileNameChange={setEditalFileName}
+            onReadingFileChange={setReadingFile}
+            allowTemplate={false}
             disabled={loading}
-          />
-        </div>
-
-        <div className="pt-1">
-          <label className="block text-xs font-medium text-fg mb-1">
-            Data prevista da prova (Opcional)
-          </label>
-          <input
-            type="date"
-            value={examDate}
-            onChange={(e) => setExamDate(e.target.value)}
-            disabled={loading || !contestId}
-            className="h-9 max-lg:h-11 w-full sm:w-56 rounded-lg border border-border-strong bg-surface px-3 text-xs text-fg focus:border-primary focus:outline-none disabled:opacity-50"
           />
         </div>
       </form>

@@ -417,7 +417,7 @@ export function ErrorNoteModal({
                           {card.answer === 'certo' ? 'Certo' : 'Errado'}
                         </Badge>
                       </div>
-                      <p className="truncate text-fg-muted">{card.statement}</p>
+                      <p className="wrap-anywhere text-fg-muted">{card.statement}</p>
                     </div>
                     <div className="flex shrink-0 items-center gap-1">
                       <Button

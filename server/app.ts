@@ -221,6 +221,11 @@ export async function handleApiRequest(
         ? { ...user, id: `${user.id}::contest::${contestIdHeader}` }
         : user;
 
+    const replacingWorkspace = method === 'PUT' && pathname === '/api/study-data/workspace';
+    if (studyUser !== user && !replacingWorkspace && !await container.studyDataService.isContestActive(studyUser.id)) {
+      throw new NotFoundError('Concurso não encontrado.');
+    }
+
     if (method === 'GET' && pathname === '/api/study-data') {
       const result = await container.studyDataController.getWorkspace(studyUser);
       sendJson(res, result.status, result.data);
@@ -234,7 +239,7 @@ export async function handleApiRequest(
       return true;
     }
 
-    if (method === 'PUT' && pathname === '/api/study-data/workspace') {
+    if (replacingWorkspace) {
       const body = await readJsonBody(req);
       const result = await container.studyDataController.replaceWorkspace(studyUser, body);
       sendJson(res, result.status, result.data);

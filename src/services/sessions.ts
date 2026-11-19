@@ -3,6 +3,7 @@ import type { SessionHistoryEntry, SessionStatus, StudySession } from '../db/typ
 import { SESSION_STATUS_LABELS } from '../db/types';
 import { formatDate, isValidDateKey, isValidTime, type DateKey } from '../lib/dates';
 import { createId, nowIso } from '../lib/utils';
+import { saveTopicWithStatus } from './topicStatus';
 
 export class ValidationError extends Error {
   constructor(message: string) {
@@ -251,13 +252,13 @@ export async function recoverSession(id: string, date: DateKey): Promise<StudySe
  */
 export async function syncTopicStatusAfterSession(topicId: string | null): Promise<void> {
   if (!topicId) return;
-  const topic = await db.topics.get(topicId);
-  if (!topic || topic.status === 'dominado' || topic.status === 'concluido') return;
   const related = await db.sessions.filter((s) => s.topicId === topicId).toArray();
+  const topic = db.topics.getSync(topicId);
+  if (!topic || topic.status === 'dominado' || topic.status === 'concluido') return;
   if (!related.some((s) => s.status === 'concluida')) return;
   const pending = related.some((s) => s.status === 'planejada');
   const next = pending ? 'em-andamento' : 'concluido';
-  if (topic.status !== next) await db.topics.update(topicId, { status: next, updatedAt: nowIso() });
+  if (topic.status !== next) await saveTopicWithStatus({ ...topic, status: next, updatedAt: nowIso() });
 }
 
 /**

@@ -13,6 +13,8 @@ import {
   BarChart3,
   Settings,
   ArrowLeftRight,
+  PanelLeftClose,
+  PanelLeftOpen,
   X,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
@@ -28,7 +30,8 @@ interface SidebarProps {
   onCloseMobile: () => void;
   activeContest?: UserContestProfile;
   contestCount?: number;
-  onOpenNewContest?: () => void;
+  collapsed: boolean;
+  onToggleCollapsed: () => void;
   onSwitchContestScreen?: () => void;
 }
 
@@ -51,7 +54,8 @@ export function Sidebar({
   onCloseMobile,
   activeContest,
   contestCount = 1,
-  onOpenNewContest: _onOpenNewContest,
+  collapsed,
+  onToggleCollapsed,
   onSwitchContestScreen,
 }: SidebarProps) {
   const today = useToday();
@@ -88,21 +92,31 @@ export function Sidebar({
       <aside
         id="main-navigation"
         className={cn(
-          'fixed inset-y-0 left-0 z-40 max-lg:z-50 flex w-60 xl:w-64 max-lg:w-80 max-lg:max-w-[90vw] max-lg:shadow-2xl max-lg:pt-[env(safe-area-inset-top)] max-lg:pb-[env(safe-area-inset-bottom)] flex-col navigation-chrome bg-surface transition-transform duration-200 ease-in-out lg:static lg:translate-x-0',
+          'fixed inset-y-0 left-0 z-40 max-lg:z-50 flex shrink-0 max-lg:w-80 max-lg:max-w-[90vw] max-lg:shadow-2xl max-lg:pt-[env(safe-area-inset-top)] max-lg:pb-[env(safe-area-inset-bottom)] flex-col navigation-chrome bg-surface transition-transform duration-200 ease-in-out lg:static lg:translate-x-0',
+          collapsed ? 'lg:w-16' : 'lg:w-60 xl:w-64',
           mobileOpen ? 'translate-x-0' : '-translate-x-full max-lg:invisible',
         )}
         aria-label="Navegação principal"
       >
         {/* Branding header: estudaê */}
-        <div className="flex h-14 items-center justify-between px-4">
-          <div className="flex items-center gap-2.5 min-w-0">
+        <div className={cn('flex h-14 shrink-0 items-center justify-between px-4', collapsed && 'lg:justify-center lg:px-0')}>
+          <div className={cn('flex items-center gap-2.5 min-w-0', collapsed && 'lg:hidden')}>
             <BnbLogo className="size-7 shrink-0 rounded-md" />
             <div className="min-w-0">
-              <p className="text-sm font-bold tracking-tight text-fg truncate leading-tight">
+              <p className="text-sm font-bold tracking-tight text-fg wrap-anywhere leading-tight">
                 estudaê
               </p>
             </div>
           </div>
+          <IconButton
+            label={collapsed ? 'Expandir barra lateral' : 'Recolher barra lateral'}
+            icon={collapsed ? <PanelLeftOpen className="size-4" /> : <PanelLeftClose className="size-4" />}
+            onClick={onToggleCollapsed}
+            aria-controls="sidebar-links"
+            aria-expanded={!collapsed}
+            className="max-lg:hidden"
+            size="sm"
+          />
           <IconButton
             label="Fechar menu lateral"
             icon={<X className="size-4" />}
@@ -113,7 +127,7 @@ export function Sidebar({
         </div>
 
         {/* Navigation list */}
-        <nav aria-label="Menu principal" className="flex-1 overflow-y-auto px-2.5 py-3 space-y-0.5">
+        <nav id="sidebar-links" aria-label="Menu principal" className="flex-1 overflow-y-auto px-2.5 py-3 space-y-0.5">
           {NAV_ITEMS.map((item, idx) => {
             const Icon = item.icon;
             const isReviews = item.to === '/revisoes';
@@ -127,18 +141,22 @@ export function Sidebar({
                     className={cn(
                       'px-2.5 pb-1 text-[11px] font-medium text-fg-subtle select-none',
                       idx > 0 && 'mt-3 pt-2 border-t border-border/60',
+                      collapsed && (idx === 0 ? 'lg:hidden' : 'lg:mt-2 lg:pt-0'),
                     )}
                   >
-                    {item.section}
+                    <span className={collapsed ? 'lg:hidden' : undefined}>{item.section}</span>
                   </div>
                 )}
                 <NavLink
                   to={item.to}
                   onClick={onCloseMobile}
+                  aria-label={item.label}
+                  title={collapsed ? item.label : undefined}
                   end={item.to === '/'}
                   className={({ isActive }) =>
                     cn(
                       'group flex items-center gap-2.5 rounded-lg px-2.5 py-2 max-lg:min-h-12 max-lg:gap-3 text-sm font-medium transition-colors',
+                      collapsed && 'lg:justify-center lg:px-0',
                       isActive
                         ? 'bg-white text-[#1e3a8a] font-semibold'
                         : 'text-fg-muted hover:bg-surface-muted hover:text-fg',
@@ -146,12 +164,12 @@ export function Sidebar({
                   }
                 >
                   <Icon className="size-4 shrink-0" aria-hidden="true" />
-                  <span className="truncate flex-1">{item.label}</span>
+                  <span className={cn('wrap-anywhere flex-1', collapsed && 'lg:hidden')}>{item.label}</span>
 
                   {/* Indicadores discretos e relevantes (Regra 3: sem piscar durante o estudo) */}
                   {isStudy && isTimerRunning && (
                     <span
-                      className="inline-flex items-center gap-1 rounded-full bg-primary/15 px-1.5 py-0.5 text-[10px] font-semibold text-primary"
+                      className={cn('inline-flex items-center gap-1 rounded-full bg-primary/15 px-1.5 py-0.5 text-[10px] font-semibold text-primary', collapsed && 'lg:hidden')}
                       title="Cronômetro em andamento"
                     >
                       <span className="size-1.5 rounded-full bg-primary" aria-hidden="true" />
@@ -162,6 +180,7 @@ export function Sidebar({
                     <span
                       className={cn(
                         'rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums leading-none',
+                        collapsed && 'lg:hidden',
                         buckets.overdue.length > 0
                           ? 'bg-danger text-white'
                           : 'bg-warning-soft text-warning',
@@ -173,7 +192,7 @@ export function Sidebar({
                   )}
                   {isErrors && pendingErrorsCount > 0 && (
                     <span
-                      className="rounded-full bg-surface-muted border border-border px-1.5 py-0.5 text-[10px] font-medium text-fg-muted tabular-nums leading-none"
+                      className={cn('rounded-full bg-surface-muted border border-border px-1.5 py-0.5 text-[10px] font-medium text-fg-muted tabular-nums leading-none', collapsed && 'lg:hidden')}
                       title={`${pendingErrorsCount} erro(s) registrado(s)`}
                     >
                       {pendingErrorsCount}
@@ -195,14 +214,15 @@ export function Sidebar({
                 onCloseMobile();
                 onSwitchContestScreen();
               }}
+              aria-label="Trocar concurso"
               title={contestCount && contestCount > 1 ? `Trocar concurso (${contestCount} disponíveis)` : 'Trocar concurso'}
-              className="w-full flex items-center justify-between gap-2 rounded-lg border border-border bg-surface-muted/40 hover:bg-surface-muted p-2.5 text-left transition-colors group cursor-pointer"
+              className={cn('w-full flex items-center justify-between gap-2 rounded-lg border border-border bg-surface-muted/40 hover:bg-surface-muted p-2.5 text-left transition-colors group cursor-pointer', collapsed && 'lg:justify-center lg:p-1')}
             >
-              <div className="min-w-0">
-                <div className="text-xs font-semibold text-fg group-hover:text-primary transition-colors truncate">
+              <div className={cn('min-w-0', collapsed && 'lg:hidden')}>
+                <div className="text-xs font-semibold text-fg group-hover:text-primary transition-colors wrap-anywhere">
                   {activeContest ? activeContest.name : 'Concurso ativo'}
                 </div>
-                <div className="text-[11px] text-fg-subtle truncate mt-0.5">
+                <div className="text-[11px] text-fg-subtle wrap-anywhere mt-0.5">
                   {activeContest ? activeContest.role : 'Analista de Sistemas — Desenvolvimento'}
                 </div>
                 <div className="mt-1 text-[11px] text-fg-muted tabular-nums">
@@ -217,11 +237,11 @@ export function Sidebar({
         )}
 
         {!onSwitchContestScreen && (
-          <div className="border-t border-border p-3 text-[11px] text-fg-subtle">
+          <div className={cn('border-t border-border p-3 text-[11px] text-fg-subtle wrap-anywhere', collapsed && 'lg:hidden')}>
             <div className="font-semibold text-fg">
               {activeContest ? activeContest.name : 'Concurso ativo'}
             </div>
-            <div className="truncate">
+            <div className="wrap-anywhere">
               {activeContest ? activeContest.role : 'Analista de Sistemas — Desenvolvimento'}
             </div>
             <div className="mt-1 text-fg-muted tabular-nums">{dailyGoal > 0 ? `Meta: ${dailyGoal} min/dia · ` : ''}{weeklyGoal} min/sem</div>

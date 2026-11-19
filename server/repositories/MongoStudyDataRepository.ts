@@ -1,5 +1,6 @@
-import type { Db } from 'mongodb';
-import { ConflictError } from '../errors/AppError';
+import type { ClientSession, Db } from 'mongodb';
+import { CONTEST_LIMIT_MESSAGE, MAX_USER_CONTESTS } from '../../src/domain/contestLimit';
+import { ConflictError, NotFoundError } from '../errors/AppError';
 import { DEFAULT_DISCIPLINES, DEFAULT_SETTINGS } from '../../src/db/seed';
 import {
   SETTINGS_ID,
@@ -53,6 +54,13 @@ interface LegacyWorkspaceDocument extends Partial<UserWorkspaceDocument> {
   weeklyPlans?: WeeklyPlan[];
   settings?: Settings[];
   mockExams?: MockExam[];
+}
+
+function removeLegacyCredentials(settings: Settings): Settings {
+  const clean = { ...settings } as Settings & { geminiApiKey?: string; aiProvider?: string };
+  delete clean.geminiApiKey;
+  delete clean.aiProvider;
+  return clean;
 }
 
 function buildDefaultWorkspaceDto(): StudyWorkspaceDto {
@@ -145,11 +153,9 @@ export class MongoStudyDataRepository implements IStudyDataRepository {
       if (raw.encryptedPayload) {
         workspace = this.decryptAndDeserializeWorkspace(ctx.ownerId, raw.encryptedPayload);
       } else {
-        const decryptedSettings: Settings[] = (raw.settings || []).map((s) => {
-          const legacy = s as Settings & { geminiApiKey?: string; aiProvider?: string };
-          const { geminiApiKey: _legacyKey, aiProvider: _legacyProvider, ...settings } = legacy;
-          return { ...settings, id: SETTINGS_ID as 'settings', theme: 'light' };
-        });
+        const decryptedSettings: Settings[] = (raw.settings ?? []).map((settings) => ({
+          ...removeLegacyCredentials(settings), id: SETTINGS_ID, theme: 'light',
+        }));
 
         workspace = {
           disciplines:
@@ -201,11 +207,9 @@ export class MongoStudyDataRepository implements IStudyDataRepository {
   }
 
   private serializeAndEncryptWorkspace(ownerId: string, workspace: StudyWorkspaceDto): string {
-    const encryptedSettings: Settings[] = (workspace.settings || []).map((s) => {
-      const legacy = s as Settings & { geminiApiKey?: string; aiProvider?: string };
-      const { geminiApiKey: _legacyKey, aiProvider: _legacyProvider, ...settings } = legacy;
-      return { ...settings, id: SETTINGS_ID as 'settings' };
-    });
+    const encryptedSettings: Settings[] = (workspace.settings ?? []).map((settings) => ({
+      ...removeLegacyCredentials(settings), id: SETTINGS_ID,
+    }));
 
     const normalized: StudyWorkspaceDto = {
       disciplines: workspace.disciplines || [],
@@ -230,11 +234,9 @@ export class MongoStudyDataRepository implements IStudyDataRepository {
     const decryptedJson = this.cipher.decryptForTenant(ownerId, encryptedPayload);
     const parsed = JSON.parse(decryptedJson) as Partial<StudyWorkspaceDto>;
 
-    const settings: Settings[] = (parsed.settings || []).map((s) => {
-      const legacy = s as Settings & { geminiApiKey?: string; aiProvider?: string };
-      const { geminiApiKey: _legacyKey, aiProvider: _legacyProvider, ...rest } = legacy;
-      return { ...rest, id: SETTINGS_ID as 'settings', theme: 'light' };
-    });
+    const settings: Settings[] = (parsed.settings ?? []).map((settings) => ({
+      ...removeLegacyCredentials(settings), id: SETTINGS_ID, theme: 'light',
+    }));
 
     return {
       disciplines: parsed.disciplines || [],
@@ -307,10 +309,18 @@ export class MongoStudyDataRepository implements IStudyDataRepository {
     return this.decryptAndDeserializeWorkspace(ctx.ownerId, doc.encryptedPayload);
   }
 
-  public async listContestWorkspaces(userId: string): Promise<ContestWorkspaceSummary[]> {
+  public async isContestActive(userId: string): Promise<boolean> {
+    const doc = await this.collection().findOne(buildWorkspaceRlsFilter(userId));
+    if (!doc) return false;
+    const { ownerId } = assertWorkspaceDocumentOwnership(doc, userId);
+    const workspace = this.decryptAndDeserializeWorkspace(ownerId, doc.encryptedPayload);
+    return !workspace.settings[0]?.contestHidden;
+  }
+
+  public async listContestWorkspaces(userId: string, session?: ClientSession): Promise<ContestWorkspaceSummary[]> {
     const { ownerId } = parseTenantScope(userId);
     const summaries: ContestWorkspaceSummary[] = [];
-    for await (const doc of this.collection().find({ ownerId })) {
+    for await (const doc of this.collection().find({ ownerId }, { session })) {
       const { scopeId } = assertWorkspaceDocumentOwnership(doc, doc._id);
       const workspace = this.decryptAndDeserializeWorkspace(ownerId, doc.encryptedPayload);
       const summary = summarizeContestWorkspace(
@@ -356,26 +366,46 @@ export class MongoStudyDataRepository implements IStudyDataRepository {
       updatedAt: new Date().toISOString(),
     };
 
-    await this.collection().updateOne(rlsFilter, { $set: doc }, { upsert: true });
+    const existing = await this.collection().findOne(rlsFilter);
+    if (existing) {
+      assertWorkspaceDocumentOwnership(existing, userId);
+      const current = this.decryptAndDeserializeWorkspace(ctx.ownerId, existing.encryptedPayload);
+      if (current.settings[0]?.contestHidden) throw new NotFoundError('Concurso não encontrado.');
+      const result = await this.collection().updateOne(
+        { ...rlsFilter, encryptedPayload: existing.encryptedPayload },
+        { $set: doc },
+      );
+      if (result.matchedCount === 0) throw new ConflictError('Dados alterados em outro dispositivo. Tente novamente.');
+    } else if (ctx.scopeId === 'default') {
+      await this.collection().insertOne(doc);
+    } else {
+      await this.insertContestWithinLimit(doc);
+    }
+
     return this.getWorkspace(userId);
   }
 
+  private async insertContestWithinLimit(doc: UserWorkspaceDocument): Promise<void> {
+    const { ownerId } = doc;
+    const ownerFilter = buildWorkspaceRlsFilter(ownerId);
+    await this.db.client.withSession((session) => session.withTransaction(async () => {
+      const root = await this.collection().findOne(ownerFilter, { session });
+      if (!root) throw new NotFoundError('Conta sem espaço de estudos.');
+
+      // A escrita no espaço raiz serializa criações simultâneas da mesma conta.
+      const plaintext = this.cipher.decryptForTenant(ownerId, root.encryptedPayload);
+      await this.collection().updateOne(ownerFilter, {
+        $set: { encryptedPayload: this.cipher.encryptForTenant(ownerId, plaintext) },
+      }, { session });
+
+      const contests = await this.listContestWorkspaces(ownerId, session);
+      if (contests.length >= MAX_USER_CONTESTS) throw new ConflictError(CONTEST_LIMIT_MESSAGE);
+      await this.collection().insertOne(doc, { session });
+    }));
+  }
+
   public async resetWorkspace(userId: string): Promise<StudyWorkspaceDto> {
-    const ctx = parseTenantScope(userId);
-    const rlsFilter = buildWorkspaceRlsFilter(userId);
-    const fresh = buildDefaultWorkspaceDto();
-
-    const doc: UserWorkspaceDocument = {
-      _id: ctx.scopedId,
-      ownerId: ctx.ownerId,
-      scopeId: ctx.scopeId,
-      encryptedPayload: this.serializeAndEncryptWorkspace(ctx.ownerId, fresh),
-      rlsVersion: 1,
-      updatedAt: new Date().toISOString(),
-    };
-
-    await this.collection().updateOne(rlsFilter, { $set: doc }, { upsert: true });
-    return this.getWorkspace(userId);
+    return this.replaceWorkspace(userId, buildDefaultWorkspaceDto());
   }
 
   public async deleteUserWorkspace(userId: string): Promise<void> {
@@ -394,6 +424,8 @@ export class MongoStudyDataRepository implements IStudyDataRepository {
       if (!doc) throw new ConflictError('Workspace indisponível. Tente novamente.');
       const ctx = assertWorkspaceDocumentOwnership(doc, userId);
       const workspace = this.decryptAndDeserializeWorkspace(ctx.ownerId, doc.encryptedPayload);
+
+      if (workspace.settings[0]?.contestHidden) throw new NotFoundError('Concurso não encontrado.');
 
       for (const op of operations) {
         if (op.action === 'patch') {

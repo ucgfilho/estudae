@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import App from "../../App";
 import { AuthScreen } from "../../screens/AuthScreen";
+import { ContestSelectorScreen } from "../../screens/ContestSelectorScreen";
+import { ToastProvider } from "../../components/ui/Toast";
 import { resetDatabase } from "../../db/db";
 import {
   setAuthSession,
@@ -157,6 +159,33 @@ Tecnologia da Informação e Ciência de Dados:
     const allContests = getUserContests();
     expect(allContests.length).toBe(2);
     expect(allContests.some((c) => c.templateId === "bb-ti")).toBe(true);
+  });
+
+  it("cria um concurso pelo nome em duas etapas e desabilita a criação no limite", async () => {
+    setAuthSession(TEST_SESSION);
+    await createAndActivateContest({ templateId: "bb-ti" });
+    render(<ToastProvider><ContestSelectorScreen onSelectContest={() => {}} /></ToastProvider>);
+
+    const addContest = await screen.findByRole("button", { name: /novo concurso/i });
+    await waitFor(() => expect(addContest).toBeEnabled());
+    fireEvent.click(addContest);
+
+    const name = await screen.findByRole("textbox", { name: /nome do concurso/i });
+    expect(screen.queryByTestId("contest-dropdown-trigger")).not.toBeInTheDocument();
+    fireEvent.change(name, { target: { value: "Tribunal Regional de Tecnologia e Administração" } });
+    fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
+    expect(screen.getByRole("heading", { name: "Edital verticalizado" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Voltar" }));
+    expect(screen.getByRole("textbox", { name: /nome do concurso/i })).toHaveValue(
+      "Tribunal Regional de Tecnologia e Administração",
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
+    fireEvent.click(screen.getByRole("button", { name: "Criar concurso" }));
+    await waitFor(() => expect(getUserContests()).toHaveLength(3));
+
+    expect(await screen.findByRole("button", { name: /novo concurso/i })).toBeDisabled();
+    expect(screen.getByText(/você atingiu o limite de 3 concursos/i)).toBeInTheDocument();
+    await expect(createAndActivateContest({ templateId: "bb-ti" })).rejects.toThrow(/limite de 3/);
   });
 
   it("permite abrir o modal de editar perfil pelo header e atualizar nome e foto do usuário", async () => {

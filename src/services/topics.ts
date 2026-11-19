@@ -3,6 +3,7 @@ import type { Topic, TopicStatus } from '../db/types';
 import type { ParsedTopic } from '../domain/checklist';
 import { createId, nowIso } from '../lib/utils';
 import { ValidationError } from './sessions';
+import { saveTopicWithStatus } from './topicStatus';
 
 export interface TopicInput {
   title: string;
@@ -48,19 +49,26 @@ export async function createTopic(disciplineId: string, parentTopicId: string | 
       createdAt: now,
       updatedAt: now,
     };
-    await db.topics.add(topic);
+    await saveTopicWithStatus(topic);
     return topic;
   });
 }
 
 export async function updateTopic(id: string, input: TopicInput): Promise<void> {
   const title = validateTitle(input.title);
-  const updated = await db.topics.update(id, { title, status: input.status, notes: input.notes.trim(), updatedAt: nowIso() });
-  if (!updated) throw new ValidationError('Tópico não encontrado.');
+  const current = db.topics.getSync(id);
+  if (!current) throw new ValidationError('Tópico não encontrado.');
+  const updated = { ...current, title, status: input.status, notes: input.notes.trim(), updatedAt: nowIso() };
+  if (updated.status === current.status) {
+    await db.topics.put(updated);
+  } else {
+    await saveTopicWithStatus(updated);
+  }
 }
 
 export async function setTopicStatus(id: string, status: TopicStatus): Promise<void> {
-  await db.topics.update(id, { status, updatedAt: nowIso() });
+  const current = db.topics.getSync(id);
+  if (current) await saveTopicWithStatus({ ...current, status, updatedAt: nowIso() });
 }
 
 /** Ativa/desativa o tópico e seus subtópicos. Tópicos inativos não contam no progresso. */

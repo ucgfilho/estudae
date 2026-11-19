@@ -26,7 +26,7 @@ export function Stepper({ current }: { current: ExamStep }) {
               >
                 {done ? <Check className="size-3.5 sm:size-4" aria-hidden /> : step}
               </span>
-              <span className={cn('truncate text-xs sm:text-sm', active ? 'font-semibold text-fg' : 'text-fg-muted')}>
+              <span className={cn('wrap-anywhere text-xs sm:text-sm', active ? 'font-semibold text-fg' : 'text-fg-muted')}>
                 {label}
                 {done && <span className="sr-only"> (concluída)</span>}
               </span>

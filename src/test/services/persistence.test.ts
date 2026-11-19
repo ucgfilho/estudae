@@ -8,6 +8,7 @@ import {
   recoverSession,
   moveSession,
   compareSessionsInDay,
+  setSessionStatus,
 } from '../../services/sessions';
 import {
   startPlannedTimer,
@@ -23,7 +24,7 @@ import {
   toCsv,
 } from '../../services/backup';
 import { completeReview, reconcileReviewsAndErrorNotes, saveErrorNote, saveQuestionLog, scheduleTopicReviews } from '../../services/performance';
-import { createTopic, deleteAllTopics } from '../../services/topics';
+import { createTopic, deleteAllTopics, setTopicStatus, updateTopic } from '../../services/topics';
 
 describe('services/persistence & workflows', () => {
   beforeEach(async () => {
@@ -53,6 +54,46 @@ describe('services/persistence & workflows', () => {
     expect(settings).toBeDefined();
     expect(settings?.dailyGoalMinutes).toBe(120);
     expect(settings?.weeklyGoalMinutes).toBe(840);
+  });
+
+  it.each(['dominado', 'concluido'] as const)('marca os subtópicos ao definir o pai como %s e reabre o pai ao reabrir um filho', async (status) => {
+    const parent = await createTopic('portugues', null, { title: 'Coesão textual', status: 'nao-iniciado', notes: '' });
+    const first = await createTopic('portugues', parent.id, { title: 'Referência', status: 'nao-iniciado', notes: '' });
+    const second = await createTopic('portugues', parent.id, { title: 'Conectores', status: 'em-andamento', notes: '' });
+
+    await setTopicStatus(parent.id, status);
+    expect(db.topics.getSync(first.id)?.status).toBe('dominado');
+    expect(db.topics.getSync(second.id)?.status).toBe('dominado');
+
+    await setTopicStatus(first.id, 'concluido');
+    expect(db.topics.getSync(parent.id)?.status).toBe(status);
+
+    await updateTopic(first.id, { title: first.title, status: 'nao-iniciado', notes: '' });
+    expect(db.topics.getSync(parent.id)?.status).toBe('em-andamento');
+    expect(db.topics.getSync(second.id)?.status).toBe('dominado');
+
+    await updateTopic(parent.id, { title: parent.title, status, notes: '' });
+    expect(db.topics.getSync(first.id)?.status).toBe('dominado');
+    await createTopic('portugues', parent.id, { title: 'Tempos verbais', status: 'nao-iniciado', notes: '' });
+    expect(db.topics.getSync(parent.id)?.status).toBe('em-andamento');
+  });
+
+  it('atualiza os subtópicos quando a conclusão de uma sessão conclui o tópico-pai', async () => {
+    const parent = await createTopic('portugues', null, { title: 'Coesão textual', status: 'nao-iniciado', notes: '' });
+    const child = await createTopic('portugues', parent.id, { title: 'Referência', status: 'nao-iniciado', notes: '' });
+    const session = await createSession({
+      date: '2026-10-14',
+      disciplineId: 'portugues',
+      topicId: parent.id,
+      plannedStart: '19:00',
+      plannedMinutes: 60,
+      objective: 'Estudar coesão textual',
+      notes: '',
+    });
+
+    await setSessionStatus(session.id, 'concluida');
+    expect(db.topics.getSync(parent.id)?.status).toBe('concluido');
+    expect(db.topics.getSync(child.id)?.status).toBe('dominado');
   });
 
   it('reschedules a planned session preserving history without data loss', async () => {

@@ -377,7 +377,7 @@ export function Select({
       >
         <span
           className={cn(
-            'min-w-0 truncate mr-2',
+            'min-w-0 whitespace-normal wrap-anywhere mr-2',
             isPlaceholderSelected ? 'text-fg-subtle font-normal' : 'text-fg font-medium'
           )}
         >
@@ -450,7 +450,7 @@ export function Select({
                       opt.disabled && 'opacity-40 cursor-not-allowed pointer-events-none'
                     )}
                   >
-                    <span className="truncate">{opt.label}</span>
+                    <span className="wrap-anywhere">{opt.label}</span>
                     {isSelected && (
                       <Check
                         className={cn(

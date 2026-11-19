@@ -32,6 +32,10 @@ export class StudyDataService implements IStudyDataService {
     return this.repository.getWorkspace(userId);
   }
 
+  public async isContestActive(userId: string): Promise<boolean> {
+    return this.repository.isContestActive(userId);
+  }
+
   public async listContestWorkspaces(userId: string) {
     return this.repository.listContestWorkspaces(userId);
   }

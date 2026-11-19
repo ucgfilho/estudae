@@ -279,7 +279,7 @@ export function PostponeReviewModal({
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
               <span className="text-xs uppercase font-semibold text-fg-subtle">Tarefa</span>
-              <p className="font-semibold text-fg truncate">{review.title}</p>
+              <p className="font-semibold text-fg wrap-anywhere">{review.title}</p>
             </div>
             {review.dueDate < today ? (
               <Badge tone="danger" className="shrink-0 text-[11px]">

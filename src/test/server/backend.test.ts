@@ -299,6 +299,42 @@ describe('Backend SOLID Architecture, DTOs, JWT Bearer & LGPD Compliance', () =>
     }
   });
 
+  it('limits concurrent contest creation per account and reuses slots after removal', async () => {
+    const { data: { token } } = await container.authController.login(TEST_USER);
+    const server = createServer((req, res) => { void handleApiRequest(container, req, res); });
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+    try {
+      const address = server.address();
+      if (!address || typeof address === 'string') throw new Error('Endereço do teste indisponível.');
+      const api = `http://127.0.0.1:${address.port}/api/study-data`;
+      const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
+      const { data } = await (await fetch(api, { headers })).json();
+      const save = (id: string) => fetch(`${api}/workspace`, {
+        method: 'PUT',
+        headers: { ...headers, 'X-Contest-Id': id },
+        body: JSON.stringify(data),
+      });
+      const responses = await Promise.all(['alpha', 'beta', 'gamma'].map(save));
+      expect(responses.map(({ status }) => status).sort()).toEqual([200, 200, 409]);
+
+      const active = ['alpha', 'beta', 'gamma'].filter((_, index) => responses[index].ok);
+      expect((await save(active[0])).status).toBe(200);
+      expect((await fetch(api, { headers: { ...headers, 'X-Contest-Id': 'unknown' } })).status).toBe(404);
+      expect((await fetch(`${api}/batch`, {
+        method: 'POST',
+        headers: { ...headers, 'X-Contest-Id': active[0] },
+        body: JSON.stringify({ operations: [{ table: 'settings', action: 'patch', changes: { contestHidden: true } }] }),
+      })).status).toBe(200);
+
+      expect((await save('replacement')).status).toBe(200);
+      expect((await save(active[0])).status).toBe(404);
+      const { contests } = await (await fetch(`${api}/contests`, { headers })).json();
+      expect(contests).toHaveLength(3);
+    } finally {
+      await new Promise<void>((resolve, reject) => server.close((err) => err ? reject(err) : resolve()));
+    }
+  });
+
   it('requires a persistent account and rejects sessions from an earlier registration', async () => {
     const input = { name: 'Conta temporária', email: 'temporaria@example.test', password: 'TemporaryPassword!' };
     const first = await container.authController.register(input);

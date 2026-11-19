@@ -355,7 +355,7 @@ export function CalendarScreen() {
                               setSelectedSessionDetail(s);
                             }}
                             className={cn(
-                              'w-full text-left rounded px-1.5 py-0.5 text-[11px] truncate block transition-all',
+                              'w-full text-left rounded px-1.5 py-0.5 text-[11px] wrap-anywhere block transition-all',
                               s.status === 'concluida'
                                 ? 'bg-success-soft text-success line-through opacity-80'
                                 : s.status === 'perdida'
@@ -410,12 +410,12 @@ export function CalendarScreen() {
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-1.5 font-semibold text-fg">
                             <DisciplineDot color={d?.color ?? '#1E40AF'} />
-                            <span className="truncate">
+                            <span className="wrap-anywhere">
                               {d?.name ?? (s.disciplineId === 'simulado' ? 'Simulado Geral BNB' : 'Sessão')}
                             </span>
                           </div>
                           {s.objective && (
-                            <p className="mt-0.5 text-fg-muted truncate">{s.objective}</p>
+                            <p className="mt-0.5 text-fg-muted wrap-anywhere">{s.objective}</p>
                           )}
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
@@ -502,7 +502,7 @@ export function CalendarScreen() {
                           )}
                         >
                           <div className="flex items-center justify-between font-medium">
-                            <span className="flex items-center gap-1.5 truncate">
+                            <span className="flex items-center gap-1.5 wrap-anywhere">
                               {d ? (
                                 <DisciplineDot color={d.color} />
                               ) : s.disciplineId === 'simulado' ? (
@@ -513,7 +513,7 @@ export function CalendarScreen() {
                             <span className="font-semibold text-fg-muted shrink-0">{s.plannedMinutes}m</span>
                           </div>
                           {s.objective && (
-                            <p className="mt-1 text-[11px] text-fg-muted line-clamp-2">{s.objective}</p>
+                            <p className="mt-1 text-[11px] text-fg-muted wrap-anywhere">{s.objective}</p>
                           )}
                         </div>
                       );

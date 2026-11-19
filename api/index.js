@@ -36042,6 +36042,7 @@ function superRefine(fn, params) {
 * verão. Instantes (início/fim de cronômetro) são timestamps ISO/epoch.
 */
 var TIMEZONE = "America/Bahia";
+var LOCALE = "pt-BR";
 new Intl.DateTimeFormat("en-CA", {
 	timeZone: TIMEZONE,
 	year: "numeric",
@@ -36053,6 +36054,16 @@ new Intl.DateTimeFormat("en-GB", {
 	hour: "2-digit",
 	minute: "2-digit",
 	hourCycle: "h23"
+});
+new Intl.DateTimeFormat(LOCALE, {
+	day: "2-digit",
+	month: "2-digit",
+	timeZone: "UTC"
+});
+new Intl.DateTimeFormat(LOCALE, {
+	month: "long",
+	year: "numeric",
+	timeZone: "UTC"
 });
 var DATE_KEY_RE = /^\d{4}-\d{2}-\d{2}$/;
 function isValidDateKey(value) {
@@ -36340,8 +36351,6 @@ var settingsDtoSchema = object({
 	scheduleStartDate: nullableDateKey.optional(),
 	scheduleWeeks: number().int().positive().optional(),
 	distribution: record(string(), nonNegInt),
-	geminiApiKey: string().optional(),
-	aiProvider: _enum(["builtin", "gemini"]).optional(),
 	contestId: string().optional(),
 	contestName: string().optional(),
 	contestRole: string().optional(),
@@ -36488,10 +36497,7 @@ function loadFirefoxSeedWorkspace(seedFilePath) {
 		const raw = JSON.parse(readFileSync(path, "utf8"));
 		if (!raw || typeof raw !== "object" || !raw.data) return null;
 		const workspace = parseStudyWorkspaceDto(raw.data);
-		if (Array.isArray(workspace.settings)) workspace.settings = workspace.settings.map((s) => ({
-			...s,
-			geminiApiKey: ""
-		}));
+		if (Array.isArray(workspace.settings)) workspace.settings = workspace.settings.map((s) => ({ ...s }));
 		return workspace;
 	} catch {
 		return null;
@@ -36875,6 +36881,7 @@ var BearerAuthGuard = class {
 		};
 	}
 };
+var CONTEST_LIMIT_MESSAGE = `Você atingiu o limite de 3 concursos. Exclua um concurso para adicionar outro.`;
 // src/db/seed.ts
 /** As oito disciplinas do cargo Analista de Sistemas — Desenvolvimento de Sistemas. */
 var DEFAULT_DISCIPLINES = [
@@ -37150,9 +37157,7 @@ var DEFAULT_SETTINGS = {
 		linguagens: 100,
 		"banco-dados": 100,
 		nuvem: 100
-	},
-	geminiApiKey: "",
-	aiProvider: "builtin"
+	}
 };
 // server/security/MongoRlsGuard.ts
 var OWNER_ID_REGEX = /^[a-zA-Z0-9_-]{1,128}$/;
@@ -37409,6 +37414,12 @@ async function applyWorkspacesCollectionValidator(db) {
 	await ensureCollectionValidator(db, "user_workspaces", WORKSPACES_COLLECTION_JSON_SCHEMA);
 }
 // server/repositories/MongoStudyDataRepository.ts
+function removeLegacyCredentials(settings) {
+	const clean = { ...settings };
+	delete clean.geminiApiKey;
+	delete clean.aiProvider;
+	return clean;
+}
 function buildDefaultWorkspaceDto() {
 	return {
 		disciplines: [...DEFAULT_DISCIPLINES],
@@ -37431,7 +37442,7 @@ function buildDefaultWorkspaceDto() {
 * - Cada documento exige `_id`, `ownerId` (chave de isolamento de titular) e `scopeId`.
 * - Nenhuma tabela de estudo (`disciplines`, `topics`, `sessions`, `settings`, etc.) fica explícita no banco:
 *   todo o documento de workspace é cifrado em repouso (`encryptedPayload`) com AES-256-GCM e AAD vinculado ao `ownerId`.
-* - As chaves de API (`geminiApiKey`) possuem dupla camada de criptografia autenticada vinculada ao `ownerId`.
+* - Os workspaces são criptografados com chave autenticada vinculada ao `ownerId`.
 * - Exclusão em cascata via `ownerId` remove todos os escopos de concursos do titular (LGPD Art. 18, VI).
 */
 var MongoStudyDataRepository = class {
@@ -37468,20 +37479,11 @@ var MongoStudyDataRepository = class {
 			let workspace;
 			if (raw.encryptedPayload) workspace = this.decryptAndDeserializeWorkspace(ctx.ownerId, raw.encryptedPayload);
 			else {
-				const decryptedSettings = (raw.settings || []).map((s) => {
-					let key = s.geminiApiKey ?? "";
-					if (key) try {
-						key = this.cipher.decryptForTenant(ctx.ownerId, key);
-					} catch {
-						key = this.cipher.decrypt(key);
-					}
-					return {
-						...s,
-						id: SETTINGS_ID,
-						theme: "light",
-						geminiApiKey: key
-					};
-				});
+				const decryptedSettings = (raw.settings ?? []).map((settings) => ({
+					...removeLegacyCredentials(settings),
+					id: SETTINGS_ID,
+					theme: "light"
+				}));
 				workspace = {
 					disciplines: raw.disciplines && raw.disciplines.length > 0 ? raw.disciplines : [...DEFAULT_DISCIPLINES],
 					topics: raw.topics || [],
@@ -37523,10 +37525,9 @@ var MongoStudyDataRepository = class {
 		}
 	}
 	serializeAndEncryptWorkspace(ownerId, workspace) {
-		const encryptedSettings = (workspace.settings || []).map((s) => ({
-			...s,
-			id: SETTINGS_ID,
-			geminiApiKey: s.geminiApiKey ? this.cipher.encryptForTenant(ownerId, s.geminiApiKey) : ""
+		const encryptedSettings = (workspace.settings ?? []).map((settings) => ({
+			...removeLegacyCredentials(settings),
+			id: SETTINGS_ID
 		}));
 		const normalized = {
 			disciplines: workspace.disciplines || [],
@@ -37545,20 +37546,11 @@ var MongoStudyDataRepository = class {
 	decryptAndDeserializeWorkspace(ownerId, encryptedPayload) {
 		const decryptedJson = this.cipher.decryptForTenant(ownerId, encryptedPayload);
 		const parsed = JSON.parse(decryptedJson);
-		const settings = (parsed.settings || []).map((s) => {
-			let key = s.geminiApiKey ?? "";
-			if (key) try {
-				key = this.cipher.decryptForTenant(ownerId, key);
-			} catch {
-				key = this.cipher.decrypt(key);
-			}
-			return {
-				...s,
-				id: SETTINGS_ID,
-				theme: "light",
-				geminiApiKey: key
-			};
-		});
+		const settings = (parsed.settings ?? []).map((settings) => ({
+			...removeLegacyCredentials(settings),
+			id: SETTINGS_ID,
+			theme: "light"
+		}));
 		return {
 			disciplines: parsed.disciplines || [],
 			topics: parsed.topics || [],
@@ -37591,7 +37583,8 @@ var MongoStudyDataRepository = class {
 		}
 		assertWorkspaceDocumentOwnership(existing, userId);
 		const workspace = this.decryptAndDeserializeWorkspace(ctx.ownerId, existing.encryptedPayload);
-		let needsUpdate = false;
+		const encryptedSettingsJson = this.cipher.decryptForTenant(ctx.ownerId, existing.encryptedPayload);
+		let needsUpdate = encryptedSettingsJson.includes("\"geminiApiKey\"") || encryptedSettingsJson.includes("\"aiProvider\"");
 		if (!workspace.disciplines || workspace.disciplines.length === 0) {
 			workspace.disciplines = [...DEFAULT_DISCIPLINES];
 			needsUpdate = true;
@@ -37619,10 +37612,16 @@ var MongoStudyDataRepository = class {
 		const ctx = assertWorkspaceDocumentOwnership(doc, userId);
 		return this.decryptAndDeserializeWorkspace(ctx.ownerId, doc.encryptedPayload);
 	}
-	async listContestWorkspaces(userId) {
+	async isContestActive(userId) {
+		const doc = await this.collection().findOne(buildWorkspaceRlsFilter(userId));
+		if (!doc) return false;
+		const { ownerId } = assertWorkspaceDocumentOwnership(doc, userId);
+		return !this.decryptAndDeserializeWorkspace(ownerId, doc.encryptedPayload).settings[0]?.contestHidden;
+	}
+	async listContestWorkspaces(userId, session) {
 		const { ownerId } = parseTenantScope(userId);
 		const summaries = [];
-		for await (const doc of this.collection().find({ ownerId })) {
+		for await (const doc of this.collection().find({ ownerId }, { session })) {
 			const { scopeId } = assertWorkspaceDocumentOwnership(doc, doc._id);
 			const workspace = this.decryptAndDeserializeWorkspace(ownerId, doc.encryptedPayload);
 			const summary = summarizeContestWorkspace(scopeId, workspace.settings[0], workspace.disciplines.length, workspace.topics.length);
@@ -37656,23 +37655,32 @@ var MongoStudyDataRepository = class {
 			rlsVersion: 1,
 			updatedAt: (/* @__PURE__ */ new Date()).toISOString()
 		};
-		await this.collection().updateOne(rlsFilter, { $set: doc }, { upsert: true });
+		const existing = await this.collection().findOne(rlsFilter);
+		if (existing) {
+			assertWorkspaceDocumentOwnership(existing, userId);
+			if (this.decryptAndDeserializeWorkspace(ctx.ownerId, existing.encryptedPayload).settings[0]?.contestHidden) throw new NotFoundError("Concurso não encontrado.");
+			if ((await this.collection().updateOne({
+				...rlsFilter,
+				encryptedPayload: existing.encryptedPayload
+			}, { $set: doc })).matchedCount === 0) throw new ConflictError("Dados alterados em outro dispositivo. Tente novamente.");
+		} else if (ctx.scopeId === "default") await this.collection().insertOne(doc);
+		else await this.insertContestWithinLimit(doc);
 		return this.getWorkspace(userId);
 	}
+	async insertContestWithinLimit(doc) {
+		const { ownerId } = doc;
+		const ownerFilter = buildWorkspaceRlsFilter(ownerId);
+		await this.db.client.withSession((session) => session.withTransaction(async () => {
+			const root = await this.collection().findOne(ownerFilter, { session });
+			if (!root) throw new NotFoundError("Conta sem espaço de estudos.");
+			const plaintext = this.cipher.decryptForTenant(ownerId, root.encryptedPayload);
+			await this.collection().updateOne(ownerFilter, { $set: { encryptedPayload: this.cipher.encryptForTenant(ownerId, plaintext) } }, { session });
+			if ((await this.listContestWorkspaces(ownerId, session)).length >= 3) throw new ConflictError(CONTEST_LIMIT_MESSAGE);
+			await this.collection().insertOne(doc, { session });
+		}));
+	}
 	async resetWorkspace(userId) {
-		const ctx = parseTenantScope(userId);
-		const rlsFilter = buildWorkspaceRlsFilter(userId);
-		const fresh = buildDefaultWorkspaceDto();
-		const doc = {
-			_id: ctx.scopedId,
-			ownerId: ctx.ownerId,
-			scopeId: ctx.scopeId,
-			encryptedPayload: this.serializeAndEncryptWorkspace(ctx.ownerId, fresh),
-			rlsVersion: 1,
-			updatedAt: (/* @__PURE__ */ new Date()).toISOString()
-		};
-		await this.collection().updateOne(rlsFilter, { $set: doc }, { upsert: true });
-		return this.getWorkspace(userId);
+		return this.replaceWorkspace(userId, buildDefaultWorkspaceDto());
 	}
 	async deleteUserWorkspace(userId) {
 		const cascadeFilter = buildWorkspaceCascadeDeleteFilter(userId);
@@ -37686,6 +37694,7 @@ var MongoStudyDataRepository = class {
 			if (!doc) throw new ConflictError("Workspace indisponível. Tente novamente.");
 			const ctx = assertWorkspaceDocumentOwnership(doc, userId);
 			const workspace = this.decryptAndDeserializeWorkspace(ctx.ownerId, doc.encryptedPayload);
+			if (workspace.settings[0]?.contestHidden) throw new NotFoundError("Concurso não encontrado.");
 			for (const op of operations) if (op.action === "patch") workspace.settings = [{
 				...workspace.settings[0] ?? DEFAULT_SETTINGS,
 				...op.changes
@@ -37889,17 +37898,16 @@ var MongoUserRepository = class {
 /**
 * Implementação concreta de IStudyDataRepository (SRP, LSP & DIP).
 * Todos os registros de estudo são intrinsecamente vinculados ao `user_id` do usuário autenticado.
-* Credenciais sensíveis de terceiros (gemini_api_key) são criptografadas em repouso (AES-256-GCM / LGPD Art. 46).
+* As colunas antigas da integração Gemini são mantidas apenas para compatibilidade com bancos existentes.
 */
 var SqlStudyDataRepository = class {
 	db;
-	cipher;
-	constructor(db, cipher) {
+	constructor(db, _cipher) {
 		this.db = db;
-		this.cipher = cipher;
 	}
 	ensureUserSeed(userId) {
 		this.db.transaction(() => {
+			this.db.run(`UPDATE user_settings SET gemini_api_key = '', ai_provider = 'builtin' WHERE user_id = ?`, [userId]);
 			if (userId.includes("::contest::")) {
 				const now = (/* @__PURE__ */ new Date()).toISOString();
 				this.db.run(`INSERT OR IGNORE INTO users (id, name, email, password_hash, created_at, updated_at)
@@ -37932,6 +37940,13 @@ var SqlStudyDataRepository = class {
 			mockExams: this.getMockExams(userId)
 		};
 	}
+	isContestActive(userId) {
+		const settings = this.getSettingsList(userId)[0];
+		return Boolean(settings && !settings.contestHidden);
+	}
+	assertContestNotHidden(userId) {
+		if (this.getSettingsList(userId)[0]?.contestHidden) throw new NotFoundError("Concurso não encontrado.");
+	}
 	listContestWorkspaces(userId) {
 		const prefix = `${userId}::contest::`;
 		return this.db.all(`SELECT s.user_id,
@@ -37948,6 +37963,10 @@ var SqlStudyDataRepository = class {
 	}
 	replaceWorkspace(userId, workspace) {
 		this.db.transaction(() => {
+			const { ownerId, scopeId } = parseTenantScope(userId);
+			const settings = this.getSettingsList(userId)[0];
+			if (settings?.contestHidden) throw new NotFoundError("Concurso não encontrado.");
+			if (!settings && scopeId !== "default" && this.listContestWorkspaces(ownerId).length >= 3) throw new ConflictError(CONTEST_LIMIT_MESSAGE);
 			this.ensureUserSeed(userId);
 			for (const table of DATA_TABLES) this.clearTableInternal(userId, table);
 			this.upsertDisciplines(userId, workspace.disciplines);
@@ -37966,6 +37985,7 @@ var SqlStudyDataRepository = class {
 	}
 	resetWorkspace(userId) {
 		this.db.transaction(() => {
+			this.assertContestNotHidden(userId);
 			for (const table of DATA_TABLES) this.clearTableInternal(userId, table);
 			this.ensureUserSeed(userId);
 		});
@@ -37979,6 +37999,7 @@ var SqlStudyDataRepository = class {
 	}
 	applyBatch(userId, operations) {
 		this.db.transaction(() => {
+			this.assertContestNotHidden(userId);
 			this.ensureUserSeed(userId);
 			for (const op of operations) if (op.action === "patch") this.upsertSettings(userId, [{
 				...this.getSettingsList(userId)[0] ?? DEFAULT_SETTINGS,
@@ -37995,16 +38016,19 @@ var SqlStudyDataRepository = class {
 	upsertTable(userId, table, records) {
 		const validated = validateTableRecords(table, records);
 		this.db.transaction(() => {
+			this.assertContestNotHidden(userId);
 			this.upsertTableInternal(userId, table, validated);
 		});
 	}
 	deleteFromTable(userId, table, ids) {
 		this.db.transaction(() => {
+			this.assertContestNotHidden(userId);
 			this.deleteFromTableInternal(userId, table, ids);
 		});
 	}
 	clearTable(userId, table) {
 		this.db.transaction(() => {
+			this.assertContestNotHidden(userId);
 			this.clearTableInternal(userId, table);
 		});
 	}
@@ -38383,8 +38407,8 @@ var SqlStudyDataRepository = class {
 			s.scheduleStartDate ?? null,
 			s.scheduleWeeks ?? 24,
 			JSON.stringify(s.distribution),
-			this.cipher ? this.cipher.encrypt(s.geminiApiKey ?? "") : s.geminiApiKey ?? "",
-			s.aiProvider ?? "builtin",
+			"",
+			"builtin",
 			s.contestId ?? null,
 			s.contestName ?? null,
 			s.contestRole ?? null,
@@ -38638,9 +38662,7 @@ var SqlStudyDataRepository = class {
 			distribution: hasCustomContest ? parsedDist : {
 				...DEFAULT_SETTINGS.distribution,
 				...parsedDist
-			},
-			geminiApiKey: this.cipher ? this.cipher.decrypt(row.gemini_api_key ?? "") : row.gemini_api_key ?? "",
-			aiProvider: row.ai_provider ?? "builtin"
+			}
 		};
 		if (row.contest_id) settingsObj.contestId = row.contest_id;
 		if (row.contest_name) settingsObj.contestName = row.contest_name;
@@ -39239,6 +39261,9 @@ var StudyDataService = class {
 	async getWorkspace(userId) {
 		return this.repository.getWorkspace(userId);
 	}
+	async isContestActive(userId) {
+		return this.repository.isContestActive(userId);
+	}
 	async listContestWorkspaces(userId) {
 		return this.repository.listContestWorkspaces(userId);
 	}
@@ -39323,6 +39348,10 @@ function createAppContainer(overrides = {}) {
 			}
 		};
 		studyDataRepository = {
+			async isContestActive(userId) {
+				const { mongoStudyRepo } = await mongoInitPromise;
+				return mongoStudyRepo.isContestActive(userId);
+			},
 			async listContestWorkspaces(userId) {
 				const { mongoStudyRepo } = await mongoInitPromise;
 				return mongoStudyRepo.listContestWorkspaces(userId);
@@ -39567,6 +39596,8 @@ async function handleApiRequest(container, req, res) {
 			...user,
 			id: `${user.id}::contest::${contestIdHeader}`
 		} : user;
+		const replacingWorkspace = method === "PUT" && pathname === "/api/study-data/workspace";
+		if (studyUser !== user && !replacingWorkspace && !await container.studyDataService.isContestActive(studyUser.id)) throw new NotFoundError("Concurso não encontrado.");
 		if (method === "GET" && pathname === "/api/study-data") {
 			const result = await container.studyDataController.getWorkspace(studyUser);
 			sendJson(res, result.status, result.data);
@@ -39578,7 +39609,7 @@ async function handleApiRequest(container, req, res) {
 			sendJson(res, result.status, result.data);
 			return true;
 		}
-		if (method === "PUT" && pathname === "/api/study-data/workspace") {
+		if (replacingWorkspace) {
 			const body = await readJsonBody(req);
 			const result = await container.studyDataController.replaceWorkspace(studyUser, body);
 			sendJson(res, result.status, result.data);

@@ -106,6 +106,10 @@ export function createAppContainer(overrides: Partial<ServerEnv> = {}): AppConta
     };
 
     studyDataRepository = {
+      async isContestActive(userId) {
+        const { mongoStudyRepo } = await mongoInitPromise;
+        return mongoStudyRepo.isContestActive(userId);
+      },
       async listContestWorkspaces(userId) {
         const { mongoStudyRepo } = await mongoInitPromise;
         return mongoStudyRepo.listContestWorkspaces(userId);
