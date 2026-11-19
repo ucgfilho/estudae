@@ -31,12 +31,30 @@ describe('App Navigation, Auth Gate and Screen Integration', () => {
   it('requires login or registration before entering the platform when unauthenticated', async () => {
     render(<App />);
 
-    expect(screen.getByRole('heading', { name: /acesse sua conta/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /boas-vindas/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /entrar na plataforma/i })).toBeInTheDocument();
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole('tab', { name: /cadastrar/i }));
-    expect(screen.getByRole('heading', { name: /crie sua conta de estudos/i })).toBeInTheDocument();
+    const loginTab = screen.getByRole('tab', { name: /já tenho conta/i });
+    const registerTab = screen.getByRole('tab', { name: /cadastrar/i });
+    await user.tab();
+    expect(loginTab).toHaveFocus();
+
+    await user.keyboard('{ArrowRight}');
+    expect(registerTab).toHaveFocus();
+    expect(registerTab).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('heading', { name: /crie sua conta/i })).toBeInTheDocument();
+
+    await user.keyboard('{ArrowLeft}');
+    expect(loginTab).toHaveFocus();
+
+    const password = screen.getByLabelText(/^senha/i);
+    await user.type(password, 'senha-de-teste');
+    await user.click(screen.getByRole('button', { name: /mostrar senha/i }));
+    expect(password).toHaveAttribute('type', 'text');
+    await user.click(screen.getByRole('button', { name: /ocultar senha/i }));
+    expect(password).toHaveAttribute('type', 'password');
+    expect(password).toHaveValue('senha-de-teste');
   });
 
   it('renders overview screen when authenticated and loads 8 mandatory disciplines', async () => {

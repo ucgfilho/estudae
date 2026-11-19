@@ -65,11 +65,12 @@ export function Input({ className, ...rest }: InputHTMLAttributes<HTMLInputEleme
 
 interface InputWithIconProps extends InputHTMLAttributes<HTMLInputElement> {
   icon: ReactNode;
+  endAction?: ReactNode;
 }
 
 /** Campo com ícone fixo à esquerda. O ícone fica fora do fluxo e o texto nunca passa por baixo dele. */
 export const InputWithIcon = forwardRef<HTMLInputElement, InputWithIconProps>(function InputWithIcon(
-  { icon, className, ...rest },
+  { icon, endAction, className, ...rest },
   ref,
 ) {
   return (
@@ -80,7 +81,12 @@ export const InputWithIcon = forwardRef<HTMLInputElement, InputWithIconProps>(fu
       >
         {icon}
       </span>
-      <input ref={ref} className={cn('input-base input-with-icon control-height', className)} {...rest} />
+      <input
+        ref={ref}
+        className={cn('input-base input-with-icon control-height', className, endAction ? 'pe-12' : undefined)}
+        {...rest}
+      />
+      {endAction && <div className="absolute inset-y-0 end-0 flex items-center">{endAction}</div>}
     </div>
   );
 });

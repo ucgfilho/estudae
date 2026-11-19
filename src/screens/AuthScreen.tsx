@@ -1,15 +1,21 @@
-import { useState } from 'react';
+import { useId, useState, type KeyboardEvent } from 'react';
 import {
-  CheckCircle2,
+  ArrowRight,
+  BookOpen,
+  Check,
+  Clock3,
+  Eye,
+  EyeOff,
+  Layers3,
   Lock,
   LogIn,
   Mail,
-  ShieldCheck,
+  RotateCw,
   User,
   UserPlus,
 } from 'lucide-react';
 import { BnbLogo } from '../components/ui/BnbLogo';
-import { Button } from '../components/ui/Button';
+import { Button, IconButton } from '../components/ui/Button';
 import { Alert } from '../components/ui/Display';
 import { Field, InputWithIcon } from '../components/ui/Form';
 import { ContestSearchSelect } from '../components/contests/ContestSearchSelect';
@@ -17,16 +23,65 @@ import { EditalUploadBox } from '../components/contests/EditalUploadBox';
 import { loginWithCredentials, registerUserAccount } from '../services/auth';
 import { createAndActivateContest } from '../services/contests';
 import { errorMessage } from '../lib/utils';
+import './AuthScreen.css';
 
 interface AuthScreenProps {
   onAuthenticated: (mode: 'login' | 'register') => void;
 }
 
+const accessModes = [
+  { id: 'login', label: 'Já tenho conta', Icon: LogIn },
+  { id: 'register', label: 'Cadastrar conta', Icon: UserPlus },
+] as const;
+
+function StudyCyclePreview() {
+  return (
+    <div className="auth-preview" aria-hidden="true">
+      <div className="auth-preview-card">
+        <div className="auth-preview-header">
+          <span className="auth-preview-icon"><RotateCw size={18} /></span>
+          <div>
+            <strong>Ciclo de estudos</strong>
+            <small>Exemplo de ciclo</small>
+          </div>
+        </div>
+        <div className="auth-preview-progress">
+          <span /><span /><span />
+        </div>
+        <div className="auth-preview-row">
+          <span className="auth-preview-check"><Check size={14} /></span>
+          Língua Portuguesa
+          <small>Concluída</small>
+        </div>
+        <div className="auth-preview-row auth-preview-current">
+          <span className="auth-preview-book"><BookOpen size={14} /></span>
+          Raciocínio Lógico
+          <small>Próxima</small>
+        </div>
+        <div className="auth-preview-row">
+          <span className="auth-preview-book"><Layers3 size={14} /></span>
+          Informática
+          <small>Na fila</small>
+        </div>
+      </div>
+      <div className="auth-preview-note">
+        <span className="auth-preview-icon"><Clock3 size={17} /></span>
+        <div>
+          <small>Próxima sessão</small>
+          <strong>30 min de estudo</strong>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function AuthScreen({ onAuthenticated }: AuthScreenProps) {
+  const accessId = useId();
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [passwordVisible, setPasswordVisible] = useState(false);
   const [confirmPassword, setConfirmPassword] = useState('');
 
   // Campos de escolha de concurso e envio do Edital Verticalizado no momento do cadastro
@@ -38,6 +93,26 @@ export function AuthScreen({ onAuthenticated }: AuthScreenProps) {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const isRegister = mode === 'register';
+
+  const changeMode = (nextMode: typeof mode) => {
+    if (nextMode === mode) return;
+    setMode(nextMode);
+    setPasswordVisible(false);
+    setError(null);
+  };
+
+  const handleTabKey = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+    event.preventDefault();
+
+    const nextMode = event.key === 'Home' || (event.key !== 'End' && isRegister)
+      ? 'login'
+      : 'register';
+    event.currentTarget.querySelector<HTMLButtonElement>(`[data-mode="${nextMode}"]`)?.focus();
+    changeMode(nextMode);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,230 +160,175 @@ export function AuthScreen({ onAuthenticated }: AuthScreenProps) {
   };
 
   return (
-    <main className="min-h-screen flex flex-col lg:flex-row bg-canvas text-fg">
-      {/* Coluna Institucional / Identidade Visual estudaê */}
-      <div className="lg:w-5/12 xl:w-1/2 p-5 sm:p-10 lg:p-12 flex flex-col justify-between text-white bg-[#1e40af] border-b lg:border-b-0 lg:border-r border-white/10">
-        <div className="flex items-center gap-3.5">
-          <BnbLogo className="size-10 sm:size-11 rounded-xl shadow-md" />
-          <div>
-            <div className="text-lg sm:text-xl font-bold tracking-tight">estudaê</div>
-            <div className="text-xs text-white/80">
-              Estudo organizado para qualquer concurso
-            </div>
-          </div>
-        </div>
-
-        <div className="my-4 sm:my-8 lg:my-0 space-y-3 sm:space-y-5 max-w-lg relative z-10">
-          <div className="inline-flex max-w-full items-center gap-2 rounded-full bg-white/15 px-3.5 py-1.5 text-xs font-medium">
-            <ShieldCheck className="size-4 text-[#ffbf69] shrink-0" />
-            <span>Ciclo contínuo de estudos feito a partir do seu edital</span>
+    <main className="auth-screen text-fg">
+      <div className="auth-hero">
+        <div className="auth-hero-content">
+          <div className="auth-brand">
+            <span aria-hidden="true"><BnbLogo className="size-11 rounded-xl" /></span>
+            estudaê
           </div>
 
-          <h1 className="text-xl sm:text-3xl lg:text-4xl font-bold leading-tight">
-            Envie seu edital verticalizado e monte seu plano de estudo.
-          </h1>
-
-          <p className="text-xs sm:text-sm text-white/85 leading-relaxed">
-            Escolha o concurso, envie o edital verticalizado e receba um ciclo contínuo de estudos
-            baseado nos tópicos dele. Dá para ter vários concursos na mesma conta, cada um
-            com o seu painel.
-          </p>
-
-          <ul className="hidden sm:block space-y-2.5 text-xs sm:text-sm text-white/90 pt-1">
-            <li className="flex items-center gap-2.5">
-              <CheckCircle2 className="size-4 text-[#ffbf69] shrink-0" />
-              <span>
-                Bancos, TI, polícia, fiscal, tribunais e outros
-              </span>
-            </li>
-            <li className="flex items-center gap-2.5">
-              <CheckCircle2 className="size-4 text-[#ffbf69] shrink-0" />
-              <span>
-                O ciclo segue os tópicos do seu edital
-              </span>
-            </li>
-            <li className="flex items-center gap-2.5">
-              <CheckCircle2 className="size-4 text-[#ffbf69] shrink-0" />
-              <span>
-                Um painel separado para cada concurso
-              </span>
-            </li>
-          </ul>
-        </div>
-
-        <div className="text-xs text-white/70 relative z-10 hidden sm:block">
-          estudaê
-        </div>
-      </div>
-
-      {/* Coluna do Formulário de Login / Cadastro */}
-      <div className="flex-1 flex items-center justify-center p-4 sm:p-8 lg:p-12 overflow-y-auto pb-[max(1.5rem,env(safe-area-inset-bottom))]">
-        <div
-          className="w-full max-w-xl space-y-5 my-auto"
-        >
-          <div className="space-y-1.5 text-center sm:text-left">
-            <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-fg">
-              {mode === 'login' ? 'Acesse sua conta no estudaê' : 'Crie sua conta de estudos'}
-            </h2>
-            <p className="text-xs sm:text-sm text-fg-muted">
-              {mode === 'login'
-                ? 'Entre com seu e-mail e senha para continuar de onde parou.'
-                : 'Preencha seus dados, escolha o concurso e envie o edital.'}
+          <div className="auth-pitch">
+            <p className="auth-eyebrow">Planejamento para concursos</p>
+            <p className="auth-display">Seu edital.<br /> <span>Seu plano.</span></p>
+            <p className="auth-description">
+              Transforme os tópicos do seu edital em um ciclo contínuo de estudos e organize
+              cada concurso no seu próprio painel.
             </p>
           </div>
 
-          {/* Seletor de Modo */}
-          <div role="tablist" aria-label="Acesso à plataforma" className="grid grid-cols-2 gap-1 rounded-xl bg-surface-muted p-1 border border-border">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={mode === 'login'}
-              onClick={() => {
-                setMode('login');
-                setError(null);
-              }}
-              className={`flex items-center justify-center gap-2 rounded-lg py-2 max-lg:py-2.5 max-lg:min-h-11 text-xs max-lg:text-sm font-semibold transition ${
-                mode === 'login'
-                  ? 'bg-surface text-primary shadow-xs'
-                  : 'text-fg-muted hover:text-fg'
-              }`}
-            >
-              <LogIn className="size-3.5" />
-              Já tenho conta
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={mode === 'register'}
-              onClick={() => {
-                setMode('register');
-                setError(null);
-              }}
-              className={`flex items-center justify-center gap-2 rounded-lg py-2 max-lg:py-2.5 max-lg:min-h-11 text-xs max-lg:text-sm font-semibold transition ${
-                mode === 'register'
-                  ? 'bg-surface text-primary shadow-xs'
-                  : 'text-fg-muted hover:text-fg'
-              }`}
-            >
-              <UserPlus className="size-3.5" />
-              Cadastrar conta
-            </button>
+          <StudyCyclePreview />
+        </div>
+      </div>
+
+      <div className="auth-access">
+        <div className="auth-access-inner">
+          <div className="auth-intro" key={mode}>
+            <h1>{isRegister ? 'Crie sua conta' : 'Boas-vindas!'}</h1>
+            <p>
+              {isRegister
+                ? 'Preencha seus dados e escolha o concurso para iniciar seu ciclo.'
+                : 'Acesse sua conta para continuar seus estudos.'}
+            </p>
           </div>
 
-          {error && (
-            <Alert tone="danger" onClose={() => setError(null)}>
-              {error}
-            </Alert>
-          )}
+          <div
+            role="tablist"
+            aria-label="Acesso à plataforma"
+            className="auth-modes"
+            data-register={isRegister}
+            onKeyDown={handleTabKey}
+          >
+            {accessModes.map(({ id, label, Icon }) => (
+              <button
+                key={id}
+                type="button"
+                role="tab"
+                id={`${accessId}-${id}`}
+                data-mode={id}
+                aria-controls={`${accessId}-panel`}
+                aria-selected={mode === id}
+                tabIndex={mode === id ? 0 : -1}
+                disabled={loading}
+                onClick={() => changeMode(id)}
+              >
+                <Icon size={16} aria-hidden="true" />
+                {label}
+              </button>
+            ))}
+          </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {mode === 'register' && (
-              <Field label="Seu nome completo" required>
-                <InputWithIcon
+          <div role="tabpanel" id={`${accessId}-panel`} aria-labelledby={`${accessId}-${mode}`}>
+            <form onSubmit={handleSubmit} className="auth-form">
+              {isRegister && (
+                <Field label="Seu nome completo" required>
+                  <InputWithIcon
                     type="text"
-                    required
+                    name="name"
+                    autoComplete="name"
                     minLength={2}
-                    placeholder="Ex: Maria Oliveira"
+                    placeholder="Ex.: Maria Oliveira"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                icon={<User />}
-              />
-              </Field>
-            )}
+                    icon={<User />}
+                  />
+                </Field>
+              )}
 
-            <Field label="E-mail" required>
-              <InputWithIcon
+              <Field label="E-mail" required>
+                <InputWithIcon
                   type="email"
-                  required
-                  autoComplete="email"
+                  name="email"
+                  autoComplete={isRegister ? 'email' : 'username'}
                   placeholder="seu.email@exemplo.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                icon={<Mail />}
-              />
-            </Field>
+                  icon={<Mail />}
+                />
+              </Field>
 
-            <div
-              className={
-                mode === 'register'
-                  ? 'grid grid-cols-1 sm:grid-cols-2 gap-3.5'
-                  : 'space-y-4'
-              }
-            >
-              <Field
-                label="Senha"
-                required
-                hint={mode === 'register' ? 'Use pelo menos 6 caracteres.' : undefined}
-              >
-                <InputWithIcon
-                    type="password"
-                    required
+              <div className={isRegister ? 'grid grid-cols-1 gap-4 sm:grid-cols-2' : undefined}>
+                <Field
+                  label="Senha"
+                  required
+                  hint={isRegister ? 'Use pelo menos 6 caracteres.' : undefined}
+                >
+                  <InputWithIcon
+                    type={passwordVisible ? 'text' : 'password'}
+                    name="password"
                     minLength={6}
-                    autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+                    autoComplete={isRegister ? 'new-password' : 'current-password'}
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                icon={<Lock />}
-              />
-              </Field>
+                    icon={<Lock />}
+                    endAction={
+                      <IconButton
+                        className="auth-password-toggle"
+                        label={passwordVisible ? 'Ocultar senha' : 'Mostrar senha'}
+                        icon={passwordVisible ? <EyeOff size={17} /> : <Eye size={17} />}
+                        onClick={() => setPasswordVisible(!passwordVisible)}
+                      />
+                    }
+                  />
+                </Field>
 
-              {mode === 'register' && (
-                <Field label="Confirmar senha" required>
-                  <InputWithIcon
+                {isRegister && (
+                  <Field label="Confirmar senha" required>
+                    <InputWithIcon
                       type="password"
-                      required
+                      name="confirmPassword"
                       minLength={6}
                       autoComplete="new-password"
                       placeholder="••••••••"
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
-                icon={<Lock />}
-              />
-                </Field>
-              )}
-            </div>
-
-            {mode === 'register' && (
-              <div className="space-y-3.5 pt-2 border-t border-border">
-                <ContestSearchSelect
-                  value={selectedContestId}
-                  onChange={(id) => {
-                    setSelectedContestId(id);
-                    setError(null);
-                  }}
-                  customName={customContestName}
-                  onCustomNameChange={setCustomContestName}
-                  customRole={customContestRole}
-                  onCustomRoleChange={setCustomContestRole}
-                  disabled={loading}
-                  label="Qual concurso você vai fazer?"
-                />
-
-                <EditalUploadBox
-                  contestId={selectedContestId}
-                  customContestName={customContestName}
-                  editalText={editalText}
-                  onEditalTextChange={setEditalText}
-                  editalFileName={editalFileName}
-                  onEditalFileNameChange={setEditalFileName}
-                  disabled={loading}
-                />
+                      icon={<Lock />}
+                    />
+                  </Field>
+                )}
               </div>
-            )}
 
-            <Button
-              type="submit"
-              variant="primary"
-              size="lg"
-              className="w-full mt-2"
-              loading={loading}
-              icon={mode === 'login' ? <LogIn className="size-4" /> : <UserPlus className="size-4" />}
-            >
-              {mode === 'login'
-                ? 'Entrar na plataforma'
-                : 'Criar conta e iniciar meu ciclo'}
-            </Button>
-          </form>
+              {isRegister && (
+                <div className="auth-contest">
+                  <ContestSearchSelect
+                    value={selectedContestId}
+                    onChange={(id) => {
+                      setSelectedContestId(id);
+                      setError(null);
+                    }}
+                    customName={customContestName}
+                    onCustomNameChange={setCustomContestName}
+                    customRole={customContestRole}
+                    onCustomRoleChange={setCustomContestRole}
+                    disabled={loading}
+                    label="Qual concurso você vai fazer?"
+                  />
+
+                  <EditalUploadBox
+                    contestId={selectedContestId}
+                    customContestName={customContestName}
+                    editalText={editalText}
+                    onEditalTextChange={setEditalText}
+                    editalFileName={editalFileName}
+                    onEditalFileNameChange={setEditalFileName}
+                    disabled={loading}
+                  />
+                </div>
+              )}
+
+              {error && (
+                <Alert tone="danger" onClose={() => setError(null)}>
+                  {error}
+                </Alert>
+              )}
+
+              <Button type="submit" variant="primary" size="lg" className="auth-submit" loading={loading}>
+                {isRegister ? 'Criar conta e iniciar meu ciclo' : 'Entrar na plataforma'}
+                {!loading && <ArrowRight size={18} className="auth-submit-arrow" aria-hidden="true" />}
+              </Button>
+            </form>
+          </div>
         </div>
       </div>
     </main>
