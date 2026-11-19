@@ -211,7 +211,7 @@ export function OverviewScreen() {
               onClick={() => navigate('/revisoes')}
               className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline max-lg:min-h-9 max-lg:px-2"
             >
-              Ver todas <ArrowRight className="size-3" aria-hidden="true" />
+              Ir para revisões <ArrowRight className="size-3" aria-hidden="true" />
             </button>
           }
         >
