@@ -318,7 +318,7 @@ export function FlashcardDeck({ reviews, notes, disciplines, onComplete }: Props
             className={cn(
               face,
               '[transform:rotateY(180deg)]',
-              correct ? 'border-success bg-success text-white' : 'border-danger bg-danger text-white',
+              'border-border bg-surface text-fg shadow-xl',
             )}
             aria-live="polite"
           >
@@ -330,9 +330,9 @@ export function FlashcardDeck({ reviews, notes, disciplines, onComplete }: Props
               <p className="text-base">
                 <strong>Gabarito:</strong> {card?.answer === 'certo' ? 'Certo' : 'Errado'}
               </p>
-              <div className="text-sm opacity-95">
+              <div className="text-sm text-fg-muted">
                 <strong>Definição correta:</strong>
-                <FormattedText text={card?.explanation ?? ''} className="mt-1 text-white" />
+                <FormattedText text={card?.explanation ?? ''} className="mt-1 text-fg" />
               </div>
             </div>
             <Button variant="secondary" disabled={!picked || animating} onClick={() => void advance()}>
