@@ -264,7 +264,7 @@ export function DisciplinesScreen() {
 
       {/* Disciplines Selection Tabs */}
       <div className="overflow-x-auto pb-1">
-        <div className="inline-flex lg:flex lg:flex-wrap gap-1.5 p-1 rounded-xl border border-border bg-surface">
+        <div className="inline-flex w-max min-w-full flex-nowrap gap-1.5 p-1 rounded-xl border border-border bg-surface">
           {disciplines.map((d) => {
             const isSelected = d.id === currentDiscipline?.id;
             return (
@@ -274,14 +274,14 @@ export function DisciplinesScreen() {
                 aria-pressed={isSelected}
                 onClick={() => setSelectedDisciplineId(d.id)}
                 className={cn(
-                  'flex items-center gap-2 rounded-lg px-3 py-2 max-lg:min-h-11 text-xs font-medium transition-all shrink-0',
+                  'flex w-max max-w-[180px] shrink-0 items-center gap-2 rounded-lg px-3 py-2 max-lg:min-h-11 text-xs font-medium transition-all',
                   isSelected
                     ? 'bg-primary text-primary-fg shadow-xs font-semibold'
                     : 'text-fg-muted hover:bg-surface-muted hover:text-fg'
                 )}
               >
                 <DisciplineDot color={d.color} className="size-2" />
-                <span className="wrap-anywhere max-w-[180px]">{d.name}</span>
+                <span className="wrap-anywhere">{d.name}</span>
               </button>
             );
           })}
