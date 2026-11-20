@@ -90,7 +90,7 @@ export function DailyMissionCard({
                     : 'Adicione ou ative as disciplinas do seu edital para começar.'}
               </p>
               {(timer || next) && <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-fg-muted">
-                {(timer || (next && !timeGoalsDisabled)) && <span className="inline-flex items-center gap-1.5 font-medium tabular-nums text-fg">
+                {(timer || next) && !timeGoalsDisabled && <span className="inline-flex items-center gap-1.5 font-medium tabular-nums text-fg">
                   <Clock className="size-4 text-primary" aria-hidden="true" />
                   {timer ? timer.plannedSeconds / 60 : next.minutes} min
                 </span>}
@@ -123,7 +123,7 @@ export function DailyMissionCard({
               Seu progresso hoje
             </h3>
             <div className="my-5 flex items-center gap-4">
-              {p.goalMinutes > 0 && <ProgressRing
+              {!timeGoalsDisabled && p.goalMinutes > 0 && <ProgressRing
                 value={p.studiedMinutes}
                 max={p.goalMinutes}
                 label="Tempo estudado hoje em relação à meta diária"
@@ -135,7 +135,7 @@ export function DailyMissionCard({
               <div className="min-w-0 space-y-1">
                 <p className="text-xs font-medium text-fg-muted">Tempo estudado</p>
                 <p className="text-2xl font-semibold tracking-tight tabular-nums text-fg">{formatMinutes(p.studiedMinutes)}</p>
-                {p.goalMinutes > 0 && <p className="text-xs text-fg-muted">{goalDone ? 'Meta diária cumprida' : `Meta diária: ${formatMinutes(p.goalMinutes)}`}</p>}
+                {!timeGoalsDisabled && p.goalMinutes > 0 && <p className="text-xs text-fg-muted">{goalDone ? 'Meta diária cumprida' : `Meta diária: ${formatMinutes(p.goalMinutes)}`}</p>}
               </div>
             </div>
 

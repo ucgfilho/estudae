@@ -77,6 +77,7 @@ export function CalendarScreen() {
 
 
   const dailyGoal = settings?.dailyGoalMinutes ?? 120;
+  const timeGoalsDisabled = settings?.dailyGoalMinutes === 0 && settings?.weeklyGoalMinutes === 0;
   const examDate = settings?.examDate ?? null;
 
   const discMap = useMemo(() => new Map(disciplines.map((d) => [d.id, d])), [disciplines]);
@@ -295,9 +296,9 @@ export function CalendarScreen() {
                         <span
                           className={cn(
                             'hidden md:inline-block text-[10px] font-semibold tabular-nums px-1 rounded',
-                            studiedMin >= dailyGoal ? 'text-success bg-success-soft' : 'text-fg-subtle'
+                            !timeGoalsDisabled && studiedMin >= dailyGoal ? 'text-success bg-success-soft' : 'text-fg-subtle'
                           )}
-                          title={`Estudado: ${formatMinutes(studiedMin)} / Meta: ${formatMinutes(dailyGoal)}`}
+                          title={timeGoalsDisabled ? undefined : `Estudado: ${formatMinutes(studiedMin)} / Meta: ${formatMinutes(dailyGoal)}`}
                         >
                           {formatMinutes(studiedMin)}
                         </span>
@@ -479,7 +480,7 @@ export function CalendarScreen() {
 
                   <div className="pt-2 text-[11px] text-fg-muted flex items-center justify-between">
                     <span>Estudado:</span>
-                    <strong className={cn(studiedMin >= dailyGoal ? 'text-success' : 'text-fg')}>
+                    <strong className={cn(!timeGoalsDisabled && studiedMin >= dailyGoal ? 'text-success' : 'text-fg')}>
                       {formatMinutes(studiedMin)}
                     </strong>
                   </div>
@@ -533,7 +534,7 @@ export function CalendarScreen() {
       {view === 'daily' && (
         <Card
           title={`Sessões para ${formatDate(currentDate, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}`}
-          description={`${dailyGoal > 0 ? `Meta diária de estudo: ${formatMinutes(dailyGoal)} | ` : ''}Estudado hoje: ${formatMinutes(Math.round((secondsByDate.get(currentDate) ?? 0) / 60))}`}
+          description={`${!timeGoalsDisabled && dailyGoal > 0 ? `Meta diária de estudo: ${formatMinutes(dailyGoal)} | ` : ''}Estudado hoje: ${formatMinutes(Math.round((secondsByDate.get(currentDate) ?? 0) / 60))}`}
           actions={
             <Button
               variant="secondary"

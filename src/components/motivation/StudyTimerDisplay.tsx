@@ -3,9 +3,10 @@ import { formatClock, formatMinutes } from '../../lib/format';
 interface StudyTimerDisplayProps {
   elapsed: number;
   planned: number;
+  showGoal?: boolean;
 }
 
-export function StudyTimerDisplay({ elapsed, planned }: StudyTimerDisplayProps) {
+export function StudyTimerDisplay({ elapsed, planned, showGoal = true }: StudyTimerDisplayProps) {
   const progress = planned > 0 ? Math.min(elapsed / planned, 1) : 0;
 
   return (
@@ -17,7 +18,7 @@ export function StudyTimerDisplay({ elapsed, planned }: StudyTimerDisplayProps) 
       >
         {formatClock(elapsed)}
       </div>
-      {planned > 0 && (
+      {showGoal && planned > 0 && (
         <div className="mx-auto w-full max-w-64 space-y-2">
           <progress
             aria-label="Progresso da meta da sessão"

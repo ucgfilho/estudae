@@ -16,6 +16,7 @@ interface FocusModeProps {
   onResume: () => void;
   onFinish: () => void;
   onExit: () => void;
+  showTimeGoal?: boolean;
 }
 
 /**
@@ -23,11 +24,11 @@ interface FocusModeProps {
  * controles). Reduz carga cognitiva estranha e estímulos concorrentes
  * (Sweller; Mark et al. sobre custo de interrupções). Esc sai do modo.
  */
-export function FocusMode({ timer, elapsed, disciplineName, disciplineColor, topicTitle, loading, onPause, onResume, onFinish, onExit }: FocusModeProps) {
+export function FocusMode({ timer, elapsed, disciplineName, disciplineColor, topicTitle, loading, onPause, onResume, onFinish, onExit, showTimeGoal = true }: FocusModeProps) {
   const ref = useRef<HTMLDivElement>(null);
   const running = timer.status === 'running';
   const planned = timer.plannedSeconds;
-  const reached = planned > 0 && elapsed >= planned;
+  const reached = showTimeGoal && planned > 0 && elapsed >= planned;
   const remainingMin = Math.max(0, Math.ceil((planned - elapsed) / 60));
 
   useEffect(() => {
@@ -88,7 +89,7 @@ export function FocusMode({ timer, elapsed, disciplineName, disciplineColor, top
           )}
         </div>
 
-        <StudyTimerDisplay elapsed={elapsed} planned={planned} />
+        <StudyTimerDisplay elapsed={elapsed} planned={planned} showGoal={showTimeGoal} />
 
         <div className="flex flex-wrap items-center justify-center gap-2">
           <Button
@@ -109,7 +110,7 @@ export function FocusMode({ timer, elapsed, disciplineName, disciplineColor, top
             <span className="inline-flex items-center gap-1.5 text-success">
               <Coffee className="size-4" aria-hidden /> Meta atingida. Faça uma pausa de 5 min antes do próximo bloco.
             </span>
-          ) : remainingMin <= 5 && planned > 0 ? (
+          ) : showTimeGoal && remainingMin <= 5 && planned > 0 ? (
             `Reta final: faltam ${remainingMin} min.`
           ) : null}
         </p>

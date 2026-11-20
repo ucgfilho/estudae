@@ -76,6 +76,7 @@ export function Sidebar({
   const isTimerRunning = Boolean(timer && timer.status === 'running');
   const dailyGoal = settings?.dailyGoalMinutes ?? 120;
   const weeklyGoal = settings?.weeklyGoalMinutes ?? 840;
+  const timeGoalsDisabled = dailyGoal === 0 && weeklyGoal === 0;
 
   return (
     <>
@@ -225,9 +226,9 @@ export function Sidebar({
                 <div className="text-[11px] text-fg-subtle wrap-anywhere mt-0.5">
                   {activeContest ? activeContest.role : 'Analista de Sistemas — Desenvolvimento'}
                 </div>
-                <div className="mt-1 text-[11px] text-fg-muted tabular-nums">
+                {!timeGoalsDisabled && <div className="mt-1 text-[11px] text-fg-muted tabular-nums">
                   {dailyGoal > 0 ? `Meta: ${dailyGoal} min/dia · ` : ''}{weeklyGoal} min/sem
-                </div>
+                </div>}
               </div>
               <div className="flex size-7 items-center justify-center rounded-md border border-border bg-surface text-fg-muted group-hover:text-primary transition-colors shrink-0">
                 <ArrowLeftRight className="size-3.5" aria-hidden="true" />
@@ -244,7 +245,7 @@ export function Sidebar({
             <div className="wrap-anywhere">
               {activeContest ? activeContest.role : 'Analista de Sistemas — Desenvolvimento'}
             </div>
-            <div className="mt-1 text-fg-muted tabular-nums">{dailyGoal > 0 ? `Meta: ${dailyGoal} min/dia · ` : ''}{weeklyGoal} min/sem</div>
+            {!timeGoalsDisabled && <div className="mt-1 text-fg-muted tabular-nums">{dailyGoal > 0 ? `Meta: ${dailyGoal} min/dia · ` : ''}{weeklyGoal} min/sem</div>}
           </div>
         )}
       </aside>

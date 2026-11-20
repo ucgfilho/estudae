@@ -150,6 +150,7 @@ export function StudyNowScreen() {
 
   // Daily progress (post-session summary)
   const dailyGoal = settings?.dailyGoalMinutes ?? 120;
+  const timeGoalsDisabled = settings?.dailyGoalMinutes === 0 && settings?.weeklyGoalMinutes === 0;
   const dayProgress = useMemo(() => dailyProgress(sessions, questionLogs, settings, today), [sessions, questionLogs, settings, today]);
   const todayMinutes = dayProgress.studiedMinutes;
   const streak = useMemo(() => studyStreak(sessions, today), [sessions, today]);
@@ -309,9 +310,9 @@ export function StudyNowScreen() {
                 )}
               </div>
 
-              <StudyTimerDisplay elapsed={elapsed} planned={activeTimer.plannedSeconds} />
+              <StudyTimerDisplay elapsed={elapsed} planned={activeTimer.plannedSeconds} showGoal={!timeGoalsDisabled} />
 
-              {reached && !goalBannerDismissed && (
+              {reached && !timeGoalsDisabled && !goalBannerDismissed && (
                 <div className="flex items-center gap-2 rounded-lg bg-success-soft px-3 py-1 text-left text-xs font-medium text-success">
                   <Sparkles className="size-4 shrink-0" aria-hidden />
                   <span>Meta atingida. Finalize a sessão ou faça uma pausa de 5 min.</span>
@@ -390,16 +391,16 @@ export function StudyNowScreen() {
                     <p className="text-xs font-medium text-fg-muted">Hoje</p>
                     <p className="mt-1 text-lg font-semibold tabular-nums text-fg">
                       {formatMinutes(todayMinutes)}
-                      <span className="text-sm font-normal text-fg-muted"> / {formatMinutes(dailyGoal)}</span>
+                      {!timeGoalsDisabled && <span className="text-sm font-normal text-fg-muted"> / {formatMinutes(dailyGoal)}</span>}
                     </p>
-                    <ProgressBar
+                    {!timeGoalsDisabled && <ProgressBar
                       value={todayMinutes}
                       max={dailyGoal}
                       label="Tempo estudado hoje em relação à meta diária"
                       tone={todayMinutes >= dailyGoal ? 'success' : 'primary'}
                       className="mt-2"
                       showOverflow
-                    />
+                    />}
                   </div>
                   <div className="rounded-lg bg-surface-muted/50 p-3">
                     <p className="text-xs font-medium text-fg-muted">Sessões planejadas do dia</p>
@@ -683,6 +684,7 @@ export function StudyNowScreen() {
           onResume={handleResume}
           onFinish={handleFinish}
           onExit={exitFocusMode}
+          showTimeGoal={!timeGoalsDisabled}
         />
       )}
 
