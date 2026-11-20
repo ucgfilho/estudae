@@ -13,10 +13,10 @@ export async function saveTopicWithStatus(topic: Topic): Promise<void> {
     if (parent && isCompleted(parent.status) && !isCompleted(topic.status)) {
       changes.push({ ...parent, status: 'em-andamento', updatedAt: topic.updatedAt });
     }
-  } else if (isCompleted(topic.status)) {
+  } else {
     for (const child of db.topics.toArraySync()) {
-      if (child.parentTopicId === topic.id && child.status !== 'dominado') {
-        changes.push({ ...child, status: 'dominado', updatedAt: topic.updatedAt });
+      if (child.parentTopicId === topic.id && child.status !== topic.status) {
+        changes.push({ ...child, status: topic.status, updatedAt: topic.updatedAt });
       }
     }
   }
