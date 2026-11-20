@@ -116,8 +116,8 @@ export function FocusMode({ timer, elapsed, disciplineName, disciplineColor, top
       </div>
 
       <p className="hidden shrink-0 text-center text-xs text-fg-subtle lg:block">
-        <kbd className="rounded border border-border bg-surface-muted px-1.5 py-0.5 font-mono text-[10px]">Espaço</kbd> pausa/retoma ·{' '}
-        <kbd className="rounded border border-border bg-surface-muted px-1.5 py-0.5 font-mono text-[10px]">Esc</kbd> sai do modo foco
+        <kbd className="rounded border border-border bg-surface-muted px-1.5 py-0.5 text-[10px]">Espaço</kbd> pausa/retoma ·{' '}
+        <kbd className="rounded border border-border bg-surface-muted px-1.5 py-0.5 text-[10px]">Esc</kbd> sai do modo foco
       </p>
     </div>
   );

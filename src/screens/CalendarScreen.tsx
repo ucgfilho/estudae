@@ -719,7 +719,7 @@ export function CalendarScreen() {
                 <div className="mt-2 space-y-1 text-xs text-fg-muted max-h-32 overflow-y-auto">
                   {selectedSessionDetail.history.map((h, i) => (
                     <div key={i} className="flex items-center gap-2">
-                      <span className="font-mono text-fg-subtle">
+                      <span className="tabular-nums text-fg-subtle">
                         {new Date(h.at).toLocaleDateString('pt-BR')} {new Date(h.at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                       </span>
                       <span>—</span>

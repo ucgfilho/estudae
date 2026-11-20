@@ -13,7 +13,7 @@ export function StudyTimerDisplay({ elapsed, planned }: StudyTimerDisplayProps) 
       <div
         role="timer"
         aria-label="Tempo de estudo"
-        className="timer-numerals whitespace-nowrap text-[clamp(2.75rem,12vw,7rem)] leading-none font-light tracking-[-0.045em] text-fg"
+        className="tabular-nums whitespace-nowrap text-[clamp(2.75rem,12vw,7rem)] leading-none font-light tracking-[-0.045em] text-fg"
       >
         {formatClock(elapsed)}
       </div>

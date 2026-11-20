@@ -42,7 +42,7 @@ import {
   reviewBuckets,
   type Granularity,
 } from '../domain/metrics';
-import { formatMinutes, formatPercent, formatInteger, EMPTY_VALUE } from '../lib/format';
+import { formatMinutes, formatPercent, formatInteger, plural } from '../lib/format';
 import { addDays, type DateKey } from '../lib/dates';
 import { toCsv, downloadFile } from '../services/backup';
 import type { Settings } from '../db/types';
@@ -115,10 +115,8 @@ export function ReportsScreen() {
     );
   }, [questionLogs, startDate, today, timeGranularity]);
 
-  // Accuracy by discipline (ordenado em formato de ranking decrescente por taxa de acerto)
   const discAccuracy = useMemo(() => {
-    const list = accuracyByDiscipline(questionLogs, disciplines);
-    return [...list].sort((a, b) => {
+    return accuracyByDiscipline(questionLogs, disciplines).sort((a, b) => {
       const accA = a.accuracy ?? -1;
       const accB = b.accuracy ?? -1;
       if (accB !== accA) return accB - accA;
@@ -329,57 +327,47 @@ export function ReportsScreen() {
         {/* Disciplines Accuracy */}
         <Card
           title="Desempenho por disciplina"
-          description="Disciplinas ordenadas pela taxa de acerto."
+          description="Taxa de acerto e questões resolvidas em todo o histórico."
         >
-          <div className="space-y-2.5">
-            {discAccuracy.map((d, index) => {
-              const position = index + 1;
-              const isTop1 = position === 1 && (d.accuracy ?? 0) > 0;
-              const isTop2 = position === 2 && (d.accuracy ?? 0) > 0;
-              const isTop3 = position === 3 && (d.accuracy ?? 0) > 0;
-
-              return (
-                <div
-                  key={d.disciplineId}
-                  className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-lg border border-border bg-surface transition-colors hover:border-border-strong hover:bg-surface-elevated/40"
-                >
-                  <div className="flex flex-1 basis-40 items-center gap-2.5 min-w-0">
-                    <span
-                      className={`flex size-6 shrink-0 items-center justify-center rounded-md font-mono text-xs font-bold ${
-                        isTop1
-                          ? 'bg-warning-soft text-warning ring-1 ring-warning/40'
-                          : isTop2
-                          ? 'bg-surface-muted text-fg-muted ring-1 ring-border-strong'
-                          : isTop3
-                          ? 'bg-warning-soft text-warning ring-1 ring-warning/40'
-                          : 'bg-surface-muted text-fg-subtle'
-                      }`}
-                    >
-                      {position}º
-                    </span>
-                    <DisciplineDot color={d.color} />
-                    <span className="font-medium text-sm text-fg wrap-anywhere">{d.name}</span>
+          {discAccuracy.some((d) => d.total > 0) ? (
+            <ul role="list" className="divide-y divide-border">
+              {discAccuracy.map((d) => (
+                <li key={d.disciplineId} className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-2 py-3.5 first:pt-0 last:pb-0">
+                  <div className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-x-2.5 gap-y-0.5">
+                    <DisciplineDot color={d.color} className="mt-1.5" />
+                    <h3 className="text-sm font-semibold text-fg [text-wrap:wrap]">{d.name}</h3>
+                    <p className="col-start-2 text-xs text-fg-muted">
+                      {d.total > 0
+                        ? plural(d.total, 'questão resolvida', 'questões resolvidas')
+                        : 'Sem questões registradas'}
+                    </p>
                   </div>
-                  <div className="flex items-center gap-3 text-xs shrink-0 ml-auto">
-                    <span className="text-fg-subtle">{d.total} resolvidas</span>
-                    <span
-                      className={`font-mono font-bold tabular-nums text-sm ${
-                        d.accuracy !== null
-                          ? d.accuracy >= 80
-                            ? 'text-success'
-                            : d.accuracy >= 65
-                            ? 'text-fg'
-                            : 'text-warning'
-                          : 'text-fg-subtle'
-                      }`}
-                    >
-                      {d.accuracy !== null ? formatPercent(d.accuracy) : EMPTY_VALUE}
+                  {d.accuracy !== null ? (
+                    <>
+                      <span className="text-right text-base leading-5 font-bold tabular-nums text-fg">
+                        <span className="sr-only">Taxa de acerto </span>
+                        {formatPercent(d.accuracy)}
+                      </span>
+                      <div aria-hidden="true" className="col-span-2 h-1 overflow-hidden rounded-full bg-surface-muted">
+                        <div className="h-full rounded-full bg-primary" style={{ width: `${d.accuracy}%` }} />
+                      </div>
+                    </>
+                  ) : (
+                    <span className="text-right text-xs leading-5 text-fg-muted">
+                      <span className="sr-only">Sem taxa de acerto</span>
+                      <span aria-hidden="true">—</span>
                     </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                  )}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <EmptyState
+              icon={<CheckCircle className="size-6" />}
+              title="Sem questões registradas"
+              description="Registre questões para acompanhar a taxa de acerto de cada disciplina."
+            />
+          )}
         </Card>
 
         {/* Worst Performing Topics */}

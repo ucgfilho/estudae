@@ -21,7 +21,7 @@ function renderInline(text: string): ReactNode[] {
     if (part.length > 3 && part.startsWith('~~') && part.endsWith('~~')) return <s key={i}>{renderInline(part.slice(2, -2))}</s>;
     if (part.length > 2 && part.startsWith('`') && part.endsWith('`'))
       return (
-        <code key={i} className="rounded bg-surface-muted px-1 py-0.5 font-mono text-[0.9em]">
+        <code key={i} className="rounded bg-surface-muted px-1 py-0.5 text-[0.9em]">
           {part.slice(1, -1)}
         </code>
       );
