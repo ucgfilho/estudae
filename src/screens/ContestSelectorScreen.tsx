@@ -218,9 +218,6 @@ export function ContestSelectorScreen({ onSelectContest, initializing = false }:
                   <span className="text-xl sm:text-2xl tracking-tight">
                     {contest.shortName}
                   </span>
-                  <span className="mt-1 rounded-full bg-black/25 px-2 py-0.5 text-[10px] font-medium">
-                    {contest.examBoard}
-                  </span>
                 </div>
 
                 <div className="w-full wrap-anywhere font-semibold text-base text-fg group-hover:text-primary transition-colors">
