@@ -51,8 +51,8 @@ export function CycleRecommendation({ showQueue = false }: { showQueue?: boolean
       <Button onClick={() => navigate('/disciplinas')}>Configurar disciplinas</Button>
     </Card> : <>
       <div className={showQueue ? 'grid items-start gap-5 xl:grid-cols-[minmax(0,1.65fr)_minmax(16rem,1fr)]' : ''}>
-        <section className="min-w-0 overflow-hidden border-t border-primary/25 bg-surface" aria-labelledby="cycle-next">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-primary-soft/40 px-[var(--panel-padding)] py-4">
+        <section className="min-w-0 overflow-hidden rounded-xl bg-surface" aria-labelledby="cycle-next">
+          <div className="flex flex-wrap items-center justify-between gap-3 bg-primary-soft/40 px-[var(--panel-padding)] py-4">
             <h2 id="cycle-next" className="section-title flex items-center gap-2"><span className="flex size-7 items-center justify-center rounded-full bg-brand text-primary-fg"><Play className="size-3.5" aria-hidden /></span>Próxima atividade do ciclo</h2>
             <Badge tone="primary">Sessão {completed + 1}</Badge>
           </div>
@@ -63,7 +63,7 @@ export function CycleRecommendation({ showQueue = false }: { showQueue?: boolean
               <p className="flex items-start gap-2 text-sm leading-relaxed text-fg-muted"><BookOpen className="mt-0.5 size-4 shrink-0" aria-hidden />{next.topic?.title ?? 'Nenhum assunto ativo. Você pode estudar a disciplina ou cadastrar um assunto.'}</p>
               {timeGoalsDisabled && <div className="pt-2">{startButton}{cycleHint}</div>}
             </div>
-            {timeGoalsDisabled ? <div className="hidden min-h-48 items-center justify-center md:flex"><CycleBookAnimation /></div> : <div className="border-t border-border pt-5 md:border-t-0 md:border-l md:pl-6 md:pt-0">
+            {timeGoalsDisabled ? <div className="hidden min-h-48 items-center justify-center md:flex"><CycleBookAnimation /></div> : <div className="pt-5 md:pl-6 md:pt-0">
               <fieldset className="min-w-0">
                 <legend className="text-sm font-medium text-fg">Tempo de estudo</legend>
                 <p className="mt-1 text-xs text-fg-muted">Escolha quanto tempo você tem agora.</p>
@@ -84,7 +84,7 @@ export function CycleRecommendation({ showQueue = false }: { showQueue?: boolean
             <p className="mt-4 text-xs leading-relaxed text-fg-muted">Quatro sessões de específicos e uma de básicos. As disciplinas se alternam dentro de cada área.</p>
             {!hasBothAreas && <p className="mt-3 text-xs text-warning">Seu edital tem apenas uma área ativa. Ela ocupa todas as sessões disponíveis.</p>}
           </Card>
-          <div className="flex items-center gap-3 border-t border-border px-5 py-4"><CheckCircle2 className="size-5 shrink-0 text-primary" aria-hidden /><div><p className="text-sm font-semibold text-fg">{completed} {completed === 1 ? 'sessão concluída' : 'sessões concluídas'}</p><p className="mt-0.5 text-xs text-fg-muted">Cada sessão é um passo no seu edital.</p></div></div>
+          <div className="flex items-center gap-3 rounded-xl bg-surface px-5 py-4"><CheckCircle2 className="size-5 shrink-0 text-primary" aria-hidden /><div><p className="text-sm font-semibold text-fg">{completed} {completed === 1 ? 'sessão concluída' : 'sessões concluídas'}</p><p className="mt-0.5 text-xs text-fg-muted">Cada sessão é um passo no seu edital.</p></div></div>
         </aside>}
       </div>
       {showQueue && <Card title="Na sequência" description="Estas atividades ficam disponíveis conforme você conclui as sessões.">
@@ -94,7 +94,7 @@ export function CycleRecommendation({ showQueue = false }: { showQueue?: boolean
           className="grid grid-flow-col auto-cols-[minmax(13rem,1fr)] gap-4 overflow-x-auto overscroll-x-contain snap-x snap-proximity rounded-lg pb-3"
         >
           {queue.map((activity, index) => (
-            <li key={index} className="flex min-w-0 snap-start flex-col gap-4 border-l border-border p-4 first:border-l-0">
+            <li key={index} className="flex min-w-0 snap-start flex-col gap-4 rounded-xl bg-surface-muted p-4">
               <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-sm font-semibold tabular-nums text-primary">
                 {String(index + 2).padStart(2, '0')}
               </span>
@@ -105,7 +105,7 @@ export function CycleRecommendation({ showQueue = false }: { showQueue?: boolean
                 </div>
                 <p className="text-sm leading-relaxed text-fg-muted">{activity.topic?.title ?? 'Estudo da disciplina'}</p>
               </div>
-              <div className="mt-auto flex flex-wrap items-center justify-between gap-2 border-t border-border pt-3 text-xs text-fg-muted">
+              <div className="mt-auto flex flex-wrap items-center justify-between gap-2 pt-3 text-xs text-fg-muted">
                 <span>{activity.discipline.kind === 'technical' ? 'Específicos' : 'Básicos'}</span>
                 {!timeGoalsDisabled && <span className="inline-flex items-center gap-1 whitespace-nowrap"><Clock3 className="size-3.5" aria-hidden />{activity.minutes} min</span>}
               </div>

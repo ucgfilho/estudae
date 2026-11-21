@@ -166,9 +166,9 @@ export function CelebrationLayer() {
         onFocus={() => setHovered(true)}
         onBlur={() => setHovered(false)}
         className={cn(
-          'fixed inset-x-4 bottom-4 z-50 border-t border-border bg-surface p-4 shadow-lg sm:inset-x-auto sm:right-6 sm:bottom-6 sm:w-96',
+          'fixed inset-x-4 bottom-4 z-50 rounded-xl p-4 shadow-lg sm:inset-x-auto sm:right-6 sm:bottom-6 sm:w-96',
           enabled && 'animate-celebrate-in',
-          isBig ? 'border-success/50' : isInfo ? 'border-border' : 'border-primary/30',
+          isBig ? 'bg-success-soft' : isInfo ? 'bg-info-soft' : 'bg-primary-soft',
         )}
       >
         <div className="flex items-start gap-3 pr-6">

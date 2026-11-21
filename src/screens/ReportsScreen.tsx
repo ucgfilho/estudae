@@ -209,7 +209,7 @@ export function ReportsScreen() {
 
       {preferenceError && <p role="alert" className="text-sm text-danger">{preferenceError}</p>}
       {/* Granularity & Time Filter Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 pb-3">
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs font-medium text-fg-muted">Agrupamento:</span>
           <Segmented
@@ -330,9 +330,9 @@ export function ReportsScreen() {
           description="Taxa de acerto e questões resolvidas em todo o histórico."
         >
           {discAccuracy.some((d) => d.total > 0) ? (
-            <ul role="list" className="divide-y divide-border">
+            <ul role="list" className="space-y-2">
               {discAccuracy.map((d) => (
-                <li key={d.disciplineId} className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-2 py-3.5 first:pt-0 last:pb-0">
+                <li key={d.disciplineId} className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-2 rounded-lg bg-surface-muted px-3 py-3.5">
                   <div className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-x-2.5 gap-y-0.5">
                     <DisciplineDot color={d.color} className="mt-1.5" />
                     <h3 className="text-sm font-semibold text-fg [text-wrap:wrap]">{d.name}</h3>
@@ -382,7 +382,7 @@ export function ReportsScreen() {
                 return (
                   <div
                     key={item.topicId}
-                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2.5 border-t border-danger/30 bg-danger-soft/10 text-xs"
+                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2.5 rounded-lg bg-danger-soft/10 text-xs"
                   >
                     <div>
                       <div className="font-semibold text-fg flex items-center gap-1.5">

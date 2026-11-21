@@ -43,11 +43,11 @@ export function Card({
   as?: 'section' | 'div' | 'article';
 }) {
   return (
-    <Tag className={cn('relative min-w-0 border-t border-border bg-surface', className)}>
+    <Tag className={cn('relative min-w-0 rounded-xl bg-surface', className)}>
       {(title || actions || onClose) && (
         <header
           className={cn(
-            'relative flex flex-wrap items-start justify-between gap-3 border-b border-border px-[var(--panel-padding)] py-4',
+            'relative flex flex-wrap items-start justify-between gap-3 rounded-t-xl bg-surface-muted/60 px-[var(--panel-padding)] py-4',
             onClose && 'pr-14',
           )}
         >
@@ -105,7 +105,7 @@ export function ProgressBar({ value, max, label, tone = 'primary', className, sh
 
 export function EmptyState({ icon, title, description, action, className }: { icon?: ReactNode; title: string; description?: ReactNode; action?: ReactNode; className?: string }) {
   return (
-    <div className={cn('flex min-w-0 flex-col items-center justify-center gap-3 border-t border-border-strong bg-surface px-5 py-10 text-center', className)}>
+    <div className={cn('flex min-w-0 flex-col items-center justify-center gap-3 rounded-xl bg-surface px-5 py-10 text-center', className)}>
       {icon && <div className="text-fg-subtle" aria-hidden>{icon}</div>}
       <p className="text-base font-semibold text-fg">{title}</p>
       {description && <div className="max-w-md text-sm leading-relaxed text-fg-muted">{description}</div>}
@@ -238,7 +238,7 @@ export function Alert({
 
 export function PageHeader({ title, description, actions }: { title: string; description?: ReactNode; actions?: ReactNode }) {
   return (
-    <header className="flex flex-wrap items-start justify-between gap-4 border-b border-border pb-5">
+    <header className="flex flex-wrap items-start justify-between gap-4 pb-5">
       <div className="min-w-0 flex-1 basis-72 space-y-2">
         <h1 className="text-2xl sm:text-[1.75rem] font-bold tracking-tight text-fg leading-tight">{title}</h1>
         {description && <p className="max-w-prose text-sm text-fg-muted leading-relaxed">{description}</p>}
@@ -264,7 +264,7 @@ export function StatCard({
   children?: ReactNode;
 }) {
   return (
-    <div className="panel-padding flex min-w-0 flex-col gap-3 border-t border-border bg-surface">
+    <div className="panel-padding flex min-w-0 flex-col gap-3 rounded-xl bg-surface">
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs font-medium text-fg-muted">{label}</p>
         {icon && <span className="text-fg-subtle" aria-hidden="true">{icon}</span>}
@@ -284,7 +284,7 @@ interface SegmentedOption<T extends string> {
 /** Grupo de opções exclusivas (botões com aria-pressed). */
 export function Segmented<T extends string>({ value, onChange, options, label }: { value: T; onChange: (v: T) => void; options: SegmentedOption<T>[]; label: string }) {
   return (
-    <div role="group" aria-label={label} className="inline-flex max-w-full flex-wrap gap-1 border-t border-border bg-surface-muted p-1 max-sm:w-full">
+    <div role="group" aria-label={label} className="inline-flex max-w-full flex-wrap gap-1 rounded-xl bg-surface-muted p-1 max-sm:w-full">
       {options.map((o) => (
         <button
           key={o.value}

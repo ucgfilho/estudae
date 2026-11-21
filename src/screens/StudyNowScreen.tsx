@@ -362,7 +362,7 @@ export function StudyNowScreen() {
             </div>
 
             {/* Quick study notes during session */}
-            <div className="mx-auto w-full max-w-2xl border-t border-border pt-5">
+            <div className="mx-auto w-full max-w-2xl pt-5">
               <Field label="Notas rápidas durante o estudo" hint="Suas anotações serão salvas junto com o registro da sessão.">
                 <Textarea
                   rows={3}
@@ -382,7 +382,7 @@ export function StudyNowScreen() {
             <Card
               title="Sessão finalizada e salva"
               description={`Você estudou ${formatMinutes(Math.round(justFinishedSession.actualSeconds / 60))} nesta sessão.`}
-              className="border-success/40 animate-fade-in"
+              className="bg-success-soft animate-fade-in"
               onClose={() => setJustFinishedSession(null)}
             >
               <div className="space-y-4">
@@ -472,7 +472,7 @@ export function StudyNowScreen() {
             <Card
               title="Iniciar sessão planejada"
               description="Execute uma sessão planejada manualmente no calendário."
-              className={cn(plannedCandidates.length > 0 && 'border-primary/40')}
+              className={cn(plannedCandidates.length > 0 && 'bg-primary-soft/50')}
             >
               {plannedCandidates.length > 0 ? (
                 <div className="space-y-4">
@@ -498,7 +498,7 @@ export function StudyNowScreen() {
                   </Field>
 
                   {selectedPlannedSessionId && (
-                    <div className="border-t border-border bg-surface-muted/30 p-3.5 text-xs space-y-1.5">
+                    <div className="rounded-lg bg-surface-muted/30 p-3.5 text-xs space-y-1.5">
                       {(() => {
                         const s = sessions.find((x) => x.id === selectedPlannedSessionId);
                         if (!s) return null;

@@ -410,7 +410,7 @@ export function Select({
               width: `${coords.width}px`,
             }}
             className={cn(
-              'z-50 max-h-60 max-lg:max-h-[min(20rem,50dvh)] overflow-y-auto overscroll-contain border-t border-border-strong bg-surface p-1 shadow-xl shadow-black/30',
+              'z-50 max-h-60 max-lg:max-h-[min(20rem,50dvh)] overflow-y-auto overscroll-contain rounded-lg bg-surface p-1 shadow-xl shadow-black/30',
               popover.state === 'open' ? 'animate-popover-in' : 'animate-popover-out pointer-events-none'
             )}
           >

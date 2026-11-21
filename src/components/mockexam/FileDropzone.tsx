@@ -58,9 +58,9 @@ export function FileDropzone({ label, hint, accept, file, required, onFile }: Fi
           onDragLeave={() => setDragging(false)}
           onDrop={onDrop}
           className={cn(
-            'flex min-h-32 cursor-pointer flex-col items-center justify-center gap-1.5 border-t px-4 py-5 text-center transition-colors',
+            'flex min-h-32 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl px-4 py-5 text-center transition-colors',
             'peer-focus-visible:ring-2 peer-focus-visible:ring-primary peer-focus-visible:ring-offset-2',
-            file ? 'border-success/50 bg-success/5' : dragging ? 'border-primary bg-primary-soft' : 'border-border-strong bg-surface hover:bg-surface-muted',
+            file ? 'bg-success-soft' : dragging ? 'bg-primary-soft' : 'bg-surface-muted hover:bg-surface-elevated',
           )}
         >
           {file ? (

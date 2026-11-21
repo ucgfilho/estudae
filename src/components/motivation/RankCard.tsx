@@ -156,7 +156,7 @@ export function RankCard(input: RankInput) {
               <li
                 key={r.id}
                 aria-current={i === state.rankIndex ? 'step' : undefined}
-                className={cn('flex items-center gap-1.5 border-t px-2 py-1 text-xs', i === state.rankIndex ? 'border-primary bg-primary-soft font-semibold text-fg' : reached ? 'border-border text-fg' : 'border-border text-fg-subtle opacity-70')}
+                className={cn('flex items-center gap-1.5 rounded-md px-2 py-1 text-xs', i === state.rankIndex ? 'bg-primary-soft font-semibold text-fg' : reached ? 'bg-surface-muted text-fg' : 'text-fg-subtle opacity-70')}
               >
                 <TIcon className={cn('size-3.5 shrink-0', reached ? t.color : 'text-fg-subtle')} aria-hidden />
                 <span className="wrap-anywhere">{r.name}</span>

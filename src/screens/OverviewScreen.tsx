@@ -218,7 +218,7 @@ export function OverviewScreen() {
           }
         >
           {urgentReviews.length > 0 ? (
-            <ul className="max-h-64 divide-y divide-border overflow-y-auto pr-3">
+            <ul className="max-h-64 space-y-2 overflow-y-auto pr-3">
               {urgentReviews.map((rev) => {
                 const disc = discMap.get(rev.disciplineId);
                 const linkedNote = rev.errorNoteId ? errorNoteMap.get(rev.errorNoteId) : undefined;
@@ -243,7 +243,7 @@ export function OverviewScreen() {
                   }
                 };
                 return (
-                  <li key={rev.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 py-2.5 first:pt-0 last:pb-0">
+                  <li key={rev.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 rounded-lg bg-surface-muted px-3 py-2.5">
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2 text-xs">
                         {disc && <DisciplineDot color={disc.color} />}
@@ -304,11 +304,11 @@ export function OverviewScreen() {
           }
         >
           {overdueSessionsInWeek.length > 0 ? (
-            <ul className="divide-y divide-border">
+            <ul className="space-y-2">
               {overdueSessionsInWeek.slice(0, 3).map((s) => {
                 const disc = discMap.get(s.disciplineId);
                 return (
-                  <li key={s.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 py-2.5 first:pt-0 last:pb-0">
+                  <li key={s.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 rounded-lg bg-surface-muted px-3 py-2.5">
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2 text-xs">
                         {disc && <DisciplineDot color={disc.color} />}
@@ -412,7 +412,7 @@ export function OverviewScreen() {
       </div>
 
       {/* Gamificação em expansão progressiva para não competir com a execução do dia */}
-      <details className="group border-t border-border bg-surface">
+      <details className="group rounded-xl bg-surface">
         <summary className="flex cursor-pointer items-center justify-between gap-2 px-4 py-3 text-sm font-medium text-fg-muted hover:text-fg select-none">
           <span className="flex items-center gap-2">
             <Trophy className="size-4 text-primary" aria-hidden="true" />
@@ -421,7 +421,7 @@ export function OverviewScreen() {
           <span className="text-xs text-fg-subtle group-open:hidden">Expandir</span>
           <span className="text-xs text-fg-subtle hidden group-open:inline">Recolher</span>
         </summary>
-        <div className="border-t border-border p-4">
+        <div className="p-4">
           <RankCard sessions={sessions} reviews={reviews} settings={settings} today={today} />
         </div>
       </details>

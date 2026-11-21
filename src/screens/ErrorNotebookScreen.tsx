@@ -194,7 +194,7 @@ export function ErrorNotebookScreen() {
       <Field label="Buscar no caderno">
         <Input type="search" placeholder="Busque por explicação, questão ou tópico" value={filterSearch} onChange={e => setFilterSearch(e.target.value)} />
       </Field>
-      <details className="group border-t border-border bg-surface">
+      <details className="group rounded-xl bg-surface">
         <summary className="flex min-h-11 cursor-pointer items-center gap-2 rounded-xl px-4 py-3 text-sm font-medium text-fg focus-visible:outline-2 focus-visible:outline-ring">
           <Filter className="size-4 text-fg-muted" aria-hidden />
           Refinar resultados
@@ -302,7 +302,7 @@ export function ErrorNotebookScreen() {
             const pendingReviews = linkedReviews.filter((r) => r.status === 'pendente');
 
             return (
-              <details key={note.id} open={focusedNoteId === note.id || undefined} className="overflow-hidden border-t border-border bg-surface">
+              <details key={note.id} open={focusedNoteId === note.id || undefined} className="overflow-hidden rounded-xl bg-surface">
                 <summary className="cursor-pointer px-[var(--panel-padding)] py-4 text-fg focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-[-2px]">
                   <div className="inline-flex w-[calc(100%-1.5rem)] flex-col gap-2 align-middle">
                     <div className="flex flex-wrap items-center justify-between gap-2">
@@ -313,7 +313,7 @@ export function ErrorNotebookScreen() {
                     <span className="text-xs text-fg-subtle">{formatDate(note.errorDate)} · {pendingReviews.length > 0 ? `${pendingReviews.length} revisões pendentes` : 'Revisões em dia'}</span>
                   </div>
                 </summary>
-                <div className="space-y-5 border-t border-border panel-padding">
+                <div className="space-y-5 panel-padding">
                   <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-fg-muted">
                     <span>{ERROR_TYPE_LABELS[note.errorType]}</span>
                     {note.mockExamTitle && <span>Prova: {note.mockExamTitle}</span>}
@@ -325,7 +325,7 @@ export function ErrorNotebookScreen() {
                     <h3 className="text-sm font-semibold">Aprendizado</h3>
                     <FormattedText text={note.explanation} />
                   </div>
-                  <div className="border-t border-border pt-4">
+                  <div className="pt-4">
                   <div className="flex flex-wrap shrink-0 items-center gap-1.5">
                     <Button
                       variant="secondary"

@@ -30,7 +30,6 @@ export function Stepper({ current }: { current: ExamStep }) {
                 {label}
                 {done && <span className="sr-only"> (concluída)</span>}
               </span>
-              {step < 3 && <span className={cn('hidden sm:block h-px flex-1', done ? 'bg-success' : 'bg-border')} aria-hidden />}
             </li>
           );
         })}

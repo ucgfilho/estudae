@@ -202,7 +202,7 @@ export function FlashcardDeck({ reviews, notes, disciplines, onComplete }: Props
   if (!current) {
     if (!redoMode && missedFlashcards.length > 0 && !sessionCompleted) {
       return (
-        <div className="mx-auto max-w-md space-y-4 border-t border-border bg-surface p-6">
+        <div className="mx-auto max-w-md space-y-4 rounded-2xl bg-surface p-6">
           <Sparkles className="mx-auto size-8 text-primary" aria-hidden />
           <h3 className="text-center text-xl font-bold text-fg">Primeira rodada concluída!</h3>
           <div className="grid grid-cols-2 gap-4 rounded-xl bg-surface-muted p-4 text-center">
@@ -221,7 +221,7 @@ export function FlashcardDeck({ reviews, notes, disciplines, onComplete }: Props
     }
     const mastered = totalCardsAnswered > 0 && (redoMode || missedFlashcards.length === 0);
     if (mastered) return (
-      <div role="status" className={cn('mx-auto max-w-3xl space-y-4 border-t border-success/40 bg-success-soft/20 p-10 text-center', enabled && 'animate-celebrate-in motion-reduce:animate-none')}>
+      <div role="status" className={cn('mx-auto max-w-3xl space-y-4 rounded-2xl bg-success-soft/20 p-10 text-center', enabled && 'animate-celebrate-in motion-reduce:animate-none')}>
         {enabled && <Confetti burst={1} intensity="big" />}
         <div className={cn('mx-auto grid size-20 place-items-center rounded-full bg-success-soft text-success', enabled && 'animate-pop motion-reduce:animate-none')}><Trophy className="size-12" aria-hidden /></div>
         <Badge tone="success">Conquista desbloqueada · Meta de revisão</Badge>
@@ -235,7 +235,7 @@ export function FlashcardDeck({ reviews, notes, disciplines, onComplete }: Props
 
   // Mantém a mesma face durante a resposta e reinicia a virada na próxima tentativa.
   const attemptIndex = totalCardsAnswered - Number(!!picked);
-  const face = 'absolute inset-0 flex flex-col border-t p-6 sm:p-8 [backface-visibility:hidden]';
+  const face = 'absolute inset-0 flex flex-col rounded-2xl p-6 sm:p-8 [backface-visibility:hidden]';
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">
@@ -270,7 +270,7 @@ export function FlashcardDeck({ reviews, notes, disciplines, onComplete }: Props
           className="relative h-[26rem] transition-transform duration-700 [transform-style:preserve-3d] motion-reduce:duration-0"
           style={{ transform: picked ? 'rotateY(180deg)' : 'none' }}
         >
-          <div inert={!!picked} className={cn(face, 'border-border bg-surface')}>
+          <div inert={!!picked} className={cn(face, 'bg-surface')}>
             <div className="flex flex-wrap items-center gap-2">
               {d && <DisciplineDot color={d.color} />}
               <span className="text-sm font-semibold text-fg">{d?.name}</span>
@@ -321,7 +321,7 @@ export function FlashcardDeck({ reviews, notes, disciplines, onComplete }: Props
               face,
               '[transform:rotateY(180deg)]',
               'text-fg shadow-xl',
-              correct ? 'border-success bg-success-soft' : 'border-danger bg-danger-soft',
+              correct ? 'bg-success-soft' : 'bg-danger-soft',
             )}
             aria-live="polite"
           >

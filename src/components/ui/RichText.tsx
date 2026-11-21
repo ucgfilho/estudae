@@ -79,7 +79,7 @@ export function FormattedText({ text, className }: { text: string; className?: s
         }
         if (b.type === 'quote') {
           return (
-            <blockquote key={i} className="border-l-2 border-border-strong pl-3 text-fg-muted italic">
+            <blockquote key={i} className="rounded-md bg-surface-muted px-3 py-1.5 text-fg-muted italic">
               {b.lines.map((l, j) => (
                 <div key={j}>{renderInline(l)}</div>
               ))}
@@ -196,7 +196,7 @@ export function RichTextEditor({ value, onChange, className, rows = 6, ...rest }
 
   return (
     <div className="min-w-0 rounded-lg border border-border-strong bg-surface focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/30">
-      <div role="toolbar" aria-label="Formatação de texto" className="flex flex-wrap items-center gap-0.5 border-b border-border p-1">
+      <div role="toolbar" aria-label="Formatação de texto" className="flex flex-wrap items-center gap-0.5 rounded-t-lg bg-surface-muted p-1">
         {TOOLS.map((t) => (
           <IconButton
             key={t.key}

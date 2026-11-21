@@ -77,11 +77,11 @@ export function MockExamsScreen() {
             {exams.length === 0 ? (
               <EmptyState icon={<FileText className="size-5" />} title="Nenhum simulado ainda" description="Os simulados que você criar aparecerão aqui." />
             ) : (
-              <ul className="divide-y divide-border">
+              <ul className="space-y-2">
                 {[...exams]
                   .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
                   .map((e) => (
-                    <li key={e.id} className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-3 py-2.5">
+                    <li key={e.id} className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-3 rounded-lg bg-surface-muted px-3 py-2.5">
                       <button type="button" className="min-w-0 flex-1 text-left py-1" onClick={() => setSelectedId(e.id)}>
                         <span className="block wrap-anywhere text-sm font-medium text-fg">{e.title}</span>
                         <span className="text-xs text-fg-subtle">

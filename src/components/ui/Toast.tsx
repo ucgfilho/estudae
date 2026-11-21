@@ -58,8 +58,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             role={t.tone === 'danger' ? 'alert' : 'status'}
             className={cn(
               t.closing ? 'animate-toast-out' : 'animate-toast-in',
-              'pointer-events-auto flex items-start gap-2.5 border-t bg-surface p-3 text-sm text-fg shadow-lg transition-all duration-300 ease-out',
-              t.tone === 'success' ? 'border-success/50' : 'border-danger/50',
+              'pointer-events-auto flex items-start gap-2.5 rounded-xl p-3 text-sm text-fg shadow-lg transition-all duration-300 ease-out',
+              t.tone === 'success' ? 'bg-success-soft' : 'bg-danger-soft',
             )}
           >
             {t.tone === 'success' ? (

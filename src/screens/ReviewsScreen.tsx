@@ -99,14 +99,14 @@ export function ReviewsScreen() {
           <p className="text-sm text-fg-muted">As revisões concluídas aparecerão aqui.</p>
         ) : (
           <>
-            <ul className="divide-y divide-border">
+            <ul className="space-y-2">
               {history.slice(0, historyLimit).map(({ review, completedAt }) => {
                 const discipline = discMap.get(review.disciplineId);
                 const note = review.errorNoteId ? errorNoteMap.get(review.errorNoteId) : undefined;
                 const stats = review.flashcardStats;
 
                 return (
-                  <li key={review.id} className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1 py-3 first:pt-0 last:pb-0">
+                  <li key={review.id} className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1 rounded-lg bg-surface-muted px-3 py-3">
                     <div className="min-w-0 flex-1 basis-56">
                       <p className="font-medium text-fg wrap-anywhere">{resolveReviewDisplayTitle(review, note)}</p>
                       <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-fg-muted">

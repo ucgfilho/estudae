@@ -93,7 +93,7 @@ export function ChecklistImportModal({
         </Field>
 
         <div>
-          <div className="flex items-center justify-between pb-2 border-b border-border">
+          <div className="flex items-center justify-between pb-2">
             <span className="text-xs font-semibold uppercase tracking-wider text-fg-subtle flex items-center gap-1.5">
               <ListChecks className="size-4" /> Prévia da Importação
             </span>
@@ -108,7 +108,7 @@ export function ChecklistImportModal({
               Digite ou cole o conteúdo acima para visualizar a prévia aqui antes de salvar.
             </p>
           ) : (
-            <div className="max-h-56 overflow-y-auto mt-2 border-t border-border bg-surface-muted/50 p-3 space-y-2 text-sm">
+            <div className="max-h-56 overflow-y-auto mt-2 rounded-lg bg-surface-muted/50 p-3 space-y-2 text-sm">
               {parsed.map((item, idx) => (
                 <div key={idx} className="space-y-1">
                   <div className="font-semibold text-fg flex items-center gap-2">

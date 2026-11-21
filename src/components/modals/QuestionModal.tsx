@@ -200,7 +200,7 @@ export function QuestionModal({
           </Field>
         </div>
 
-        <div className="border-t border-border bg-surface-muted/30 p-3 space-y-3">
+        <div className="rounded-lg bg-surface-muted/30 p-3 space-y-3">
           <div className="text-xs font-semibold uppercase tracking-wider text-fg-subtle">
             Contagem de Questões
           </div>

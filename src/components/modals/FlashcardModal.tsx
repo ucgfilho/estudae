@@ -91,7 +91,7 @@ export function FlashcardModal({ open, onClose, note, cardToEdit, onSaved }: Fla
         <fieldset className="min-w-0">
           <legend className="text-sm font-medium text-fg">Gabarito <span className="text-danger" aria-hidden="true">*</span></legend>
           <div className="mt-1.5 grid grid-cols-2 gap-3">
-            <div className="border-t border-border bg-surface-muted/30 p-3">
+            <div className="rounded-lg bg-surface-muted/30 p-3">
               <Radio
                 name="flashcard-answer"
                 value="certo"
@@ -105,7 +105,7 @@ export function FlashcardModal({ open, onClose, note, cardToEdit, onSaved }: Fla
                 }
               />
             </div>
-            <div className="border-t border-border bg-surface-muted/30 p-3">
+            <div className="rounded-lg bg-surface-muted/30 p-3">
               <Radio
                 name="flashcard-answer"
                 value="errado"

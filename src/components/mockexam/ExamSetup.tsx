@@ -109,7 +109,7 @@ export function ExamSetup({ disciplines, onCreated }: ExamSetupProps) {
 
         {fileError && <Alert tone="danger" onClose={() => setFileError(null)}>{fileError}</Alert>}
 
-        <details className="group border-t border-border px-3 py-2">
+        <details className="group rounded-lg bg-surface-muted px-3 py-2">
           <summary className="cursor-pointer text-sm font-medium text-fg-muted select-none focus-visible:ring-2 focus-visible:ring-primary max-lg:py-1.5">
             Prefere colar ou corrigir o gabarito em texto?
           </summary>
@@ -166,7 +166,7 @@ export function ExamSetup({ disciplines, onCreated }: ExamSetupProps) {
         </div>
 
         {keyOk && parsed && (
-          <details className="border-t border-border px-3 py-2">
+          <details className="rounded-lg bg-surface-muted px-3 py-2">
             <summary className="cursor-pointer text-sm font-medium text-fg-muted select-none focus-visible:ring-2 focus-visible:ring-primary max-lg:py-1.5">
               Opcional: informar as disciplinas por faixa de questões
             </summary>
@@ -212,7 +212,7 @@ export function ExamSetup({ disciplines, onCreated }: ExamSetupProps) {
 
         {submitError && <Alert tone="danger" onClose={() => setSubmitError(null)}>{submitError}</Alert>}
 
-        <div className="flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 pt-4 sm:flex-row sm:items-center sm:justify-between">
           <ul className="flex flex-col gap-1 text-xs" aria-label="O que falta para continuar">
             {checklist.map((item) => (
               <li key={item.text} className={item.done ? 'flex items-center gap-1.5 text-success' : 'flex items-center gap-1.5 text-fg-muted'}>

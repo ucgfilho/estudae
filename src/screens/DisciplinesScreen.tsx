@@ -264,7 +264,7 @@ export function DisciplinesScreen() {
 
       {/* Disciplines Selection Tabs */}
       <div className="overflow-x-auto pb-1">
-        <div className="inline-flex w-max min-w-full flex-nowrap gap-1.5 p-1 border-t border-border bg-surface">
+        <div className="inline-flex w-max min-w-full flex-nowrap gap-1.5 p-1 rounded-xl bg-surface">
           {disciplines.map((d) => {
             const isSelected = d.id === currentDiscipline?.id;
             return (
@@ -364,7 +364,7 @@ export function DisciplinesScreen() {
                     data-sort-id={topic.id}
                     onPointerDown={(e) => handleSortPointerDown(e, topic.id, 'topics')}
                     className={cn(
-                      'border-t border-border bg-surface transition-all',
+                      'rounded-xl bg-surface transition-all',
                       !topic.active && 'opacity-60 bg-surface-muted/20'
                     )}
                   >
@@ -416,7 +416,7 @@ export function DisciplinesScreen() {
                       </div>
 
                       {/* Topic Actions */}
-                      <div className="flex flex-wrap items-center justify-between gap-2 w-full sm:w-auto sm:flex-nowrap sm:justify-end sm:gap-1 shrink-0 self-stretch sm:self-center pt-2 sm:pt-0 border-t border-border/50 sm:border-t-0">
+                      <div className="flex flex-wrap items-center justify-between gap-2 w-full sm:w-auto sm:flex-nowrap sm:justify-end sm:gap-1 shrink-0 self-stretch sm:self-center pt-2 sm:pt-0">
                         <div className="w-full sm:w-32">
                           <Select
                             size="sm"
@@ -486,13 +486,13 @@ export function DisciplinesScreen() {
 
                     {/* Subtopics List (nested) */}
                     {isExpanded && subtopics.length > 0 && (
-                      <div className="border-t border-border bg-surface-muted/30 px-3 sm:px-6 py-2 space-y-1.5" data-sort-group={`sub-${topic.id}`}>
+                      <div className="bg-surface-muted/30 px-3 sm:px-6 py-2 space-y-1.5" data-sort-group={`sub-${topic.id}`}>
                         {subtopics.map((sub, sIdx) => (
                           <div
                             key={sub.id}
                             data-sort-id={sub.id}
                             onPointerDown={(e) => handleSortPointerDown(e, sub.id, `sub-${topic.id}`)}
-                            className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-surface p-2.5 sm:p-2 border-t border-border/70 text-xs"
+                            className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-surface p-2.5 sm:p-2 rounded-lg text-xs"
                           >
                             <div className="flex flex-wrap items-center gap-2 min-w-0">
                               <span className="touch-none" data-drag-handle><GripVertical className="size-3 text-fg-subtle cursor-grab shrink-0" /></span>
@@ -511,7 +511,7 @@ export function DisciplinesScreen() {
                               </Badge>
                             </div>
 
-                            <div className="flex flex-wrap items-center justify-between gap-2 w-full sm:w-auto sm:flex-nowrap sm:justify-end sm:gap-1 shrink-0 self-stretch sm:self-center pt-1.5 sm:pt-0 border-t border-border/40 sm:border-t-0">
+                            <div className="flex flex-wrap items-center justify-between gap-2 w-full sm:w-auto sm:flex-nowrap sm:justify-end sm:gap-1 shrink-0 self-stretch sm:self-center pt-1.5 sm:pt-0">
                               <div className="w-full sm:w-32">
                                 <Select
                                   size="sm"
@@ -665,10 +665,10 @@ export function DisciplinesScreen() {
             <div className="space-y-2">
               <label
                 className={cn(
-                  'group flex items-start gap-3 border-t p-3 cursor-pointer transition-colors',
+                  'group flex items-start gap-3 rounded-xl p-3 cursor-pointer transition-colors',
                   deleteAllScope === 'current'
-                    ? 'border-danger/60 bg-danger/5'
-                    : 'border-border bg-surface hover:bg-surface-muted/50'
+                    ? 'bg-danger-soft'
+                    : 'bg-surface-muted hover:bg-surface-elevated'
                 )}
               >
                 <input
@@ -708,10 +708,10 @@ export function DisciplinesScreen() {
 
               <label
                 className={cn(
-                  'group flex items-start gap-3 border-t p-3 cursor-pointer transition-colors',
+                  'group flex items-start gap-3 rounded-xl p-3 cursor-pointer transition-colors',
                   deleteAllScope === 'all'
-                    ? 'border-danger/60 bg-danger/5'
-                    : 'border-border bg-surface hover:bg-surface-muted/50'
+                    ? 'bg-danger-soft'
+                    : 'bg-surface-muted hover:bg-surface-elevated'
                 )}
               >
                 <input

@@ -59,7 +59,7 @@ export function ExamResult({ exam, disciplines, accuracyGoal }: ExamResultProps)
         {totals.accuracy !== null && !bannerDismissed && (
           <div
             className={cn(
-              'relative flex items-center gap-4 border-t p-4 pr-11',
+              'relative flex items-center gap-4 rounded-xl p-4 pr-11',
               totals.accuracy >= accuracyGoal ? 'border-success/40 bg-success/10' : 'border-warning/40 bg-warning/10',
             )}
           >
@@ -157,7 +157,7 @@ export function ExamResult({ exam, disciplines, accuracyGoal }: ExamResultProps)
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">
-          <section aria-labelledby="strengths-title" className="border-t border-success/30 bg-success/5 p-4">
+          <section aria-labelledby="strengths-title" className="rounded-xl bg-success/5 p-4">
             <h3 id="strengths-title" className="mb-3 flex items-center gap-2 text-sm font-semibold text-success">
               <Trophy className="size-4" aria-hidden />
               Pontos fortes
@@ -168,7 +168,7 @@ export function ExamResult({ exam, disciplines, accuracyGoal }: ExamResultProps)
               ))}
             </ul>
           </section>
-          <section aria-labelledby="improvements-title" className="border-t border-warning/30 bg-warning/5 p-4">
+          <section aria-labelledby="improvements-title" className="rounded-xl bg-warning/5 p-4">
             <h3 id="improvements-title" className="mb-3 flex items-center gap-2 text-sm font-semibold text-warning">
               <TrendingUp className="size-4" aria-hidden />
               O que melhorar

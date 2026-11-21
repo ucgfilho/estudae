@@ -169,7 +169,7 @@ export function DateInput({ className, disabled, min, max, value, onChange, onBl
             data-state={presence.state}
             style={{ position: 'fixed', top: pos.top, bottom: pos.bottom, left: pos.left, width: 280 }}
             className={cn(
-              'z-[60] border-t border-border-strong bg-surface p-3 text-fg shadow-xl shadow-black/30',
+              'z-[60] rounded-xl bg-surface p-3 text-fg shadow-xl shadow-black/30',
               presence.state === 'open' ? 'animate-popover-in' : 'animate-popover-out pointer-events-none',
             )}
           >
@@ -223,7 +223,7 @@ export function DateInput({ className, disabled, min, max, value, onChange, onBl
                 );
               })}
             </div>
-            <div className="mt-2 flex justify-between border-t border-border pt-2 text-xs">
+            <div className="mt-2 flex justify-between pt-2 text-xs">
               <button type="button" onClick={() => pick(today)} className="font-medium text-primary hover:underline max-lg:px-2 max-lg:py-2 max-lg:text-sm">
                 Hoje
               </button>

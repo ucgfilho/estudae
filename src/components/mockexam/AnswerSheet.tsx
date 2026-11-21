@@ -28,8 +28,8 @@ function QuestionRow({
   return (
     <div
       className={cn(
-        'flex items-center gap-2 sm:gap-3 border-t px-2.5 sm:px-3 py-2 transition-colors',
-        current ? 'border-primary/30 bg-primary-soft/40' : 'border-border bg-surface',
+        'flex items-center gap-2 sm:gap-3 rounded-lg px-2.5 sm:px-3 py-2 transition-colors',
+        current ? 'bg-primary-soft' : 'bg-surface-muted',
       )}
     >
       <span className="w-6 sm:w-8 shrink-0 text-right text-sm font-semibold tabular-nums text-fg">{number}</span>
@@ -159,7 +159,7 @@ export function AnswerSheet({ exam, disciplines }: { exam: MockExam; disciplines
 
         {error && <Alert tone="danger" onClose={() => setError(null)}>{error}</Alert>}
 
-        <div className="flex flex-wrap items-center gap-3 border-t border-border pt-4">
+        <div className="flex flex-wrap items-center gap-3 pt-4">
           <Button variant="primary" icon={<Send className="size-4" />} loading={sending} onClick={requestSubmit}>
             Enviar respostas
           </Button>

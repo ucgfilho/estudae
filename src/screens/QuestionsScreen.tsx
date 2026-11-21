@@ -336,10 +336,10 @@ export function QuestionsScreen() {
                   setFilterDisciplineId(isSelected ? '' : d.disciplineId);
                   setFilterTopicId('');
                 }}
-                className={`border-t text-left p-3 space-y-1.5 transition-all ${
+                className={`rounded-lg text-left p-3 space-y-1.5 transition-all ${
                   isSelected
-                    ? 'border-primary bg-primary/5 shadow-sm'
-                    : 'border-border bg-surface hover:border-primary/50 hover:bg-surface-muted/30'
+                    ? 'bg-primary-soft'
+                    : 'bg-surface-muted hover:bg-primary-soft/50'
                 }`}
                 title={isSelected ? 'Clique para remover o filtro' : `Filtrar por ${d.name}`}
               >
@@ -384,7 +384,7 @@ export function QuestionsScreen() {
                 return (
                   <div
                     key={log.id}
-                    className="border-t border-border bg-surface p-3.5 space-y-2.5 text-xs"
+                    className="rounded-xl bg-surface p-3.5 space-y-2.5 text-xs"
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
@@ -437,7 +437,7 @@ export function QuestionsScreen() {
                       )}
                     </div>
 
-                    <div className="flex items-center justify-between gap-2 pt-1 border-t border-border/50">
+                    <div className="flex items-center justify-between gap-2 pt-1">
                       <span className="text-fg-muted wrap-anywhere">
                         {log.source ? `Fonte: ${log.source}` : 'Sem banca/fonte'}
                       </span>
@@ -486,7 +486,7 @@ export function QuestionsScreen() {
             {/* Desktop Table (md+) */}
             <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-left text-sm">
-              <thead className="border-b border-border bg-surface-muted/40 text-xs font-semibold text-fg-muted">
+              <thead className="bg-surface-muted/40 text-xs font-semibold text-fg-muted">
                 <tr>
                   <th className="py-2.5 px-1.5 xl:px-3">Data</th>
                   <th className="py-2.5 px-1.5 xl:px-3">Disciplina / Conteúdo</th>
@@ -499,7 +499,7 @@ export function QuestionsScreen() {
                   <th className="py-2.5 px-1.5 xl:px-3 text-right">Ações</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border">
+              <tbody>
                 {filteredLogs.map((log) => {
                   const d = discMap.get(log.disciplineId);
                   const t = log.topicId ? topicMap.get(log.topicId) : null;
@@ -507,7 +507,7 @@ export function QuestionsScreen() {
                   const acc = graded > 0 ? (log.correct / graded) * 100 : null;
 
                   return (
-                    <tr key={log.id} className="hover:bg-surface-muted/20 transition-colors">
+                    <tr key={log.id} className="even:bg-surface-muted/60 hover:bg-surface-muted transition-colors">
                       <td className="py-2.5 px-2 xl:px-3 whitespace-nowrap font-medium text-xs tabular-nums">
                         {formatDate(log.date)}
                       </td>
