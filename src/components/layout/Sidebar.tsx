@@ -92,19 +92,20 @@ export function Sidebar({
       {/* Sidebar container */}
       <aside
         id="main-navigation"
+        data-collapsed={collapsed}
         className={cn(
-          'fixed inset-y-0 left-0 z-40 max-lg:z-50 flex shrink-0 max-lg:w-80 max-lg:max-w-[90vw] max-lg:shadow-2xl max-lg:pt-[env(safe-area-inset-top)] max-lg:pb-[env(safe-area-inset-bottom)] flex-col navigation-chrome bg-surface transition-[width,transform] duration-300 ease-[cubic-bezier(0.2,0,0,1)] motion-reduce:transition-none lg:static lg:translate-x-0',
+          'fixed inset-y-0 left-0 z-40 max-lg:z-50 flex shrink-0 max-lg:w-80 max-lg:max-w-[90vw] max-lg:shadow-2xl max-lg:pt-[env(safe-area-inset-top)] max-lg:pb-[env(safe-area-inset-bottom)] flex-col navigation-chrome bg-surface transition-[width,translate,visibility] duration-300 ease-[cubic-bezier(0.2,0,0,1)] motion-reduce:transition-none lg:static lg:translate-x-0',
           collapsed ? 'lg:w-16' : 'lg:w-60 xl:w-64',
-          mobileOpen ? 'translate-x-0' : '-translate-x-full max-lg:invisible',
+          mobileOpen ? 'translate-x-0' : '-translate-x-full max-lg:invisible max-lg:transition-discrete',
         )}
         aria-label="Navegação principal"
       >
         {/* Branding header: estudaê */}
-        <div className={cn('flex h-14 shrink-0 items-center justify-between overflow-hidden px-4', collapsed && 'lg:justify-center lg:px-0')}>
-          <div className={cn('flex items-center gap-2.5 min-w-0', collapsed && 'lg:hidden')}>
+        <div className="flex h-14 shrink-0 items-center justify-between overflow-hidden px-4">
+          <div className="sidebar-label flex min-w-0 items-center gap-2.5 overflow-hidden lg:whitespace-nowrap">
             <BnbLogo className="size-7 shrink-0 rounded-md" />
             <div className="min-w-0">
-              <p className="text-sm font-bold tracking-tight text-fg wrap-anywhere leading-tight">
+              <p className="text-sm font-bold tracking-tight text-fg max-lg:wrap-anywhere leading-tight">
                 estudaê
               </p>
             </div>
@@ -115,7 +116,7 @@ export function Sidebar({
             onClick={onToggleCollapsed}
             aria-controls="sidebar-links"
             aria-expanded={!collapsed}
-            className="max-lg:hidden"
+            className="ml-auto max-lg:hidden"
             size="sm"
           />
           <IconButton
@@ -142,10 +143,9 @@ export function Sidebar({
                     className={cn(
                       'px-2.5 pb-1 text-[11px] font-medium text-fg-subtle select-none',
                       idx > 0 && 'mt-3 pt-2 border-t border-border/60',
-                      collapsed && (idx === 0 ? 'lg:hidden' : 'lg:mt-2 lg:pt-0'),
                     )}
                   >
-                    <span className={collapsed ? 'lg:hidden' : undefined}>{item.section}</span>
+                    <span className="sidebar-label block truncate">{item.section}</span>
                   </div>
                 )}
                 <NavLink
@@ -156,8 +156,8 @@ export function Sidebar({
                   end={item.to === '/'}
                   className={({ isActive }) =>
                     cn(
-                      'group flex items-center gap-2.5 rounded-lg px-2.5 py-2 max-lg:min-h-12 max-lg:gap-3 text-sm font-medium transition-[color,background-color,padding] duration-200',
-                      collapsed && 'lg:justify-center lg:px-0',
+                      'group flex items-center gap-2.5 overflow-hidden rounded-lg px-2.5 py-2 max-lg:min-h-12 max-lg:gap-3 text-sm font-medium transition-[color,background-color,padding] duration-200',
+                      collapsed && 'lg:pl-3.5 lg:pr-0',
                       isActive
                         ? 'nav-selected font-semibold'
                         : 'text-fg-muted hover:bg-surface-muted hover:text-fg',
@@ -165,12 +165,12 @@ export function Sidebar({
                   }
                 >
                   <Icon className="size-4 shrink-0" aria-hidden="true" />
-                  <span className={cn('wrap-anywhere flex-1', collapsed && 'lg:hidden')}>{item.label}</span>
+                  <span className="sidebar-label min-w-0 flex-1 max-lg:wrap-anywhere lg:truncate">{item.label}</span>
 
                   {/* Indicadores discretos e relevantes (Regra 3: sem piscar durante o estudo) */}
                   {isStudy && isTimerRunning && (
                     <span
-                      className={cn('inline-flex items-center gap-1 rounded-full bg-primary/15 px-1.5 py-0.5 text-[10px] font-semibold text-primary', collapsed && 'lg:hidden')}
+                      className="sidebar-label inline-flex shrink-0 items-center gap-1 rounded-full bg-primary/15 px-1.5 py-0.5 text-[10px] font-semibold text-primary"
                       title="Cronômetro em andamento"
                     >
                       <span className="size-1.5 rounded-full bg-primary" aria-hidden="true" />
@@ -180,8 +180,7 @@ export function Sidebar({
                   {isReviews && pendingReviewsCount > 0 && (
                     <span
                       className={cn(
-                        'rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums leading-none',
-                        collapsed && 'lg:hidden',
+                        'sidebar-label shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums leading-none',
                         buckets.overdue.length > 0
                           ? 'bg-danger text-status-fg'
                           : 'bg-warning-soft text-warning',
@@ -193,7 +192,7 @@ export function Sidebar({
                   )}
                   {isErrors && pendingErrorsCount > 0 && (
                     <span
-                      className={cn('rounded-full bg-surface-muted border border-border px-1.5 py-0.5 text-[10px] font-medium text-fg-muted tabular-nums leading-none', collapsed && 'lg:hidden')}
+                      className="sidebar-label shrink-0 rounded-full bg-surface-muted border border-border px-1.5 py-0.5 text-[10px] font-medium text-fg-muted tabular-nums leading-none"
                       title={`${pendingErrorsCount} erro(s) registrado(s)`}
                     >
                       {pendingErrorsCount}
@@ -217,20 +216,20 @@ export function Sidebar({
               }}
               aria-label="Trocar concurso"
               title={contestCount && contestCount > 1 ? `Trocar concurso (${contestCount} disponíveis)` : 'Trocar concurso'}
-              className={cn('w-full flex items-center justify-between gap-2 rounded-lg border border-border bg-surface-muted/40 hover:bg-surface-muted p-2.5 text-left transition-colors group cursor-pointer', collapsed && 'lg:justify-center lg:p-1')}
+              className="group flex w-full cursor-pointer items-center overflow-hidden rounded-lg border border-border bg-surface-muted/40 p-2.5 text-left transition-colors hover:bg-surface-muted lg:px-[7px]"
             >
-              <div className={cn('min-w-0', collapsed && 'lg:hidden')}>
-                <div className="text-xs font-semibold text-fg group-hover:text-primary transition-colors wrap-anywhere">
+              <div className="sidebar-label min-w-0 flex-1 lg:whitespace-nowrap">
+                <div className="text-xs font-semibold text-fg group-hover:text-primary transition-colors max-lg:wrap-anywhere lg:truncate">
                   {activeContest ? activeContest.name : 'Concurso ativo'}
                 </div>
-                <div className="text-[11px] text-fg-subtle wrap-anywhere mt-0.5">
+                <div className="text-[11px] text-fg-subtle max-lg:wrap-anywhere lg:truncate mt-0.5">
                   {activeContest ? activeContest.role : 'Analista de Sistemas — Desenvolvimento'}
                 </div>
-                {!timeGoalsDisabled && <div className="mt-1 text-[11px] text-fg-muted tabular-nums">
+                {!timeGoalsDisabled && <div className="mt-1 text-[11px] text-fg-muted lg:truncate tabular-nums">
                   {dailyGoal > 0 ? `Meta: ${dailyGoal} min/dia · ` : ''}{weeklyGoal} min/sem
                 </div>}
               </div>
-              <div className="flex size-7 items-center justify-center rounded-md border border-border bg-surface text-fg-muted group-hover:text-primary transition-colors shrink-0">
+              <div className="flex size-7 items-center justify-center rounded-md border border-border bg-surface text-fg-muted group-hover:text-primary transition-colors shrink-0 max-lg:ml-2">
                 <ArrowLeftRight className="size-3.5" aria-hidden="true" />
               </div>
             </button>
@@ -238,11 +237,11 @@ export function Sidebar({
         )}
 
         {!onSwitchContestScreen && (
-          <div className={cn('border-t border-border p-3 text-[11px] text-fg-subtle wrap-anywhere', collapsed && 'lg:hidden')}>
-            <div className="font-semibold text-fg">
+          <div className="sidebar-label border-t border-border p-3 text-[11px] text-fg-subtle">
+            <div className="font-semibold text-fg lg:truncate">
               {activeContest ? activeContest.name : 'Concurso ativo'}
             </div>
-            <div className="wrap-anywhere">
+            <div className="max-lg:wrap-anywhere lg:truncate">
               {activeContest ? activeContest.role : 'Analista de Sistemas — Desenvolvimento'}
             </div>
             {!timeGoalsDisabled && <div className="mt-1 text-fg-muted tabular-nums">{dailyGoal > 0 ? `Meta: ${dailyGoal} min/dia · ` : ''}{weeklyGoal} min/sem</div>}

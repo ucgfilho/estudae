@@ -131,7 +131,7 @@ export function AppLayout({ onSwitchContestScreen }: AppLayoutProps) {
         onToggleCollapsed={() => setSidebarCollapsed((collapsed) => !collapsed)}
         onSwitchContestScreen={onSwitchContestScreen}
       />
-      <div className="flex flex-1 flex-col overflow-hidden min-w-0 lg:bg-[#1e3a8a]">
+      <div className="flex flex-1 flex-col overflow-hidden min-w-0 lg:bg-[var(--navigation-background)]">
         <Header
           activeContest={activeContest}
           timerNow={now}
