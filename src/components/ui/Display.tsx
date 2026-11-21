@@ -96,7 +96,7 @@ export function ProgressBar({ value, max, label, tone = 'primary', className, sh
       aria-valuemax={Math.max(1, Math.round(max))}
       aria-valuenow={Math.round(Math.min(value, Math.max(max, value)))}
       aria-valuetext={`${Math.round(ratio * 100)}%`}
-      className={cn('h-2 w-full overflow-hidden rounded-full', tone === 'primary' ? 'bg-white ring-1 ring-inset ring-primary/50' : 'bg-surface-muted', className)}
+      className={cn('h-2 w-full overflow-hidden rounded-full', tone === 'primary' ? 'bg-surface ring-1 ring-inset ring-primary/50' : 'bg-surface-muted', className)}
     >
       <div className={cn('h-full rounded-full transition-[width] duration-500', bar, showOverflow && ratio > 1 && 'bg-success')} style={{ width: `${pct}%` }} />
     </div>

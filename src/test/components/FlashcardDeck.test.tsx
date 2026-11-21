@@ -411,6 +411,18 @@ describe('FlashcardDeck progress bar', () => {
     expect(screen.queryByText(/em sequência/)).not.toBeInTheDocument();
   });
 
+  it.each([
+    ['Errado', 'Você errou', 'bg-danger-soft'],
+    ['Certo', 'Você acertou!', 'bg-success-soft'],
+  ])('mostra a cor da resposta %s somente no flashcard respondido', async (answer, message, color) => {
+    render(<FlashcardDeck reviews={makeReviews(2)} notes={makeNotes(2)} disciplines={makeDisciplines()} onComplete={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: answer }));
+    expect(screen.getByText(message).parentElement).toHaveClass(color);
+    fireEvent.click(screen.getByRole('button', { name: 'Próximo card' }));
+    expect(await screen.findByText('Enunciado da questão 2')).toBeInTheDocument();
+    expect(screen.queryByText(/Você (acertou|errou)/)).not.toBeInTheDocument();
+  });
+
   it('labels only the last flashcard of the last review as Finalizar', async () => {
     const notes = makeNotes(2);
     notes.get('note-2')!.flashcards!.push({ ...notes.get('note-2')!.flashcards![0], id: 'last-card', statement: 'Último flashcard' });
@@ -422,7 +434,9 @@ describe('FlashcardDeck progress bar', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Certo' }));
     fireEvent.click(screen.getByRole('button', { name: 'Próximo flashcard' }));
     expect(await screen.findByText('Último flashcard')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Finalizar' })).toBeDisabled();
+    expect(screen.queryByText('Você errou')).not.toBeInTheDocument();
+    expect(screen.queryByText('Você acertou!')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Finalizar' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Certo' }));
     fireEvent.click(screen.getByRole('button', { name: 'Finalizar' }));
     expect(await screen.findByText(/Conquista desbloqueada/)).toBeInTheDocument();

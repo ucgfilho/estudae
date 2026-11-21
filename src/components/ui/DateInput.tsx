@@ -211,7 +211,7 @@ export function DateInput({ className, disabled, min, max, value, onChange, onBl
                     className={cn(
                       'h-8 max-lg:h-9 max-lg:text-sm rounded-md text-xs transition-colors disabled:opacity-30',
                       isSel
-                        ? 'bg-primary font-semibold text-primary-fg'
+                        ? 'bg-brand font-semibold text-primary-fg'
                         : isSameMonth(k, view)
                           ? 'text-fg hover:bg-surface-muted'
                           : 'text-fg-subtle hover:bg-surface-muted',

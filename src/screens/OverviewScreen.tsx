@@ -4,6 +4,7 @@ import {
   Clock,
   CheckCircle,
   BookOpen,
+  BookOpenCheck,
   Calendar,
   Plus,
   ArrowRight,
@@ -92,6 +93,7 @@ export function OverviewScreen() {
   const questionTotals = useMemo(() => sumQuestions(questionLogs), [questionLogs]);
   const streak = useMemo(() => studyStreak(sessions, today), [sessions, today]);
   const topicsProg = useMemo(() => topicProgress(topics), [topics]);
+  const approached = topicsProg.completed + topicsProg.inProgress;
   const revBuckets = useMemo(() => reviewBuckets(reviews, today), [reviews, today]);
 
   const superseded = useMemo(() => supersededSessionIds(sessions), [sessions]);
@@ -354,7 +356,7 @@ export function OverviewScreen() {
       </div>
 
       {/* Resumo enxuto de ritmo e progresso (Informações Progressivas — sem gráficos pesados no painel de execução) */}
-      <div className="stats-grid">
+      <div className="overview-metrics">
         {weeklyGoalEnabled && <StatCard
           label="Ritmo na semana"
           value={formatMinutes(weekDoneMinutes)}
@@ -389,19 +391,24 @@ export function OverviewScreen() {
           </div>
         </StatCard>
 
-        <StatCard
-          label="Cobertura do edital"
-          value={formatPercent(topicsProg.percent)}
-          hint={`${topicsProg.completed} de ${topicsProg.total} tópicos concluídos`}
-          icon={<BookOpen className="size-4" />}
-        >
-          <ProgressBar
-            value={topicsProg.completed}
-            max={topicsProg.total || 1}
-            label="Progresso geral de tópicos"
-            tone="success"
-          />
-        </StatCard>
+        <div className="topic-metrics">
+          <StatCard
+            label="Cobertura do edital"
+            value={formatPercent(topicsProg.percent)}
+            hint={<span title="Tópicos concluídos ou dominados">{topicsProg.completed} de {topicsProg.total} tópicos</span>}
+            icon={<BookOpenCheck className="size-4" />}
+          >
+            <ProgressBar value={topicsProg.completed} max={topicsProg.total || 1} label="Cobertura do edital" tone="success" />
+          </StatCard>
+          <StatCard
+            label="Tópicos em abordagem"
+            value={formatPercent(topicsProg.total ? approached / topicsProg.total * 100 : null)}
+            hint={<span title="Tópicos em andamento, concluídos ou dominados">{approached} de {topicsProg.total} tópicos</span>}
+            icon={<BookOpen className="size-4" />}
+          >
+            <ProgressBar value={approached} max={topicsProg.total || 1} label="Tópicos em abordagem" />
+          </StatCard>
+        </div>
       </div>
 
       {/* Gamificação em expansão progressiva para não competir com a execução do dia */}

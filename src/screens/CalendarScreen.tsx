@@ -275,7 +275,7 @@ export function CalendarScreen() {
                     onClick={() => setCurrentDate(dayKey)}
                     className={cn(
                       'min-h-14 md:min-h-[105px] xl:min-h-[118px] p-1 md:p-1.5 xl:p-2 transition-colors flex flex-col justify-between group max-md:cursor-pointer',
-                      !isCurMonth && 'bg-surface-muted/20 text-fg-subtle opacity-70',
+                      !isCurMonth && 'bg-surface-muted/20 text-fg-subtle',
                       isToday && 'bg-primary-soft/30',
                       isSelectedDay && 'max-md:ring-2 max-md:ring-inset max-md:ring-primary max-md:bg-primary-soft/20'
                     )}
@@ -284,8 +284,8 @@ export function CalendarScreen() {
                       <span
                         className={cn(
                           'flex size-6 items-center justify-center rounded-full font-medium',
-                          isToday && 'bg-primary text-primary-fg font-bold',
-                          isExamDay && !isToday && 'bg-danger text-white'
+                          isToday && 'bg-brand text-primary-fg font-bold',
+                          isExamDay && !isToday && 'bg-danger text-status-fg'
                         )}
                         title={isExamDay ? 'Dia da prova' : undefined}
                       >

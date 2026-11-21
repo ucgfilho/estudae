@@ -58,7 +58,7 @@ function QuestionRow({
                     ? 'flex h-10 items-center justify-center gap-1.5 rounded-full border px-3.5 text-sm font-semibold transition-colors'
                     : 'flex size-10 items-center justify-center rounded-full border text-sm font-semibold transition-colors',
                   'border-border-strong bg-surface text-fg-muted hover:bg-surface-muted',
-                  'peer-checked:border-primary peer-checked:bg-primary peer-checked:text-primary-fg',
+                  'peer-checked:border-primary peer-checked:bg-brand peer-checked:text-primary-fg',
                   'peer-focus-visible:ring-2 peer-focus-visible:ring-primary peer-focus-visible:ring-offset-2',
                 )}
               >

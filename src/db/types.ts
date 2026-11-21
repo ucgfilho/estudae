@@ -224,7 +224,7 @@ export interface Settings {
   /** Meta de conclusão de tópicos em % (`null` = não definida). */
   topicCompletionGoal: number | null;
   reviewIntervals: number[];
-  /** Campo legado de persistência; a interface usa apenas o tema claro. */
+  /** Campo legado do concurso. A preferência visual é salva no navegador. */
   theme: 'light';
   examDate: DateKey | null;
   /** @deprecated Metadado de backups antigos; não controla o ciclo. */

@@ -249,7 +249,7 @@ export function QuestionsScreen() {
                 onClick={() => applyDatePreset(p.id as 'all' | 'today' | '7d' | '30d')}
                 className={`rounded-full px-2.5 py-1 max-lg:px-3.5 max-lg:py-2 max-lg:min-h-11 text-xs font-medium transition-colors ${
                   activeDatePreset === p.id
-                    ? 'bg-primary text-primary-fg shadow-sm'
+                    ? 'bg-brand text-primary-fg shadow-sm'
                     : 'bg-surface-muted text-fg-muted hover:bg-surface-muted/80 hover:text-fg'
                 }`}
               >

@@ -38,6 +38,8 @@ describe('App Navigation, Auth Gate and Screen Integration', () => {
     const loginTab = screen.getByRole('tab', { name: /já tenho conta/i });
     const registerTab = screen.getByRole('tab', { name: /cadastrar/i });
     await user.tab();
+    expect(screen.getByRole('button', { name: 'Modo escuro' })).toHaveFocus();
+    await user.tab();
     expect(loginTab).toHaveFocus();
 
     await user.keyboard('{ArrowRight}');
@@ -65,7 +67,12 @@ describe('App Navigation, Auth Gate and Screen Integration', () => {
       expect(screen.getByRole('heading', { name: /visão geral/i })).toBeInTheDocument();
     });
 
-    expect(screen.queryByRole('button', { name: /alterar tema/i })).not.toBeInTheDocument();
+    const toggle = screen.getByRole('button', { name: 'Modo escuro' });
+    await userEvent.click(toggle);
+    expect(document.documentElement.dataset.theme).toBe('dark');
+    expect(localStorage.getItem('estudae-theme')).toBe('dark');
+    await userEvent.click(toggle);
+    expect(document.documentElement.dataset.theme).toBe('light');
 
     // Check sidebar navigation items
     expect(screen.getByRole('link', { name: /visão geral/i })).toBeInTheDocument();
@@ -154,8 +161,7 @@ describe('App Navigation, Auth Gate and Screen Integration', () => {
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: /configurações/i })).toBeInTheDocument();
     });
-    expect(screen.queryByLabelText('Tema da plataforma')).not.toBeInTheDocument();
-    expect(screen.queryByRole('option', { name: /escuro|seguir o sistema/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Modo escuro' })).toBeInTheDocument();
   });
 
   it('opens the continuous cycle without numbered weeks', async () => {

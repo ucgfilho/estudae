@@ -1,3 +1,4 @@
+import { ThemeToggle } from '../components/ui/ThemeToggle';
 import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import {
   BookOpen,
@@ -124,6 +125,7 @@ export function ContestSelectorScreen({ onSelectContest, initializing = false }:
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3">
+          <ThemeToggle />
           {authUser && (
             <button
               type="button"
@@ -202,7 +204,7 @@ export function ContestSelectorScreen({ onSelectContest, initializing = false }:
                     type="button"
                     onClick={(e) => handleDelete(e, contest)}
                     title="Excluir concurso"
-                    className="absolute top-2.5 right-2.5 size-7 max-lg:size-9 rounded-full bg-danger/10 text-danger hover:bg-danger hover:text-white flex items-center justify-center transition"
+                    className="absolute top-2.5 right-2.5 size-7 max-lg:size-9 rounded-full bg-danger/10 text-danger hover:bg-danger hover:text-status-fg flex items-center justify-center transition"
                   >
                     <Trash2 className="size-3.5 max-lg:size-4" />
                   </button>

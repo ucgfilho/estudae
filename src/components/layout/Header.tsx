@@ -1,3 +1,4 @@
+import { ThemeToggle } from '../ui/ThemeToggle';
 import { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
@@ -104,6 +105,7 @@ export function Header({
         </div>
 
         <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+          <ThemeToggle />
           {timer && (
             <button
               type="button"

@@ -159,7 +159,7 @@ export function Sidebar({
                       'group flex items-center gap-2.5 rounded-lg px-2.5 py-2 max-lg:min-h-12 max-lg:gap-3 text-sm font-medium transition-colors',
                       collapsed && 'lg:justify-center lg:px-0',
                       isActive
-                        ? 'bg-white text-[#1e3a8a] font-semibold'
+                        ? 'nav-selected font-semibold'
                         : 'text-fg-muted hover:bg-surface-muted hover:text-fg',
                     )
                   }
@@ -183,7 +183,7 @@ export function Sidebar({
                         'rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums leading-none',
                         collapsed && 'lg:hidden',
                         buckets.overdue.length > 0
-                          ? 'bg-danger text-white'
+                          ? 'bg-danger text-status-fg'
                           : 'bg-warning-soft text-warning',
                       )}
                       title={`${pendingReviewsCount} revisão(ões) pendente(s)`}

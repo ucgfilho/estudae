@@ -19,8 +19,8 @@ export function Stepper({ current }: { current: ExamStep }) {
               <span
                 className={cn(
                   'flex size-6 sm:size-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold',
-                  done && 'bg-success text-white',
-                  active && 'bg-primary text-primary-fg',
+                  done && 'bg-success text-status-fg',
+                  active && 'bg-brand text-primary-fg',
                   !done && !active && 'bg-surface-muted text-fg-muted',
                 )}
               >

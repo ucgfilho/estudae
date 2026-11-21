@@ -439,3 +439,19 @@
     }
   }
 }
+
+[data-theme='dark'] .auth-screen { background: var(--canvas); }
+[data-theme='dark'] .auth-hero { background: linear-gradient(145deg, #101d3a, #16294c); }
+[data-theme='dark'] .auth-intro h1 { color: var(--fg); }
+[data-theme='dark'] .auth-modes,
+[data-theme='dark'] .auth-preview-card,
+[data-theme='dark'] .auth-preview-note {
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--fg);
+}
+[data-theme='dark'] .auth-modes::before { background: var(--surface-elevated); }
+[data-theme='dark'] .auth-preview-note small { color: var(--fg-muted); }
+[data-theme='dark'] .auth-form .input-with-icon:autofill {
+  box-shadow: inset 0 0 0 3rem var(--surface-muted);
+}

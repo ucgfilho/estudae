@@ -276,7 +276,7 @@ export function DisciplinesScreen() {
                 className={cn(
                   'flex w-max max-w-[180px] shrink-0 items-center gap-2 rounded-lg px-3 py-2 max-lg:min-h-11 text-xs font-medium transition-all',
                   isSelected
-                    ? 'bg-primary text-primary-fg shadow-xs font-semibold'
+                    ? 'bg-brand text-primary-fg shadow-xs font-semibold'
                     : 'text-fg-muted hover:bg-surface-muted hover:text-fg'
                 )}
               >

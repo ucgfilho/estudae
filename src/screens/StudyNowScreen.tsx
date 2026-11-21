@@ -627,7 +627,7 @@ export function StudyNowScreen() {
                           className={cn(
                             'rounded-md px-2 py-0.5 max-lg:px-3.5 max-lg:py-2 max-lg:min-h-11 text-xs font-medium transition-colors',
                             adHocPlannedMinutes === String(mins)
-                              ? 'bg-primary text-primary-fg font-semibold'
+                              ? 'bg-brand text-primary-fg font-semibold'
                               : 'bg-surface-muted text-fg-muted hover:bg-surface-muted/80 hover:text-fg'
                           )}
                         >

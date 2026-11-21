@@ -6,7 +6,7 @@ import { settingsDtoSchema } from '../../../server/dtos/study-data.dto';
 
 beforeEach(async () => { await resetDatabase(); });
 
-describe('plataforma com tema claro único', () => {
+describe('compatibilidade do campo legado de tema nos dados do concurso', () => {
   it.each(['dark', 'system', undefined])('converte preferência legada %s ao ler dados sincronizados', theme => {
     const settings = { ...DEFAULT_SETTINGS, theme };
     expect(settingsDtoSchema.parse(settings).theme).toBe('light');

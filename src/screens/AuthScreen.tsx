@@ -1,3 +1,4 @@
+import { ThemeToggle } from '../components/ui/ThemeToggle';
 import { useId, useState, type KeyboardEvent } from 'react';
 import {
   ArrowRight,
@@ -183,6 +184,7 @@ export function AuthScreen({ onAuthenticated }: AuthScreenProps) {
 
       <div className="auth-access">
         <div className="auth-access-inner">
+          <div className="mb-3 flex justify-end"><ThemeToggle /></div>
           <div className="auth-intro" key={mode}>
             <h1>{isRegister ? 'Crie sua conta' : 'Boas-vindas!'}</h1>
             <p>

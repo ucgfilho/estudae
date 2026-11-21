@@ -7,7 +7,7 @@
     <meta name="description" content="estudaê — Ambiente de execução e gestão de estudos para concursos públicos" />
     <meta name="robots" content="index, follow" />
     <meta name="theme-color" content="#1e3a8a" />
-    <meta name="color-scheme" content="only light" />
+    <meta name="color-scheme" content="light dark" />
     <link rel="canonical" href="https://estudaeconcursos.vercel.app/" />
     <link rel="ai-catalog" href="/.well-known/ai-catalog.json" />
     <meta property="og:type" content="website" />
@@ -34,8 +34,12 @@
       }
     </script>
     <script>
-      // Descarta a preferência visual legada; a plataforma usa apenas o tema claro.
-      try { localStorage.removeItem('bnb-theme'); } catch (e) {}
+      try {
+        if (localStorage.getItem('estudae-theme') === 'dark') {
+          document.documentElement.dataset.theme = 'dark';
+          document.querySelector('meta[name=theme-color]').content = '#101D3A';
+        }
+      } catch { /* Preferência local indisponível. */ }
     </script>
   </head>
   <body>

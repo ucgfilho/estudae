@@ -14,21 +14,26 @@
 .study-timer-progress::-webkit-progress-value { background: var(--primary); border-radius: 9999px; }
 .study-timer-progress::-moz-progress-bar { background: var(--primary); border-radius: 9999px; }
 
-/* Mesmo feedback nos botões compartilhados e nos controles nativos da interface. */
-:where(button, [role='button'], input:is([type='button'], [type='submit'], [type='reset'])) {
-  transition: background-color 120ms ease-out, color 120ms ease-out, border-color 120ms ease-out,
-    box-shadow 120ms ease-out, filter 120ms ease-out, opacity 120ms ease-out;
-}
+/* Feedback compartilhado também em abas, opções e controles nativos. */
+:where(button, a[href], summary, select, [role='button'], [role='option'], [role='tab'],
+  label:has(input:is([type='checkbox'], [type='radio'])),
+  input:is([type='button'], [type='submit'], [type='reset'], [type='checkbox'], [type='radio'])) {
+  transition: background-color 140ms ease-out, color 140ms ease-out, border-color 140ms ease-out,
+    box-shadow 140ms ease-out, filter 140ms ease-out, opacity 140ms ease-out, scale 140ms ease-out;
 
-@media (hover: hover) {
-  :where(button, [role='button'], input:is([type='button'], [type='submit'], [type='reset'])):not(:disabled, [aria-disabled='true']):hover {
-    filter: brightness(0.97);
+  &:not(:disabled, [aria-disabled='true'], :has(input:disabled)) {
+    @media (hover: hover) {
+      &:hover { filter: brightness(0.97); }
+    }
+    @media (hover: hover) and (prefers-reduced-motion: no-preference) {
+      &:hover { scale: 1.012; }
+    }
+    &:active {
+      filter: brightness(0.92);
+      transition-duration: 65ms;
+      @media (prefers-reduced-motion: no-preference) { scale: 0.98; }
+    }
   }
-}
-
-:where(button, [role='button'], input:is([type='button'], [type='submit'], [type='reset'])):not(:disabled, [aria-disabled='true']):active {
-  filter: brightness(0.92);
-  transition-duration: 65ms;
 }
 
 @theme inline {
@@ -41,6 +46,8 @@
   --color-fg: var(--fg);
   --color-fg-muted: var(--fg-muted);
   --color-fg-subtle: var(--fg-subtle);
+  --color-brand: var(--brand, var(--primary));
+  --color-status-fg: var(--status-fg, white);
   --color-primary: var(--primary);
   --color-primary-hover: var(--primary-hover);
   --color-primary-fg: var(--primary-fg);
@@ -203,7 +210,7 @@
 
 @layer base {
   :root {
-    color-scheme: only light;
+    color-scheme: light;
     /* Escala compartilhada por páginas, cards, formulários e diálogos. */
     --page-gap: 1.5rem;
     --panel-padding: 1rem;
@@ -238,6 +245,37 @@
     --info-soft: #e8efff;
 
     --ring: #1e40af;
+  }
+
+  :root[data-theme='dark'] {
+    color-scheme: dark;
+    --canvas: #0B1220;
+    --surface: #111C2E;
+    --surface-muted: #17243A;
+    --surface-elevated: #1d2d46;
+    --border: #64748B;
+    --border-strong: #8091aa;
+    --fg: #E8EEF9;
+    --fg-muted: #AAB8D0;
+    --fg-subtle: #a0aec4;
+    --brand: #2447C5;
+    --primary: #8CA6FF;
+    --primary-hover: #3455c8;
+    --primary-fg: #fff;
+    --primary-soft: #202f52;
+    --accent: #F5C451;
+    --accent-fg: #0B1220;
+    --accent-soft: #342d20;
+    --success: #34C3A1;
+    --success-soft: #12352f;
+    --warning: #F5C451;
+    --warning-soft: #382e1e;
+    --danger: #ff9caa;
+    --danger-soft: #40212e;
+    --info: #39B8D4;
+    --info-soft: #14323e;
+    --ring: #8CA6FF;
+    --status-fg: #0B1220;
   }
 
   html {
@@ -356,7 +394,7 @@
     min-width: 0;
   }
   .skip-link {
-    @apply sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-md focus:bg-primary focus:px-3.5 focus:py-2 focus:text-xs focus:font-semibold focus:text-primary-fg focus:shadow-md focus:outline-2 focus:outline-offset-2 focus:outline-ring;
+    @apply sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-md focus:bg-brand focus:px-3.5 focus:py-2 focus:text-xs focus:font-semibold focus:text-primary-fg focus:shadow-md focus:outline-2 focus:outline-offset-2 focus:outline-ring;
   }
   .input-base {
     @apply min-w-0 w-full rounded-lg border border-border-strong bg-surface px-3 py-2 text-sm leading-5 text-fg transition-colors placeholder:text-fg-subtle focus-visible:border-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-50;
@@ -569,5 +607,49 @@ input[type='number']::-webkit-outer-spin-button {
 .confirm-destructive {
   background-color: var(--warning);
   border-color: var(--warning);
-  color: #fff;
+  color: var(--status-fg, white);
 }
+
+[data-theme='dark'] .navigation-chrome {
+  --surface: #101D3A;
+  --surface-muted: #17243A;
+  --surface-elevated: #1d2d46;
+  --border: #64748B;
+  --border-strong: #8091aa;
+  --fg: #E8EEF9;
+  --fg-muted: #AAB8D0;
+  --fg-subtle: #a0aec4;
+  --primary: #8CA6FF;
+  --primary-soft: #202f52;
+  --ring: #8CA6FF;
+}
+
+[data-theme='dark'] .contest-selector-screen::before {
+  background: linear-gradient(135deg, #101d3a, var(--canvas) 62%, var(--surface));
+}
+
+[data-theme='dark'] .contest-selector-glow { opacity: 0.25; }
+
+.topic-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(0.5rem, 1vw, 1rem);
+}
+
+.topic-metrics > div {
+  aspect-ratio: 1;
+  gap: 0.25rem;
+  justify-content: space-between;
+  padding: clamp(0.75rem, 1.3vw, 1.25rem);
+}
+
+.overview-metrics {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+  align-items: stretch;
+}
+
+
+.nav-selected { background: white; color: #1e3a8a; }
+[data-theme='dark'] .nav-selected { background: var(--primary-soft); color: var(--primary); }

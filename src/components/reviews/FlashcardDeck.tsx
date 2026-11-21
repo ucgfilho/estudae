@@ -233,6 +233,8 @@ export function FlashcardDeck({ reviews, notes, disciplines, onComplete }: Props
     return <EmptyState icon={<CheckCircle2 className="size-8" />} title={sessionCompleted ? 'Sessão concluída!' : 'Todas as revisões de hoje estão em dia'} description={sessionCompleted ? 'Suas revisões foram salvas. Continue praticando os erros na próxima sessão.' : 'As próximas revisões aparecerão aqui na data agendada.'} />;
   }
 
+  // Mantém a mesma face durante a resposta e reinicia a virada na próxima tentativa.
+  const attemptIndex = totalCardsAnswered - Number(!!picked);
   const face = 'absolute inset-0 flex flex-col rounded-2xl border p-6 sm:p-8 [backface-visibility:hidden]';
 
   return (
@@ -263,12 +265,12 @@ export function FlashcardDeck({ reviews, notes, disciplines, onComplete }: Props
         </div>
       </div>
 
-      <div className="[perspective:1400px]">
+      <div key={`${card?.id ?? review?.id}:${attemptIndex}`} className="animate-fade-in [perspective:1400px]">
         <div
           className="relative h-[26rem] transition-transform duration-700 [transform-style:preserve-3d] motion-reduce:duration-0"
           style={{ transform: picked ? 'rotateY(180deg)' : 'none' }}
         >
-          <div className={cn(face, 'border-border bg-surface')}>
+          <div inert={!!picked} className={cn(face, 'border-border bg-surface')}>
             <div className="flex flex-wrap items-center gap-2">
               {d && <DisciplineDot color={d.color} />}
               <span className="text-sm font-semibold text-fg">{d?.name}</span>
@@ -314,15 +316,16 @@ export function FlashcardDeck({ reviews, notes, disciplines, onComplete }: Props
             </div>
           </div>
 
-          <div
+          {picked && <div
             className={cn(
               face,
               '[transform:rotateY(180deg)]',
-              'border-border bg-surface text-fg shadow-xl',
+              'text-fg shadow-xl',
+              correct ? 'border-success bg-success-soft' : 'border-danger bg-danger-soft',
             )}
             aria-live="polite"
           >
-            <div className="flex items-center gap-2 text-xl font-bold">
+            <div className={cn("flex items-center gap-2 text-xl font-bold", correct ? "text-success" : "text-danger")}>
               {correct ? <CheckCircle2 className="size-6" /> : <XCircle className="size-6" />}
               {correct ? 'Você acertou!' : 'Você errou'}
             </div>
@@ -346,7 +349,7 @@ export function FlashcardDeck({ reviews, notes, disciplines, onComplete }: Props
                   ? 'Finalizar'
                   : 'Próximo card'}
             </Button>
-          </div>
+          </div>}
         </div>
       </div>
     </div>

@@ -69,7 +69,7 @@ export function DailyMissionCard({
           <section className="flex min-w-0 flex-col rounded-xl border border-primary/25 bg-primary-soft/60 p-5 max-sm:p-4 sm:p-6" aria-label="Sua próxima sessão">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <p className="flex items-center gap-2 text-sm font-semibold text-primary">
-                <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-fg">
+                <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-brand text-primary-fg">
                   <Play className="size-4" aria-hidden="true" />
                 </span>
                 {timer ? 'Sessão em andamento' : 'Próxima atividade do ciclo'}
