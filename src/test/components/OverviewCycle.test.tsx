@@ -26,7 +26,7 @@ function renderOverview() {
 beforeEach(async () => { await resetDatabase(); });
 
 describe('ciclo contínuo na visão geral', () => {
-  it('mostra a sessão planejada com etiqueta ao expandir o ciclo completo', async () => {
+  it('mostra e exclui a sessão planejada na mesma fila do ciclo completo', async () => {
     const activity = next()!;
     const session = await createSession({ date: todayKey(), disciplineId: activity.discipline.id, topicId: null,
       plannedStart: '19:30', plannedMinutes: 35, objective: 'Compromisso manual', notes: '' });
@@ -35,10 +35,15 @@ describe('ciclo contínuo na visão geral', () => {
 
     expect(screen.queryByText('Compromisso manual')).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Ver ciclo completo' }));
-    const planned = screen.getByRole('region', { name: 'Sessões planejadas por você' });
-    expect(within(planned).getByText('Criada por você')).toBeInTheDocument();
+    const queue = screen.getByRole('list', { name: 'Próximos estudos do ciclo' });
+    const planned = within(queue).getByText('Criada por você').closest('li')!;
+    expect(within(queue).getAllByRole('button', { name: /^Excluir sessão \d/ }).length).toBeGreaterThan(0);
     expect(within(planned).getByText('Compromisso manual')).toBeInTheDocument();
     expect(within(planned).getByText(/19:30/)).toBeInTheDocument();
+    await userEvent.click(within(planned).getByRole('button', { name: 'Excluir sessão planejada: Compromisso manual' }));
+    await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Excluir sessão' }));
+    await waitFor(() => expect(within(queue).queryByText('Compromisso manual')).not.toBeInTheDocument());
+    expect(await db.sessions.get(session.id)).toBeUndefined();
   });
 
   it('prioriza o ciclo mesmo com sessão manual planejada e inicia o cronômetro do ciclo', async () => {
