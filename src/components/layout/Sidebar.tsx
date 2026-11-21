@@ -93,14 +93,14 @@ export function Sidebar({
       <aside
         id="main-navigation"
         className={cn(
-          'fixed inset-y-0 left-0 z-40 max-lg:z-50 flex shrink-0 max-lg:w-80 max-lg:max-w-[90vw] max-lg:shadow-2xl max-lg:pt-[env(safe-area-inset-top)] max-lg:pb-[env(safe-area-inset-bottom)] flex-col navigation-chrome bg-surface transition-transform duration-200 ease-in-out lg:static lg:translate-x-0',
+          'fixed inset-y-0 left-0 z-40 max-lg:z-50 flex shrink-0 max-lg:w-80 max-lg:max-w-[90vw] max-lg:shadow-2xl max-lg:pt-[env(safe-area-inset-top)] max-lg:pb-[env(safe-area-inset-bottom)] flex-col navigation-chrome bg-surface transition-[width,transform] duration-300 ease-[cubic-bezier(0.2,0,0,1)] motion-reduce:transition-none lg:static lg:translate-x-0',
           collapsed ? 'lg:w-16' : 'lg:w-60 xl:w-64',
           mobileOpen ? 'translate-x-0' : '-translate-x-full max-lg:invisible',
         )}
         aria-label="Navegação principal"
       >
         {/* Branding header: estudaê */}
-        <div className={cn('flex h-14 shrink-0 items-center justify-between px-4', collapsed && 'lg:justify-center lg:px-0')}>
+        <div className={cn('flex h-14 shrink-0 items-center justify-between overflow-hidden px-4', collapsed && 'lg:justify-center lg:px-0')}>
           <div className={cn('flex items-center gap-2.5 min-w-0', collapsed && 'lg:hidden')}>
             <BnbLogo className="size-7 shrink-0 rounded-md" />
             <div className="min-w-0">
@@ -156,7 +156,7 @@ export function Sidebar({
                   end={item.to === '/'}
                   className={({ isActive }) =>
                     cn(
-                      'group flex items-center gap-2.5 rounded-lg px-2.5 py-2 max-lg:min-h-12 max-lg:gap-3 text-sm font-medium transition-colors',
+                      'group flex items-center gap-2.5 rounded-lg px-2.5 py-2 max-lg:min-h-12 max-lg:gap-3 text-sm font-medium transition-[color,background-color,padding] duration-200',
                       collapsed && 'lg:justify-center lg:px-0',
                       isActive
                         ? 'nav-selected font-semibold'
