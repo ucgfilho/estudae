@@ -398,7 +398,7 @@ export function OverviewScreen() {
             hint={<span title="Tópicos concluídos ou dominados">{topicsProg.completed} de {topicsProg.total} tópicos</span>}
             icon={<BookOpenCheck className="size-4" />}
           >
-            <ProgressBar value={topicsProg.completed} max={topicsProg.total || 1} label="Cobertura do edital" tone="success" />
+            <ProgressBar value={topicsProg.completed} max={topicsProg.total || 1} label="Cobertura do edital" tone="success" className="mt-auto" />
           </StatCard>
           <StatCard
             label="Tópicos em abordagem"
@@ -406,7 +406,7 @@ export function OverviewScreen() {
             hint={<span title="Tópicos em andamento, concluídos ou dominados">{approached} de {topicsProg.total} tópicos</span>}
             icon={<BookOpen className="size-4" />}
           >
-            <ProgressBar value={approached} max={topicsProg.total || 1} label="Tópicos em abordagem" />
+            <ProgressBar value={approached} max={topicsProg.total || 1} label="Tópicos em abordagem" tone="success" className="mt-auto" />
           </StatCard>
         </div>
       </div>

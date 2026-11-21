@@ -638,13 +638,6 @@ input[type='number']::-webkit-outer-spin-button {
   gap: clamp(0.5rem, 1vw, 1rem);
 }
 
-.topic-metrics > div {
-  aspect-ratio: 1;
-  gap: 0.25rem;
-  justify-content: space-between;
-  padding: clamp(0.75rem, 1.3vw, 1.25rem);
-}
-
 .overview-metrics {
   display: grid;
   gap: 1rem;
