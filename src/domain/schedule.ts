@@ -49,17 +49,23 @@ export function nextCycleActivity(input: CycleInput): CycleActivity | null {
     consumed.push(activity);
     position += 1;
   }
-  const ordered = input.disciplines.filter(d => d.active).sort((a, b) => a.order - b.order || a.id.localeCompare(b.id));
+  const ordered = input.disciplines.filter(d => d.active)
+    .map(discipline => {
+      const available = availableTopics(input.topics, discipline.id);
+      const pending = available.filter(topic => topic.status !== 'concluido' && topic.status !== 'dominado');
+      return { discipline, available, pending };
+    })
+    .filter(({ available, pending }) => !available.length || pending.length > 0);
   if (!ordered.length) return null;
   const kind = (position - 1) % 5 === 2 ? 'general' : 'technical';
-  const group = ordered.filter(d => d.kind === kind);
-  // Se o edital só tem uma área ativa, ela ocupa todas as sessões.
+  const group = ordered.filter(({ discipline }) => discipline.kind === kind);
+  // Se apenas uma área tem atividades elegíveis, ela ocupa todas as posições.
   const candidates = group.length ? group : ordered;
   const count = (id: string) => consumed.filter(s => s.disciplineId === id).length;
-  const discipline = [...candidates].sort((a, b) => count(a.id) - count(b.id) || a.order - b.order || a.id.localeCompare(b.id))[0];
-  const pool = availableTopics(input.topics, discipline.id).sort((a, b) => a.order - b.order || a.id.localeCompare(b.id));
+  const { discipline, pending } = candidates.sort(({ discipline: a }, { discipline: b }) =>
+    count(a.id) - count(b.id) || a.order - b.order || a.id.localeCompare(b.id))[0];
   const topicCount = (id: string) => consumed.filter(s => s.topicId === id).length;
-  const topic = [...pool].sort((a, b) => topicCount(a.id) - topicCount(b.id) || a.order - b.order || a.id.localeCompare(b.id))[0] ?? null;
+  const topic = pending.sort((a, b) => topicCount(a.id) - topicCount(b.id) || a.order - b.order || a.id.localeCompare(b.id))[0] ?? null;
   const reason = discipline.kind === 'technical'
     ? 'Conhecimentos específicos: 80% das sessões do ciclo.'
     : 'Conhecimentos básicos: 20% das sessões do ciclo.';

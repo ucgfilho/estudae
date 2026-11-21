@@ -196,7 +196,7 @@ export function startCycleTimer(minutes?: number, now = Date.now()) {
     const next = nextCycleActivity({ settings, disciplines: await db.disciplines.toArray(),
       topics: await db.topics.toArray(), sessions: await db.sessions.toArray(),
       questionLogs: await db.questionLogs.toArray(), errorNotes: await db.errorNotes.toArray() });
-    if (!next) throw new ValidationError('Cadastre ou ative uma disciplina para iniciar o ciclo.');
+    if (!next) throw new ValidationError('O ciclo não tem atividades disponíveis. Confira as disciplinas e os tópicos do edital.');
     return startAdHocTimerInternal({ disciplineId: next.discipline.id, topicId: next.topic?.id ?? null,
       objective: next.topic?.title ?? next.discipline.name, notes: '', plannedMinutes: minutes ?? next.minutes,
       cycleStudy: true }, now);

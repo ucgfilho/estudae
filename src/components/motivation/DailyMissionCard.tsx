@@ -47,6 +47,7 @@ export function DailyMissionCard({
   const queue = useMemo(() => settings ? previewCycle({ disciplines, topics, sessions,
     settings, questionLogs: logs, errorNotes: [] }, 4) : [], [disciplines, topics, sessions, settings, logs]);
   const next = queue[0];
+  const hasActiveDiscipline = disciplines.some(discipline => discipline.active);
   const timeGoalsDisabled = settings?.dailyGoalMinutes === 0 && settings?.weeklyGoalMinutes === 0;
   const queueOffset = timer && !timer.cycleStudy ? 0 : 1;
   const completed = useMemo(() => cycleCompletions(sessions), [sessions]);
@@ -74,20 +75,22 @@ export function DailyMissionCard({
                 </span>
                 {timer ? 'Sessão em andamento' : 'Próxima atividade do ciclo'}
               </p>
-              {!timer && next && <Badge tone="primary">Sessão {completed.length + 1}</Badge>}
+              {!timer && next && <Badge tone="primary">Sessão {next.position}</Badge>}
             </div>
 
             <div className="my-6 max-sm:my-4 space-y-3">
               <div className="flex items-start gap-2.5">
                 {(timer || next) && <span className="mt-2.5 shrink-0"><DisciplineDot color={timer ? activeDiscipline?.color ?? '#1E40AF' : next.discipline.color} className="size-3" /></span>}
                 <h3 className="min-w-0 text-2xl font-semibold leading-tight tracking-tight text-fg sm:text-3xl">
-                  {timer ? nameOf(timer.disciplineId) : next?.discipline.name ?? 'Seu ciclo começa com uma disciplina'}
+                  {timer ? nameOf(timer.disciplineId) : next?.discipline.name ??
+                    (hasActiveDiscipline ? 'Nenhum tópico pendente no ciclo' : 'Seu ciclo começa com uma disciplina')}
                 </h3>
               </div>
               <p className="text-base leading-relaxed text-fg-muted">
                 {timer ? timer.objective || 'Continue sua sessão de estudo.'
                   : next ? next.topic?.title ?? 'Estude a disciplina ou cadastre um assunto para orientar a sessão.'
-                    : 'Adicione ou ative as disciplinas do seu edital para começar.'}
+                    : hasActiveDiscipline ? 'Os tópicos disponíveis já foram concluídos ou dominados.'
+                      : 'Adicione ou ative as disciplinas do seu edital para começar.'}
               </p>
               {(timer || next) && <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-fg-muted">
                 {(timer || next) && !timeGoalsDisabled && <span className="inline-flex items-center gap-1.5 font-medium tabular-nums text-fg">
@@ -204,7 +207,9 @@ export function DailyMissionCard({
                 {activity.topic && <p className="text-xs leading-relaxed text-fg-muted">{activity.topic.title}</p>}
               </div>
             </li>)}
-          </ol> : <p className="rounded-lg bg-surface-muted p-4 text-sm text-fg-muted">Ao ativar suas disciplinas, as próximas atividades aparecem aqui.</p>}
+          </ol> : <p className="rounded-lg bg-surface-muted p-4 text-sm text-fg-muted">
+            {hasActiveDiscipline ? 'Nenhuma atividade automática pendente.' : 'Ao ativar suas disciplinas, as próximas atividades aparecem aqui.'}
+          </p>}
         </section>
       </div>
     </Card>

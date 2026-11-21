@@ -58,6 +58,20 @@ describe('ciclo contínuo por área do edital', () => {
     expect(data.sessions).toHaveLength(1);
     expect(nextCycleActivity({ ...data, disciplines: [] })).toBeNull();
   });
+  it('ignora tópicos concluídos e dominados e pula disciplinas sem tópicos pendentes', () => {
+    const data = input();
+    const [first, second] = data.disciplines;
+    const base = { ...DEFAULT_TOPICS[0], parentTopicId: null, active: true, order: 0 };
+    data.disciplines = [first, second];
+    data.topics = [
+      { ...base, id: 'done', disciplineId: first.id, status: 'concluido' },
+      { ...base, id: 'mastered', disciplineId: second.id, status: 'dominado' },
+      { ...base, id: 'pending', disciplineId: second.id, status: 'em-andamento' },
+    ];
+
+    expect(previewCycle(data, 6).map(activity => activity.topic?.id)).toEqual(Array(6).fill('pending'));
+    expect(nextCycleActivity({ ...data, topics: data.topics.slice(0, 2) })).toBeNull();
+  });
   it('reserva 80% para específicos e 20% para básicos, independentemente do desempenho', () => {
     const data = input();
     data.disciplines = DEFAULT_DISCIPLINES;

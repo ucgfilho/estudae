@@ -3,9 +3,10 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Play, Clock3, ArrowRight, BookOpen, Repeat2, CheckCircle2, Trash2 } from 'lucide-react';
 import { useDisciplines, useTopics, useSessions, useSettings, useReviews, useActiveTimer } from '../hooks/useData';
 import { cycleCompletions, previewCycle, type CycleActivity } from '../domain/schedule';
+import { compareSessions } from '../domain/metrics';
 import { startCycleTimer } from '../services/timer';
 import { getSettings, updateSettings } from '../services/settings';
-import { todayKey } from '../lib/dates';
+import { formatDate, todayKey } from '../lib/dates';
 import { errorMessage } from '../lib/utils';
 import { Card, Alert, DisciplineDot, Badge } from './ui/Display';
 import { Button, IconButton } from './ui/Button';
@@ -37,6 +38,9 @@ export function CycleRecommendation({ showQueue = false }: { showQueue?: boolean
   const hasBothAreas = technical > 0 && general > 0;
   const rotationSize = hasBothAreas ? 5 * Math.max(Math.ceil(technical / 4), general) : technical + general;
   const [next, ...queue] = previewCycle(input, showQueue ? (expanded ? Math.max(10, rotationSize) + 1 : 6) : 1);
+  const planned = showQueue ? sessions.filter(session => session.status === 'planejada' &&
+    (session.isManual ?? session.history.some(entry => entry.type === 'criada' && entry.description === 'Sessão planejada criada pelo usuário.')))
+    .sort(compareSessions) : [];
 
   async function removeActivity() {
     if (!pendingRemoval || removing) return;
@@ -75,9 +79,11 @@ export function CycleRecommendation({ showQueue = false }: { showQueue?: boolean
       <Link to="/revisoes" className="underline">{due === 1 ? '1 revisão para fazer' : `${due} revisões para fazer`}</Link>. Depois, continue seu ciclo daqui.
     </Alert>}
     {error && <Alert tone="danger" title="Não foi possível iniciar">{error}</Alert>}
-    {!next ? <Card title="Seu ciclo começa com uma disciplina">
-      <p className="mb-4 text-sm text-fg-muted">Adicione ou ative as disciplinas do seu edital para começar.</p>
-      <Button onClick={() => navigate('/disciplinas')}>Configurar disciplinas</Button>
+    {!next ? <Card title={technical + general > 0 ? 'Nenhum tópico pendente no ciclo' : 'Seu ciclo começa com uma disciplina'}>
+      <p className="mb-4 text-sm text-fg-muted">{technical + general > 0
+        ? 'Os tópicos disponíveis já foram concluídos ou dominados.'
+        : 'Adicione ou ative as disciplinas do seu edital para começar.'}</p>
+      <Button onClick={() => navigate(timer ? '/estudar-agora' : '/disciplinas')}>{timer ? 'Retomar sessão em andamento' : 'Configurar disciplinas'}</Button>
     </Card> : <>
       <div className={showQueue ? 'grid items-start gap-5 xl:grid-cols-[minmax(0,1.65fr)_minmax(16rem,1fr)]' : ''}>
         <section className="min-w-0 overflow-hidden rounded-xl bg-surface" aria-labelledby="cycle-next">
@@ -116,9 +122,10 @@ export function CycleRecommendation({ showQueue = false }: { showQueue?: boolean
           <div className="flex items-center gap-3 rounded-xl bg-surface px-5 py-4"><CheckCircle2 className="size-5 shrink-0 text-primary" aria-hidden /><div><p className="text-sm font-semibold text-fg">{completed} {completed === 1 ? 'sessão concluída' : 'sessões concluídas'}</p><p className="mt-0.5 text-xs text-fg-muted">Cada sessão é um passo no seu edital.</p></div></div>
         </aside>}
       </div>
-      {showQueue && <Card title="Na sequência" description="Estas atividades ficam disponíveis conforme você conclui as sessões.">
-        <ol
-          id="cycle-queue"
+    </>}
+    {showQueue && (next || planned.length > 0) && <Card title="Na sequência" description={next ? "Estas atividades ficam disponíveis conforme você conclui as sessões." : "Consulte as sessões que você planejou."}>
+      <div id="cycle-queue">
+        {queue.length > 0 && <ol
           aria-label="Próximos estudos do ciclo"
           tabIndex={0}
           className={expanded
@@ -152,21 +159,48 @@ export function CycleRecommendation({ showQueue = false }: { showQueue?: boolean
               </div>
             </li>
           ))}
-        </ol>
-        <Button className="mt-5" variant="subtle" aria-controls="cycle-queue" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>
-          {expanded ? 'Recolher ciclo completo' : 'Ver ciclo completo'}
-          <ArrowRight className="size-4" aria-hidden />
-        </Button>
-        <ConfirmModal
-          open={pendingRemoval !== null}
-          title="Excluir sessão do ciclo?"
-          message={pendingRemoval && `A sessão ${pendingRemoval.position} de ${pendingRemoval.discipline.name} será pulada nesta passagem do ciclo.`}
-          confirmLabel="Excluir sessão"
-          loading={removing}
-          onClose={() => { if (!removing) setPendingRemoval(null); }}
-          onConfirm={removeActivity}
-        />
-      </Card>}
-    </>}
+        </ol>}
+        {expanded && planned.length > 0 && (
+          <section className={queue.length > 0 ? 'mt-6' : undefined} aria-labelledby="cycle-planned-title">
+            <h3 id="cycle-planned-title" className="section-title mb-3">Sessões planejadas por você</h3>
+            <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              {planned.map(session => {
+                const discipline = disciplines.find(item => item.id === session.disciplineId);
+                const topic = topics.find(item => item.id === session.topicId);
+                return (
+                  <li key={session.id} className="min-w-0 space-y-2 rounded-xl bg-surface-muted p-4">
+                    <Badge tone="info">Criada por você</Badge>
+                    <h4 className="flex items-start gap-2 text-sm font-semibold text-fg wrap-anywhere">
+                      {discipline && <DisciplineDot color={discipline.color} className="mt-1.5" />}
+                      {discipline?.name ?? 'Sessão de estudo'}
+                    </h4>
+                    {(topic || session.objective) && <p className="text-sm text-fg-muted">{topic?.title ?? session.objective}</p>}
+                    <p className="text-xs text-fg-muted">
+                      <time dateTime={session.plannedStart ? `${session.date}T${session.plannedStart}` : session.date}>
+                        {formatDate(session.date)}{session.plannedStart && ` às ${session.plannedStart}`}
+                      </time>
+                      {' · '}{session.plannedMinutes} min
+                    </p>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        )}
+      </div>
+      <Button className="mt-5" variant="subtle" aria-controls="cycle-queue" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>
+        {expanded ? 'Recolher ciclo completo' : 'Ver ciclo completo'}
+        <ArrowRight className="size-4" aria-hidden />
+      </Button>
+      <ConfirmModal
+        open={pendingRemoval !== null}
+        title="Excluir sessão do ciclo?"
+        message={pendingRemoval && `A sessão ${pendingRemoval.position} de ${pendingRemoval.discipline.name} será pulada nesta passagem do ciclo.`}
+        confirmLabel="Excluir sessão"
+        loading={removing}
+        onClose={() => { if (!removing) setPendingRemoval(null); }}
+        onConfirm={removeActivity}
+      />
+    </Card>}
   </div>;
 }

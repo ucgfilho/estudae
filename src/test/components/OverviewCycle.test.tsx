@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { ToastProvider } from '../../components/ui/Toast';
 import { OverviewScreen } from '../../screens/OverviewScreen';
+import { ScheduleScreen } from '../../screens/ScheduleScreen';
 import { db, resetDatabase } from '../../db/db';
 import { cycleCompletions, nextCycleActivity } from '../../domain/schedule';
 import { discardTimer, finishTimer, pauseTimer, startCycleTimer } from '../../services/timer';
@@ -25,6 +26,21 @@ function renderOverview() {
 beforeEach(async () => { await resetDatabase(); });
 
 describe('ciclo contínuo na visão geral', () => {
+  it('mostra a sessão planejada com etiqueta ao expandir o ciclo completo', async () => {
+    const activity = next()!;
+    const session = await createSession({ date: todayKey(), disciplineId: activity.discipline.id, topicId: null,
+      plannedStart: '19:30', plannedMinutes: 35, objective: 'Compromisso manual', notes: '' });
+    await db.sessions.update(session.id, { isManual: undefined });
+    render(<MemoryRouter><ScheduleScreen /></MemoryRouter>);
+
+    expect(screen.queryByText('Compromisso manual')).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Ver ciclo completo' }));
+    const planned = screen.getByRole('region', { name: 'Sessões planejadas por você' });
+    expect(within(planned).getByText('Criada por você')).toBeInTheDocument();
+    expect(within(planned).getByText('Compromisso manual')).toBeInTheDocument();
+    expect(within(planned).getByText(/19:30/)).toBeInTheDocument();
+  });
+
   it('prioriza o ciclo mesmo com sessão manual planejada e inicia o cronômetro do ciclo', async () => {
     const expected = next()!;
     await createSession({ date: todayKey(), disciplineId: expected.discipline.id, topicId: null,
