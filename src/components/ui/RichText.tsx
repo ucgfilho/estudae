@@ -195,7 +195,7 @@ export function RichTextEditor({ value, onChange, className, rows = 6, ...rest }
   };
 
   return (
-    <div className="min-w-0 rounded-lg bg-field">
+    <div className="field-feedback min-w-0 rounded-lg" aria-invalid={rest['aria-invalid']}>
       <div role="toolbar" aria-label="Formatação de texto" className="flex flex-wrap items-center gap-0.5 rounded-t-lg bg-surface-muted p-1">
         {TOOLS.map((t) => (
           <IconButton
@@ -216,7 +216,7 @@ export function RichTextEditor({ value, onChange, className, rows = 6, ...rest }
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={onKeyDown}
-        className={cn('block w-full resize-y bg-transparent px-3 py-2 text-sm text-fg outline-none placeholder:text-fg-subtle', className)}
+        className={cn('block w-full resize-y bg-transparent px-3 py-2 text-sm text-fg', className)}
         {...rest}
       />
     </div>

@@ -257,7 +257,7 @@ export function EditalUploadBox({
               }
             }}
             placeholder={`Exemplo:\nLíngua Portuguesa:\n1. Compreensão e interpretação de textos\n2. Ortografia oficial\n\nConhecimentos Específicos:\n1. Arquitetura de Software\n2. Banco de Dados`}
-            className="w-full rounded-lg bg-field p-2.5 text-xs text-fg placeholder:text-fg-subtle focus:outline-none"
+            className="field-feedback w-full rounded-lg p-2.5 text-xs text-fg"
           />
         </div>
       )}

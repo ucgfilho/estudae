@@ -182,11 +182,10 @@
 
 .auth-form .input-base {
   border-radius: 0.75rem;
-  transition: background-color var(--auth-motion), box-shadow var(--auth-motion);
 }
 
 .auth-form .input-with-icon:autofill {
-  box-shadow: inset 0 0 0 3rem #f1f5ff;
+  box-shadow: inset 0 0 0 3rem var(--field-fill);
 }
 
 .auth-form .auth-password-toggle {
@@ -222,10 +221,6 @@
 @media (hover: hover) {
   .auth-modes button:hover:not(:disabled) {
     color: var(--primary);
-  }
-
-  .auth-form .input-base:hover:not(:focus, :disabled, [aria-invalid='true']) {
-    background-color: var(--surface-inset);
   }
 
   .auth-submit:hover:not(:disabled) {
@@ -445,6 +440,3 @@
 }
 [data-theme='dark'] .auth-modes::before { background: var(--surface-elevated); }
 [data-theme='dark'] .auth-preview-note small { color: var(--fg-muted); }
-[data-theme='dark'] .auth-form .input-with-icon:autofill {
-  box-shadow: inset 0 0 0 3rem var(--surface-muted);
-}

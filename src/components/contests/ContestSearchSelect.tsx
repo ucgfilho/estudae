@@ -100,13 +100,12 @@ export function ContestSearchSelect({
           disabled={disabled}
           aria-haspopup="listbox"
           aria-expanded={open}
+          data-selected={!!selectedTemplate}
           data-testid="contest-dropdown-trigger"
           onClick={() => setOpen((prev) => !prev)}
           className={cn(
-            'w-full flex items-center justify-between gap-2 rounded-lg bg-field px-3 py-2.5 text-left text-sm transition',
-            selectedTemplate
-              ? 'bg-primary-soft! text-fg'
-              : 'text-fg-muted',
+            'field-feedback w-full flex items-center justify-between gap-2 rounded-lg px-3 py-2.5 text-left text-sm',
+            selectedTemplate ? 'text-fg' : 'text-fg-muted',
             disabled && 'opacity-60 cursor-not-allowed',
           )}
         >
@@ -270,7 +269,7 @@ export function ContestSearchSelect({
               value={customName}
               onChange={(e) => onCustomNameChange?.(e.target.value)}
               placeholder="Ex: Petrobras, Sefaz-CE, MP-SP..."
-              className="w-full h-9 max-lg:h-11 rounded-lg bg-field px-3 text-xs text-fg focus:outline-none"
+              className="field-feedback w-full h-9 max-lg:h-11 rounded-lg px-3 text-xs text-fg"
             />
           </div>
           <div>
@@ -282,7 +281,7 @@ export function ContestSearchSelect({
               value={customRole}
               onChange={(e) => onCustomRoleChange?.(e.target.value)}
               placeholder="Ex: Analista de Sistemas, Auditor..."
-              className="w-full h-9 max-lg:h-11 rounded-lg bg-field px-3 text-xs text-fg focus:outline-none"
+              className="field-feedback w-full h-9 max-lg:h-11 rounded-lg px-3 text-xs text-fg"
             />
           </div>
         </div>

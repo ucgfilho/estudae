@@ -44,6 +44,7 @@
   --color-surface-header: var(--surface-header);
   --color-surface-inset: var(--surface-inset);
   --color-field: var(--field);
+  --color-field-hint: var(--field-hint);
   --color-border: var(--border);
   --color-border-strong: var(--border-strong);
   --color-fg: var(--fg);
@@ -227,6 +228,9 @@
     --surface-header: #e5edf8;
     --surface-inset: #becfe3;
     --field: #cedced;
+    --field-hover: #c0d2e9;
+    --field-focus: #aec6e8;
+    --field-hint: #354963;
     --border: #dbe4ee;
     --border-strong: #b8c8da;
     --fg: #1e293b;
@@ -262,6 +266,9 @@
     --surface-header: color-mix(in oklab, var(--surface-muted) 60%, transparent);
     --surface-inset: var(--surface-muted);
     --field: #263955;
+    --field-hover: #304767;
+    --field-focus: #385477;
+    --field-hint: #c6d2e5;
     --border: #64748B;
     --border-strong: #8091aa;
     --fg: #E8EEF9;
@@ -341,9 +348,11 @@
   [role='button'][aria-disabled='true'] {
     cursor: not-allowed;
   }
-  :focus-visible,
-  label:has(> .peer:focus-visible) {
+  :focus-visible {
     outline: none;
+  }
+  :focus-visible:not(:is(.input-base, .field-feedback, .field-feedback textarea)),
+  label:has(> .peer:focus-visible) {
     box-shadow: inset 0 -3px currentColor;
   }
   @media (forced-colors: active) {
@@ -413,7 +422,26 @@
     @apply sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-md focus:bg-brand focus:px-3.5 focus:py-2 focus:text-xs focus:font-semibold focus:text-primary-fg;
   }
   .input-base {
-    @apply min-w-0 w-full rounded-lg bg-field px-3 py-2 text-sm leading-5 text-fg transition-colors placeholder:text-fg-subtle disabled:cursor-not-allowed disabled:opacity-50;
+    @apply min-w-0 w-full rounded-lg px-3 py-2 text-sm leading-5 text-fg disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  :is(.input-base, .field-feedback) {
+    --field-fill: var(--field);
+    background-color: var(--field-fill);
+    transition: background-color 180ms var(--ease-emphasized);
+  }
+  :is(.input-base, .field-feedback, .field-feedback textarea)::placeholder {
+    color: var(--field-hint);
+  }
+  @media (hover: hover) {
+    :is(.input-base, .field-feedback):hover:not(:disabled, [aria-disabled='true']) {
+      --field-fill: var(--field-hover);
+    }
+  }
+  :is(.input-base, .field-feedback):is(:focus-within, [aria-expanded='true']) {
+    --field-fill: var(--field-focus);
+  }
+  .field-feedback[data-selected='true']:not(:hover, :focus-within, [aria-expanded='true']) {
+    --field-fill: var(--primary-soft);
   }
   .control-height {
     min-height: var(--control-height);
@@ -424,8 +452,8 @@
   .control-height-lg {
     min-height: var(--control-height-lg);
   }
-  .input-base[aria-invalid='true'] {
-    background-color: var(--danger-soft);
+  :is(.input-base, .field-feedback)[aria-invalid='true'] {
+    background-color: color-mix(in srgb, var(--danger-soft) 70%, var(--field-fill));
   }
   /* Campo com ícone à esquerda: o espaço do ícone é reservado pelo padding. */
   .input-with-icon {

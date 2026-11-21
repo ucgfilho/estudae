@@ -368,8 +368,7 @@ export function Select({
         }}
         onKeyDown={handleKeyDown}
         className={cn(
-          'input-base flex w-full items-center justify-between text-left cursor-pointer transition-all select-none',
-          isOpen && 'bg-primary-soft!',
+          'input-base flex w-full items-center justify-between text-left cursor-pointer select-none',
           sizeClasses[size],
           className
         )}
@@ -377,7 +376,7 @@ export function Select({
         <span
           className={cn(
             'min-w-0 whitespace-normal wrap-anywhere mr-2',
-            isPlaceholderSelected ? 'text-fg-subtle font-normal' : 'text-fg font-medium'
+            isPlaceholderSelected ? 'text-field-hint font-normal' : 'text-fg font-medium'
           )}
         >
           {displayText}
