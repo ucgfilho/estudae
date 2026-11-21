@@ -637,10 +637,16 @@ input[type='number']::-webkit-outer-spin-button {
 }
 
 .topic-metrics > div {
-  aspect-ratio: 1;
-  gap: 0.25rem;
-  justify-content: space-between;
-  padding: clamp(0.75rem, 1.3vw, 1.25rem);
+  min-height: 9rem;
+  justify-content: flex-start;
+  gap: 0.625rem;
+  padding: 1rem;
+}
+
+.topic-metrics [role='progressbar'] {
+  background-color: var(--surface-muted);
+  border-radius: 9999px;
+  overflow: hidden;
 }
 
 .overview-metrics {
