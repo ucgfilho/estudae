@@ -637,16 +637,10 @@ input[type='number']::-webkit-outer-spin-button {
 }
 
 .topic-metrics > div {
-  min-height: 9rem;
-  justify-content: flex-start;
-  gap: 0.625rem;
-  padding: 1rem;
-}
-
-.topic-metrics [role='progressbar'] {
-  background-color: var(--surface-muted);
-  border-radius: 9999px;
-  overflow: hidden;
+  aspect-ratio: 1;
+  gap: 0.25rem;
+  justify-content: space-between;
+  padding: clamp(0.75rem, 1.3vw, 1.25rem);
 }
 
 .overview-metrics {
@@ -659,3 +653,11 @@ input[type='number']::-webkit-outer-spin-button {
 
 .nav-selected { background: white; color: #1e3a8a; }
 [data-theme='dark'] .nav-selected { background: var(--primary-soft); color: var(--primary); }
+
+/* Recorte uniforme do conteúdo no canto em que o painel encontra a navegação. */
+@media (width >= 64rem) {
+  #main-content {
+    border-top-left-radius: 0.75rem;
+    overflow: clip;
+  }
+}
