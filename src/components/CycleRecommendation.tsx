@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Play, Clock3, ArrowRight, BookOpen, Repeat2, CheckCircle2 } from 'lucide-react';
+import { Play, Clock3, ArrowRight, BookOpen, Repeat2, CheckCircle2, Trash2 } from 'lucide-react';
 import { useDisciplines, useTopics, useSessions, useSettings, useReviews, useActiveTimer } from '../hooks/useData';
-import { cycleCompletions, nextCycleActivity, previewCycle } from '../domain/schedule';
+import { cycleCompletions, previewCycle, type CycleActivity } from '../domain/schedule';
 import { startCycleTimer } from '../services/timer';
+import { getSettings, updateSettings } from '../services/settings';
 import { todayKey } from '../lib/dates';
 import { errorMessage } from '../lib/utils';
 import { Card, Alert, DisciplineDot, Badge } from './ui/Display';
-import { Button } from './ui/Button';
+import { Button, IconButton } from './ui/Button';
+import { ConfirmModal } from './ui/ConfirmModal';
 import { Input } from './ui/Form';
 import { CycleBookAnimation } from './CycleBookAnimation';
 
@@ -22,14 +24,41 @@ export function CycleRecommendation({ showQueue = false }: { showQueue?: boolean
   const [minutes, setMinutes] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const [pendingRemoval, setPendingRemoval] = useState<CycleActivity | null>(null);
+  const [removing, setRemoving] = useState(false);
   if (!settings) return null;
   const input = { disciplines, topics, sessions, questionLogs: [], errorNotes: [], settings };
-  const next = nextCycleActivity(input);
   const timeGoalsDisabled = settings.dailyGoalMinutes === 0 && settings.weeklyGoalMinutes === 0;
   const completed = cycleCompletions(sessions).length;
   const due = reviews.filter(r => r.status === 'pendente' && r.dueDate <= todayKey()).length;
-  const queue = showQueue ? previewCycle(input, 6).slice(1) : [];
-  const hasBothAreas = disciplines.some(d => d.active && d.kind === 'technical') && disciplines.some(d => d.active && d.kind === 'general');
+  const technical = disciplines.filter(d => d.active && d.kind === 'technical').length;
+  const general = disciplines.filter(d => d.active && d.kind === 'general').length;
+  const hasBothAreas = technical > 0 && general > 0;
+  const rotationSize = hasBothAreas ? 5 * Math.max(Math.ceil(technical / 4), general) : technical + general;
+  const [next, ...queue] = previewCycle(input, showQueue ? (expanded ? Math.max(10, rotationSize) + 1 : 6) : 1);
+
+  async function removeActivity() {
+    if (!pendingRemoval || removing) return;
+    setRemoving(true);
+    setError(null);
+    try {
+      const { skippedCycleActivities = [] } = await getSettings();
+      const { position, discipline, topic } = pendingRemoval;
+      if (!skippedCycleActivities.some(activity => activity.position === position)) {
+        await updateSettings({ skippedCycleActivities: [
+          ...skippedCycleActivities,
+          { position, disciplineId: discipline.id, topicId: topic?.id ?? null },
+        ] });
+      }
+      setPendingRemoval(null);
+    } catch (err) {
+      setError(errorMessage(err));
+      setPendingRemoval(null);
+    } finally {
+      setRemoving(false);
+    }
+  }
   async function start() {
     setError(null);
     setLoading(true);
@@ -54,7 +83,7 @@ export function CycleRecommendation({ showQueue = false }: { showQueue?: boolean
         <section className="min-w-0 overflow-hidden rounded-xl bg-surface" aria-labelledby="cycle-next">
           <div className="flex flex-wrap items-center justify-between gap-3 bg-primary-soft/40 px-[var(--panel-padding)] py-4">
             <h2 id="cycle-next" className="section-title flex items-center gap-2"><span className="flex size-7 items-center justify-center rounded-full bg-brand text-primary-fg"><Play className="size-3.5" aria-hidden /></span>Próxima atividade do ciclo</h2>
-            <Badge tone="primary">Sessão {completed + 1}</Badge>
+            <Badge tone="primary">Sessão {next.position}</Badge>
           </div>
           <div className={`panel-padding grid gap-6 ${timeGoalsDisabled ? 'md:grid-cols-[minmax(0,1.2fr)_minmax(17rem,0.8fr)] md:items-center' : 'md:grid-cols-2 md:items-start'}`}>
             <div className="space-y-3">
@@ -68,7 +97,7 @@ export function CycleRecommendation({ showQueue = false }: { showQueue?: boolean
                 <legend className="text-sm font-medium text-fg">Tempo de estudo</legend>
                 <p className="mt-1 text-xs text-fg-muted">Escolha quanto tempo você tem agora.</p>
                 <div className="mt-3 flex flex-wrap items-center gap-2">
-                  {[25, 45, 60].map(value => <button type="button" key={value} aria-pressed={Number(minutes || next.minutes) === value} onClick={() => setMinutes(String(value))} className={`min-h-11 rounded-lg border px-4 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-ring ${Number(minutes || next.minutes) === value ? 'border-primary bg-primary-soft text-primary' : 'border-border bg-surface text-fg-muted hover:bg-surface-muted'}`}>{value} min</button>)}
+                  {[25, 45, 60].map(value => <button type="button" key={value} aria-pressed={Number(minutes || next.minutes) === value} onClick={() => setMinutes(String(value))} className={`min-h-11 rounded-lg px-4 text-sm font-medium transition-colors ${Number(minutes || next.minutes) === value ? 'bg-primary-soft text-primary' : 'bg-field text-fg-muted hover:bg-surface-muted'}`}>{value} min</button>)}
                   <div className="flex items-center gap-2"><Input aria-label="Duração personalizada em minutos" type="number" min={1} max={720} className="w-24" value={minutes} placeholder={String(next.minutes)} onChange={e => setMinutes(e.target.value)} /><span className="text-xs text-fg-muted">min</span></div>
                 </div>
               </fieldset>
@@ -89,14 +118,17 @@ export function CycleRecommendation({ showQueue = false }: { showQueue?: boolean
       </div>
       {showQueue && <Card title="Na sequência" description="Estas atividades ficam disponíveis conforme você conclui as sessões.">
         <ol
+          id="cycle-queue"
           aria-label="Próximos estudos do ciclo"
           tabIndex={0}
-          className="grid grid-flow-col auto-cols-[minmax(13rem,1fr)] gap-4 overflow-x-auto overscroll-x-contain snap-x snap-proximity rounded-lg pb-3"
+          className={expanded
+            ? 'grid gap-4 sm:grid-cols-2 xl:grid-cols-4'
+            : 'grid grid-flow-col auto-cols-[minmax(13rem,1fr)] gap-4 overflow-x-auto overscroll-x-contain snap-x snap-proximity rounded-lg pb-3'}
         >
-          {queue.map((activity, index) => (
-            <li key={index} className="flex min-w-0 snap-start flex-col gap-4 rounded-xl bg-surface-muted p-4">
+          {queue.map((activity) => (
+            <li key={activity.position} className="flex min-w-0 snap-start flex-col gap-4 rounded-xl bg-surface-muted p-4">
               <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-sm font-semibold tabular-nums text-primary">
-                {String(index + 2).padStart(2, '0')}
+                {String(activity.position).padStart(2, '0')}
               </span>
               <div className="min-w-0 space-y-2">
                 <div className="flex items-start gap-2">
@@ -106,13 +138,34 @@ export function CycleRecommendation({ showQueue = false }: { showQueue?: boolean
                 <p className="text-sm leading-relaxed text-fg-muted">{activity.topic?.title ?? 'Estudo da disciplina'}</p>
               </div>
               <div className="mt-auto flex flex-wrap items-center justify-between gap-2 pt-3 text-xs text-fg-muted">
-                <span>{activity.discipline.kind === 'technical' ? 'Específicos' : 'Básicos'}</span>
-                {!timeGoalsDisabled && <span className="inline-flex items-center gap-1 whitespace-nowrap"><Clock3 className="size-3.5" aria-hidden />{activity.minutes} min</span>}
+                <div className="flex flex-wrap items-center gap-2">
+                  <span>{activity.discipline.kind === 'technical' ? 'Específicos' : 'Básicos'}</span>
+                  {!timeGoalsDisabled && <span className="inline-flex items-center gap-1 whitespace-nowrap"><Clock3 className="size-3.5" aria-hidden />{activity.minutes} min</span>}
+                </div>
+                <IconButton
+                  className="ml-auto hover:bg-danger-soft hover:text-danger"
+                  size="sm"
+                  label={`Excluir sessão ${activity.position} de ${activity.discipline.name}`}
+                  icon={<Trash2 className="size-4" />}
+                  onClick={() => setPendingRemoval(activity)}
+                />
               </div>
             </li>
           ))}
         </ol>
-        <Link to="/disciplinas" className="mt-5 inline-flex min-h-11 items-center gap-2 text-sm font-medium text-primary">Organizar disciplinas e assuntos<ArrowRight className="size-4" aria-hidden /></Link>
+        <Button className="mt-5" variant="subtle" aria-controls="cycle-queue" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>
+          {expanded ? 'Recolher ciclo completo' : 'Ver ciclo completo'}
+          <ArrowRight className="size-4" aria-hidden />
+        </Button>
+        <ConfirmModal
+          open={pendingRemoval !== null}
+          title="Excluir sessão do ciclo?"
+          message={pendingRemoval && `A sessão ${pendingRemoval.position} de ${pendingRemoval.discipline.name} será pulada nesta passagem do ciclo.`}
+          confirmLabel="Excluir sessão"
+          loading={removing}
+          onClose={() => { if (!removing) setPendingRemoval(null); }}
+          onConfirm={removeActivity}
+        />
       </Card>}
     </>}
   </div>;

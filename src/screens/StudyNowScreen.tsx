@@ -357,7 +357,7 @@ export function StudyNowScreen() {
               </div>
 
               <div className="hidden lg:block text-[11px] text-fg-subtle">
-                Atalho: pressione <kbd className="rounded border border-border bg-surface-muted px-1.5 py-0.5 text-[10px]">Espaço</kbd> para pausar ou retomar
+                Atalho: pressione <kbd className="rounded bg-surface-muted px-1.5 py-0.5 text-[10px]">Espaço</kbd> para pausar ou retomar
               </div>
             </div>
 

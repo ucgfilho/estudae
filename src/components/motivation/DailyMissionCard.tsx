@@ -157,7 +157,7 @@ export function DailyMissionCard({
                   showOverflow
                 />
               ) : (
-                <button type="button" onClick={onOpenSettings} className="min-h-11 text-left text-xs font-medium text-primary hover:underline focus-visible:outline-2 focus-visible:outline-ring">
+                <button type="button" onClick={onOpenSettings} className="min-h-11 text-left text-xs font-medium text-primary hover:underline">
                   Definir meta diária de questões
                 </button>
               )}
@@ -189,13 +189,13 @@ export function DailyMissionCard({
               <h3 id="mission-queue-title" className="text-sm font-semibold text-fg">Na sequência do ciclo</h3>
               <p className="mt-1 text-xs leading-relaxed text-fg-muted">Uma atividade por vez, no seu ritmo.</p>
             </div>
-            <button type="button" onClick={onOpenCycle} className="inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-primary hover:underline focus-visible:outline-2 focus-visible:outline-ring">
+            <button type="button" onClick={onOpenCycle} className="inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-primary hover:underline">
               Ver ciclo de estudos <ArrowRight className="size-4" aria-hidden="true" />
             </button>
           </div>
           {next ? <ol className="grid gap-3 md:grid-cols-3" aria-label="Próximas atividades do ciclo">
-            {queue.slice(queueOffset, queueOffset + 3).map((activity, index) => <li key={index} className="flex min-w-0 items-start gap-3 rounded-lg bg-surface-muted p-4">
-              <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-surface text-xs font-semibold tabular-nums text-fg-muted">{completed.length + index + queueOffset + 1}</span>
+            {queue.slice(queueOffset, queueOffset + 3).map((activity) => <li key={activity.position} className="flex min-w-0 items-start gap-3 rounded-lg bg-surface-muted p-4">
+              <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-surface text-xs font-semibold tabular-nums text-fg-muted">{activity.position}</span>
               <div className="min-w-0 space-y-1.5">
                 <p className="flex items-start gap-2 text-sm font-semibold leading-snug text-fg">
                   <span className="mt-1 shrink-0"><DisciplineDot color={activity.discipline.color} /></span>

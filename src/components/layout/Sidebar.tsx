@@ -142,7 +142,7 @@ export function Sidebar({
                   <div
                     className={cn(
                       'px-2.5 pb-1 text-[11px] font-medium text-fg-subtle select-none',
-                      idx > 0 && 'mt-3 pt-2 ',
+                      idx > 0 && 'mt-3 pt-2',
                     )}
                   >
                     <span className="sidebar-label block truncate">{item.section}</span>
@@ -192,7 +192,7 @@ export function Sidebar({
                   )}
                   {isErrors && pendingErrorsCount > 0 && (
                     <span
-                      className="sidebar-label shrink-0 rounded-full bg-surface-muted border border-border px-1.5 py-0.5 text-[10px] font-medium text-fg-muted tabular-nums leading-none"
+                      className="sidebar-label shrink-0 rounded-full bg-surface-muted px-1.5 py-0.5 text-[10px] font-medium text-fg-muted tabular-nums leading-none"
                       title={`${pendingErrorsCount} erro(s) registrado(s)`}
                     >
                       {pendingErrorsCount}
@@ -229,7 +229,7 @@ export function Sidebar({
                   {dailyGoal > 0 ? `Meta: ${dailyGoal} min/dia · ` : ''}{weeklyGoal} min/sem
                 </div>}
               </div>
-              <div className="flex size-7 items-center justify-center rounded-md border border-border bg-surface text-fg-muted group-hover:text-primary transition-colors shrink-0 max-lg:ml-2">
+              <div className="flex size-7 items-center justify-center rounded-md bg-surface text-fg-muted group-hover:text-primary transition-colors shrink-0 max-lg:ml-2">
                 <ArrowLeftRight className="size-3.5" aria-hidden="true" />
               </div>
             </button>

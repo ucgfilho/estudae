@@ -215,7 +215,7 @@ export function DateInput({ className, disabled, min, max, value, onChange, onBl
                         : isSameMonth(k, view)
                           ? 'text-fg hover:bg-surface-muted'
                           : 'text-fg-subtle hover:bg-surface-muted',
-                      k === today && !isSel && 'ring-1 ring-primary/60',
+                      k === today && !isSel && 'bg-info-soft',
                     )}
                   >
                     {Number(k.slice(8))}

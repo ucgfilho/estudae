@@ -681,10 +681,10 @@ export function DisciplinesScreen() {
                 />
                 <div
                   className={cn(
-                    'mt-0.5 size-4 shrink-0 rounded-full border border-border-strong bg-surface transition-all flex items-center justify-center',
+                    'mt-0.5 size-4 shrink-0 rounded-full bg-field transition-all flex items-center justify-center',
                     deleteAllScope === 'current'
-                      ? 'border-danger bg-danger/10'
-                      : 'group-hover:border-fg-subtle'
+                      ? 'bg-danger/10'
+                      : ''
                   )}
                   aria-hidden="true"
                 >
@@ -724,10 +724,10 @@ export function DisciplinesScreen() {
                 />
                 <div
                   className={cn(
-                    'mt-0.5 size-4 shrink-0 rounded-full border border-border-strong bg-surface transition-all flex items-center justify-center',
+                    'mt-0.5 size-4 shrink-0 rounded-full bg-field transition-all flex items-center justify-center',
                     deleteAllScope === 'all'
-                      ? 'border-danger bg-danger/10'
-                      : 'group-hover:border-fg-subtle'
+                      ? 'bg-danger/10'
+                      : ''
                   )}
                   aria-hidden="true"
                 >

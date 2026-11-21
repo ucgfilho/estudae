@@ -114,10 +114,9 @@ export function Checkbox({ label, description, className, id: customId, ...rest 
       />
       <div
         className={cn(
-          'mt-0.5 size-4 max-lg:size-5 shrink-0 rounded border border-border-strong bg-surface transition-all flex items-center justify-center',
-          'group-hover:border-primary/70',
-          'peer-focus-visible:ring-2 peer-focus-visible:ring-primary/40 peer-focus-visible:ring-offset-1 peer-focus-visible:ring-offset-surface',
-          'peer-checked:bg-brand peer-checked:border-primary peer-checked:text-primary-fg peer-checked:[&_svg]:opacity-100',
+          'mt-0.5 size-4 max-lg:size-5 shrink-0 rounded bg-field transition-all flex items-center justify-center',
+          'group-hover:bg-primary-soft',
+          'peer-checked:bg-brand peer-checked:text-primary-fg peer-checked:[&_svg]:opacity-100',
           'peer-disabled:opacity-50 peer-disabled:cursor-not-allowed'
         )}
         aria-hidden="true"
@@ -151,10 +150,9 @@ export function Radio({ label, description, className, id: customId, ...rest }: 
       />
       <div
         className={cn(
-          'mt-0.5 size-4 max-lg:size-5 shrink-0 rounded-full border border-border-strong bg-surface transition-all flex items-center justify-center',
-          'group-hover:border-primary/70',
-          'peer-focus-visible:ring-2 peer-focus-visible:ring-primary/40 peer-focus-visible:ring-offset-1 peer-focus-visible:ring-offset-surface',
-          'peer-checked:border-primary peer-checked:bg-primary/10 peer-checked:[&_span]:opacity-100 peer-checked:[&_span]:scale-100',
+          'mt-0.5 size-4 max-lg:size-5 shrink-0 rounded-full bg-field transition-all flex items-center justify-center',
+          'group-hover:bg-primary-soft',
+          'peer-checked:bg-primary/10 peer-checked:[&_span]:opacity-100 peer-checked:[&_span]:scale-100',
           'peer-disabled:opacity-50 peer-disabled:cursor-not-allowed'
         )}
         aria-hidden="true"

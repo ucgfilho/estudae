@@ -158,7 +158,7 @@ export function EditalUploadBox({
             type="button"
             disabled={disabled || readingFile}
             onClick={() => setShowTextEditor((prev) => !prev)}
-            className="rounded-md border border-border-strong bg-surface px-2.5 py-1 max-lg:px-3 max-lg:py-2 max-lg:min-h-9 text-[11px] font-medium text-fg hover:bg-surface-muted transition"
+            className="rounded-md bg-field px-2.5 py-1 max-lg:px-3 max-lg:py-2 max-lg:min-h-9 text-[11px] font-medium text-fg hover:bg-surface-muted transition"
           >
             {showTextEditor ? 'Ocultar editor' : 'Colar texto do edital'}
           </button>
@@ -257,7 +257,7 @@ export function EditalUploadBox({
               }
             }}
             placeholder={`Exemplo:\nLíngua Portuguesa:\n1. Compreensão e interpretação de textos\n2. Ortografia oficial\n\nConhecimentos Específicos:\n1. Arquitetura de Software\n2. Banco de Dados`}
-            className="w-full rounded-lg border border-border-strong bg-surface p-2.5 text-xs text-fg placeholder:text-fg-subtle focus:border-primary focus:outline-none"
+            className="w-full rounded-lg bg-field p-2.5 text-xs text-fg placeholder:text-fg-subtle focus:outline-none"
           />
         </div>
       )}

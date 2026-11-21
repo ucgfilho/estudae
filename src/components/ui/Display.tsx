@@ -5,18 +5,18 @@ import { cn } from '../../lib/utils';
 export type Tone = 'neutral' | 'primary' | 'accent' | 'success' | 'warning' | 'danger' | 'info';
 
 const toneClasses: Record<Tone, string> = {
-  neutral: 'bg-surface-muted text-fg-muted border-border',
-  primary: 'bg-primary-soft text-primary border-transparent',
-  accent: 'bg-accent-soft text-accent border-transparent',
-  success: 'bg-success-soft text-success border-transparent',
-  warning: 'bg-warning-soft text-warning border-transparent',
-  danger: 'bg-danger-soft text-danger border-transparent',
-  info: 'bg-info-soft text-info border-transparent',
+  neutral: 'bg-surface-muted text-fg-muted',
+  primary: 'bg-primary-soft text-primary',
+  accent: 'bg-accent-soft text-accent',
+  success: 'bg-success-soft text-success',
+  warning: 'bg-warning-soft text-warning',
+  danger: 'bg-danger-soft text-danger',
+  info: 'bg-info-soft text-info',
 };
 
 export function Badge({ tone = 'neutral', icon, children, className }: { tone?: Tone; icon?: ReactNode; children: ReactNode; className?: string }) {
   return (
-    <span className={cn('inline-flex max-w-full items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium leading-5 break-words', toneClasses[tone], className)}>
+    <span className={cn('inline-flex max-w-full items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium leading-5 break-words', toneClasses[tone], className)}>
       {icon}
       {children}
     </span>
@@ -60,7 +60,7 @@ export function Card({
             <button
               type="button"
               onClick={onClose}
-              className="absolute top-3 right-3 max-lg:top-2 max-lg:right-2 inline-flex size-8 max-lg:size-11 shrink-0 items-center justify-center rounded-lg text-fg-muted hover:text-fg hover:bg-surface-muted transition-colors focus-visible:ring-2 focus-visible:ring-ring"
+              className="absolute top-3 right-3 max-lg:top-2 max-lg:right-2 inline-flex size-8 max-lg:size-11 shrink-0 items-center justify-center rounded-lg text-fg-muted hover:text-fg hover:bg-surface-muted transition-colors"
               aria-label="Fechar"
               title="Fechar"
             >
@@ -226,7 +226,7 @@ export function Alert({
       <button
         type="button"
         onClick={handleClose}
-        className="absolute top-2 right-2 inline-flex size-8 max-lg:size-11 shrink-0 items-center justify-center rounded-lg text-current/80 hover:text-current hover:bg-black/10 transition-colors focus-visible:ring-2 focus-visible:ring-current"
+        className="absolute top-2 right-2 inline-flex size-8 max-lg:size-11 shrink-0 items-center justify-center rounded-lg text-current/80 hover:text-current hover:bg-black/10 transition-colors"
         aria-label="Fechar mensagem"
         title="Fechar mensagem"
       >

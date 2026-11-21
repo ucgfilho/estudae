@@ -313,10 +313,10 @@ export function PostponeReviewModal({
                   type="button"
                   onClick={() => handlePresetClick(p.days)}
                   className={cn(
-                    'rounded-lg px-2.5 py-1 max-lg:px-3 max-lg:py-2 max-lg:min-h-9 text-xs font-medium border transition-all cursor-pointer',
+                    'rounded-lg px-2.5 py-1 max-lg:px-3 max-lg:py-2 max-lg:min-h-9 text-xs font-medium transition-all cursor-pointer',
                     isActive
-                      ? 'border-primary bg-brand text-primary-fg font-semibold shadow-xs'
-                      : 'border-border bg-surface hover:bg-surface-muted text-fg hover:border-border-strong'
+                      ? 'bg-brand text-primary-fg font-semibold shadow-xs'
+                      : 'bg-surface hover:bg-surface-muted text-fg '
                   )}
                 >
                   {p.label}
@@ -394,7 +394,7 @@ export function PostponeReviewModal({
                     !isPast && !isSelected && isCurrentMonth && 'text-fg hover:bg-surface-muted',
                     !isPast && !isSelected && !isCurrentMonth && 'text-fg-subtle/50 hover:bg-surface-muted/50',
                     isSelected && 'bg-brand text-primary-fg font-bold shadow-xs scale-102 z-10',
-                    isOriginal && !isSelected && 'border border-dashed border-accent text-accent font-semibold',
+                    isOriginal && !isSelected && 'bg-accent-soft text-accent font-semibold',
                   )}
                   title={`${formatDate(dayKey)}${isOriginal ? ' (Data atual)' : ''}${isToday ? ' (Hoje)' : ''}`}
                 >

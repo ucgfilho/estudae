@@ -438,7 +438,7 @@ export function ErrorNoteModal({
                         variant="secondary"
                         size="sm"
                         icon={<Trash2 className="size-3.5" />}
-                        className="text-fg-muted hover:text-danger hover:border-danger/40"
+                        className="text-fg-muted hover:text-danger"
                         onClick={() => void deleteFlashcard(effectiveNote.id, card.id)}
                       />
                     </div>

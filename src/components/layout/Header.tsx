@@ -110,7 +110,7 @@ export function Header({
             <button
               type="button"
               onClick={() => navigate('/estudar-agora')}
-              className="inline-flex control-height items-center gap-1.5 sm:gap-2 rounded-lg border border-primary/30 bg-primary-soft px-2 text-xs font-semibold text-primary transition-colors hover:brightness-95"
+              className="inline-flex control-height items-center gap-1.5 sm:gap-2 rounded-lg bg-primary-soft px-2 text-xs font-semibold text-primary transition-colors hover:brightness-95"
               title="Sessão de estudo em andamento — Clique para abrir o cronômetro"
             >
               <TimerIcon className="size-3.5" aria-hidden="true" />
@@ -127,15 +127,14 @@ export function Header({
               data-testid="header-profile-button"
               onClick={() => setProfileOpen(true)}
               title={`Editar perfil (${authUser.name} · Patente: ${rankState.rank.name} · ${rankState.xp} XP)`}
-              className="inline-flex control-height items-center gap-2 rounded-lg border border-border bg-surface hover:bg-surface-muted px-2.5 max-sm:px-2 py-1.5 text-xs font-medium text-fg transition-colors cursor-pointer"
+              className="inline-flex control-height items-center gap-2 rounded-lg bg-surface hover:bg-surface-muted px-2.5 max-sm:px-2 py-1.5 text-xs font-medium text-fg transition-colors cursor-pointer"
               aria-label="Editar perfil"
             >
               <span
                 data-testid="header-rank-icon"
                 title={`Patente atual: ${rankState.rank.name} (${rankState.xp} XP)`}
                 className={cn(
-                  'hidden sm:inline-flex size-5 shrink-0 items-center justify-center rounded-md bg-white ring-1 ring-primary/20',
-                  rankTier.ring,
+                  'hidden sm:inline-flex size-5 shrink-0 items-center justify-center rounded-md bg-white',
                 )}
               >
                 <RankIcon className={cn('size-3.5', rankIconColor)} strokeWidth={2.5} aria-hidden="true" />

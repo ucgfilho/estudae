@@ -71,7 +71,7 @@ export function SettingsScreen() {
       setTopicCompletionGoal(
         settings.topicCompletionGoal ? String(settings.topicCompletionGoal) : ''
       );
-      setReviewIntervalsText(settings.reviewIntervals.join(', '));
+      setReviewIntervalsText(settings.reviewIntervals.join(','));
       setExamDate(settings.examDate ?? '');
     }
   }, [settings]);
@@ -150,7 +150,7 @@ export function SettingsScreen() {
       const text = event.target?.result as string;
       const validation = validateBackup(text);
       if (!validation.ok) {
-        setActionError(`Arquivo de backup inválido: ${validation.errors.join('; ')}`);
+        setActionError(`Arquivo de backup inválido: ${validation.errors.join(';')}`);
         if (fileInputRef.current) fileInputRef.current.value = '';
         return;
       }
@@ -415,7 +415,7 @@ export function SettingsScreen() {
                   size="sm"
                   icon={<RotateCcw className="size-4 text-danger" />}
                   onClick={() => setResetConfirmOpen(true)}
-                  className="text-danger border-danger/30 hover:bg-danger-soft/30"
+                  className="text-danger hover:bg-danger-soft/30"
                 >
                   Reiniciar plataforma
                 </Button>
@@ -435,7 +435,7 @@ export function SettingsScreen() {
                   size="sm"
                   icon={<Trash2 className="size-4 text-danger" />}
                   onClick={() => setDeleteAccountConfirmOpen(true)}
-                  className="text-danger border-danger/30 hover:bg-danger-soft/30"
+                  className="text-danger hover:bg-danger-soft/30"
                 >
                   Excluir conta e dados
                 </Button>

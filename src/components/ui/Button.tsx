@@ -5,11 +5,11 @@ type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'subtle';
 type Size = 'sm' | 'md' | 'lg';
 
 const variants: Record<Variant, string> = {
-  primary: 'bg-brand text-primary-fg hover:bg-primary-hover active:brightness-95 border border-transparent shadow-2xs',
-  secondary: 'bg-surface text-fg border border-border-strong hover:bg-surface-muted active:bg-surface-muted/80',
-  ghost: 'bg-transparent text-fg-muted hover:bg-surface-muted hover:text-fg active:bg-surface-muted/80 border border-transparent',
-  danger: 'bg-danger text-status-fg hover:opacity-90 active:opacity-85 border border-transparent',
-  subtle: 'bg-primary-soft text-primary hover:brightness-95 active:brightness-90 border border-transparent',
+  primary: 'bg-brand text-primary-fg hover:bg-primary-hover active:brightness-95 shadow-2xs',
+  secondary: 'bg-field text-fg hover:bg-surface-muted active:bg-surface-muted/80',
+  ghost: 'bg-transparent text-fg-muted hover:bg-surface-muted hover:text-fg active:bg-surface-muted/80',
+  danger: 'bg-danger text-status-fg hover:opacity-90 active:opacity-85',
+  subtle: 'bg-primary-soft text-primary hover:brightness-95 active:brightness-90',
 };
 
 // A mesma escala de altura é usada por campos, selects e botões.

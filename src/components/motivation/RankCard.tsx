@@ -16,14 +16,14 @@ const RANK_ICONS: LucideIcon[] = [
 ];
 
 /** Emblema e cor por faixa de patente (índice em RANKS). */
-export function tierOf(index: number): { icon: LucideIcon; color: string; ring: string } {
+export function tierOf(index: number): { icon: LucideIcon; color: string } {
   const icon = RANK_ICONS[index] ?? Trophy;
-  if (index < 4) return { icon, color: 'text-fg-muted', ring: 'ring-border-strong' };
-  if (index < 8) return { icon, color: 'text-info', ring: 'ring-info' };
-  if (index < 12) return { icon, color: 'text-warning', ring: 'ring-warning' };
-  if (index < 15) return { icon, color: 'text-accent', ring: 'ring-accent' };
-  if (index < 17) return { icon, color: 'text-primary', ring: 'ring-primary' };
-  return { icon, color: 'text-primary', ring: 'ring-primary' };
+  if (index < 4) return { icon, color: 'text-fg-muted' };
+  if (index < 8) return { icon, color: 'text-info' };
+  if (index < 12) return { icon, color: 'text-warning' };
+  if (index < 15) return { icon, color: 'text-accent' };
+  if (index < 17) return { icon, color: 'text-primary' };
+  return { icon, color: 'text-primary' };
 }
 
 const EVENT_STYLE: Record<RankEventType, { icon: LucideIcon; tone: string }> = {
@@ -81,8 +81,7 @@ export function RankCard(input: RankInput) {
           <div
             key={rank.id}
             className={cn(
-              'grid size-14 shrink-0 place-items-center rounded-xl bg-surface-muted ring-2',
-              tier.ring,
+              'grid size-14 shrink-0 place-items-center rounded-xl bg-surface-muted',
               anim === 'up' && 'animate-pop',
               anim === 'down' && 'animate-rank-drop',
             )}

@@ -182,7 +182,7 @@
 
 .auth-form .input-base {
   border-radius: 0.75rem;
-  transition: border-color var(--auth-motion), box-shadow var(--auth-motion);
+  transition: background-color var(--auth-motion), box-shadow var(--auth-motion);
 }
 
 .auth-form .input-with-icon:autofill {
@@ -225,7 +225,7 @@
   }
 
   .auth-form .input-base:hover:not(:focus, :disabled, [aria-invalid='true']) {
-    border-color: #788dbd;
+    background-color: var(--surface-inset);
   }
 
   .auth-submit:hover:not(:disabled) {

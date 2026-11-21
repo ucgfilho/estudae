@@ -59,7 +59,7 @@ export function FileDropzone({ label, hint, accept, file, required, onFile }: Fi
           onDrop={onDrop}
           className={cn(
             'flex min-h-32 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl px-4 py-5 text-center transition-colors',
-            'peer-focus-visible:ring-2 peer-focus-visible:ring-primary peer-focus-visible:ring-offset-2',
+
             file ? 'bg-success-soft' : dragging ? 'bg-primary-soft' : 'bg-surface-muted hover:bg-surface-elevated',
           )}
         >
@@ -86,7 +86,7 @@ export function FileDropzone({ label, hint, accept, file, required, onFile }: Fi
               if (inputRef.current) inputRef.current.value = '';
               onFile(null);
             }}
-            className="absolute top-2 right-2 inline-flex size-8 max-lg:size-10 items-center justify-center rounded-md text-fg-muted hover:bg-surface-muted hover:text-fg focus-visible:ring-2 focus-visible:ring-primary"
+            className="absolute top-2 right-2 inline-flex size-8 max-lg:size-10 items-center justify-center rounded-md text-fg-muted hover:bg-surface-muted hover:text-fg"
           >
             <X className="size-4" aria-hidden />
           </button>

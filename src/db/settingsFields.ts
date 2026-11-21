@@ -9,6 +9,11 @@ export const workspacePreferenceFields = {
     date: z.string().refine(isValidDateKey),
     progress: z.string().max(500_000),
   }).optional(),
+  skippedCycleActivities: z.array(z.object({
+    position: z.number().int().positive(),
+    disciplineId: z.string().min(1),
+    topicId: z.string().nullable(),
+  })).optional(),
   contestExamBoard: z.string().optional(),
   contestCreatedAt: z.string().optional(),
   contestHidden: z.boolean().optional(),

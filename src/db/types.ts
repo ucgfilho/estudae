@@ -245,6 +245,7 @@ export interface Settings {
   reportTimeGranularity?: 'day' | 'week' | 'month';
   reportPeriodDays?: '30' | '60' | '90' | 'all';
   flashcardDraft?: { date: DateKey; progress: string };
+  skippedCycleActivities?: { position: number; disciplineId: string; topicId: string | null }[];
   contestExamBoard?: string;
   contestCreatedAt?: string;
   contestHidden?: boolean;

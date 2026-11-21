@@ -195,7 +195,7 @@ export function RichTextEditor({ value, onChange, className, rows = 6, ...rest }
   };
 
   return (
-    <div className="min-w-0 rounded-lg border border-border-strong bg-surface focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/30">
+    <div className="min-w-0 rounded-lg bg-field">
       <div role="toolbar" aria-label="Formatação de texto" className="flex flex-wrap items-center gap-0.5 rounded-t-lg bg-surface-muted p-1">
         {TOOLS.map((t) => (
           <IconButton

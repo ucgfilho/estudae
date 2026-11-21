@@ -790,7 +790,7 @@ export function CalendarScreen() {
                   variant="secondary"
                   size="sm"
                   icon={<Trash2 className="size-3.5" />}
-                  className="text-fg-muted hover:text-danger hover:border-danger/40 hover:bg-danger-soft/20"
+                  className="text-fg-muted hover:text-danger hover:bg-danger-soft/20"
                   onClick={() => {
                     setSessionToDelete(selectedSessionDetail);
                     setDeleteConfirmOpen(true);

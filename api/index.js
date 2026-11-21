@@ -36095,6 +36095,11 @@ var workspacePreferenceFields = {
 		date: string().refine(isValidDateKey),
 		progress: string().max(5e5)
 	}).optional(),
+	skippedCycleActivities: array(object({
+		position: number().int().positive(),
+		disciplineId: string().min(1),
+		topicId: string().nullable()
+	})).optional(),
 	contestExamBoard: string().optional(),
 	contestCreatedAt: string().optional(),
 	contestHidden: boolean().optional()

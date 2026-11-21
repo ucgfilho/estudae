@@ -1,4 +1,4 @@
-/** Ciclo contínuo: o histórico de execução é a única fonte da posição. */
+/** O histórico de execução e as exclusões determinam a posição no ciclo contínuo. */
 import type { Discipline, Topic, StudySession, QuestionLog, ErrorNote, Settings } from '../db/types';
 
 export const SIMULADO_DISCIPLINE_ID = 'simulado';
@@ -9,9 +9,10 @@ export interface CycleInput {
   sessions: readonly StudySession[];
   questionLogs: readonly QuestionLog[];
   errorNotes: readonly ErrorNote[];
-  settings: Pick<Settings, 'distribution' | 'dailyGoalMinutes'>;
+  settings: Pick<Settings, 'distribution' | 'dailyGoalMinutes' | 'skippedCycleActivities'>;
 }
 export interface CycleActivity {
+  position: number;
   discipline: Discipline;
   topic: Topic | null;
   minutes: number;
@@ -37,24 +38,32 @@ export function availableTopics(topics: readonly Topic[], disciplineId: string):
     return false;
   }).filter(t => ![...map.values()].some(child => child.active && child.parentTopicId === t.id));
 }
-/** Quatro sessões de específicos e uma de básicos a cada cinco conclusões. */
+/** Quatro posições para específicos e uma para básicos em cada bloco de cinco. */
 export function nextCycleActivity(input: CycleInput): CycleActivity | null {
   const done = cycleCompletions(input.sessions);
+  const consumed = [...done.map(({ disciplineId, topicId }) => ({ disciplineId, topicId }))];
+  let position = done.length + 1;
+  const skipped = new Map(input.settings.skippedCycleActivities?.map(activity => [activity.position, activity]));
+  for (const activity of [...skipped.values()].sort((a, b) => a.position - b.position)) {
+    if (activity.position > position) break;
+    consumed.push(activity);
+    position += 1;
+  }
   const ordered = input.disciplines.filter(d => d.active).sort((a, b) => a.order - b.order || a.id.localeCompare(b.id));
   if (!ordered.length) return null;
-  const kind = done.length % 5 === 2 ? 'general' : 'technical';
+  const kind = (position - 1) % 5 === 2 ? 'general' : 'technical';
   const group = ordered.filter(d => d.kind === kind);
   // Se o edital só tem uma área ativa, ela ocupa todas as sessões.
   const candidates = group.length ? group : ordered;
-  const count = (id: string) => done.filter(s => s.disciplineId === id).length;
+  const count = (id: string) => consumed.filter(s => s.disciplineId === id).length;
   const discipline = [...candidates].sort((a, b) => count(a.id) - count(b.id) || a.order - b.order || a.id.localeCompare(b.id))[0];
   const pool = availableTopics(input.topics, discipline.id).sort((a, b) => a.order - b.order || a.id.localeCompare(b.id));
-  const topicCount = (id: string) => done.filter(s => s.topicId === id).length;
+  const topicCount = (id: string) => consumed.filter(s => s.topicId === id).length;
   const topic = [...pool].sort((a, b) => topicCount(a.id) - topicCount(b.id) || a.order - b.order || a.id.localeCompare(b.id))[0] ?? null;
   const reason = discipline.kind === 'technical'
     ? 'Conhecimentos específicos: 80% das sessões do ciclo.'
     : 'Conhecimentos básicos: 20% das sessões do ciclo.';
-  return { discipline, topic, minutes: input.settings.dailyGoalMinutes > 0 ? Math.max(1, Math.min(60, input.settings.dailyGoalMinutes)) : 60, reason };
+  return { position, discipline, topic, minutes: input.settings.dailyGoalMinutes > 0 ? Math.max(1, Math.min(60, input.settings.dailyGoalMinutes)) : 60, reason };
 }
 /** Prévia recalculada a cada conclusão; não cria sessões nem compromissos no calendário. */
 export function previewCycle(input: CycleInput, count = 7): CycleActivity[] {

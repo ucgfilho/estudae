@@ -369,8 +369,7 @@ export function Select({
         onKeyDown={handleKeyDown}
         className={cn(
           'input-base flex w-full items-center justify-between text-left cursor-pointer transition-all select-none',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:border-primary',
-          isOpen && 'ring-2 ring-primary/40 border-primary shadow-xs',
+          isOpen && 'bg-primary-soft!',
           sizeClasses[size],
           className
         )}

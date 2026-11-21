@@ -133,7 +133,7 @@ export function ContestSelectorScreen({ onSelectContest, initializing = false }:
               disabled={initializing}
               onClick={() => setProfileOpen(true)}
               title="Editar perfil"
-              className="inline-flex control-height items-center gap-2 rounded-lg border border-border-strong bg-surface px-2.5 text-xs font-medium text-fg hover:border-primary/40 transition cursor-pointer"
+              className="inline-flex control-height items-center gap-2 rounded-lg bg-surface px-2.5 text-xs font-medium text-fg transition cursor-pointer"
             >
               <Avatar name={authUser.name || authUser.email} src={authUser.avatarUrl} size="sm" />
               <span className="hidden sm:inline-block max-w-36 wrap-anywhere font-semibold text-fg">
@@ -147,7 +147,7 @@ export function ContestSelectorScreen({ onSelectContest, initializing = false }:
             onClick={() => {
               void logoutUser().catch(() => toast.error('Não foi possível encerrar a sessão. Tente novamente.'));
             }}
-            className="inline-flex control-height items-center gap-1.5 rounded-lg border border-border-strong bg-surface px-3 text-xs font-medium text-fg-muted hover:text-danger hover:border-danger/40 transition cursor-pointer"
+            className="inline-flex control-height items-center gap-1.5 rounded-lg bg-surface px-3 text-xs font-medium text-fg-muted hover:text-danger transition cursor-pointer"
           >
             <LogOut className="size-3.5" />
             <span>Sair</span>
@@ -278,7 +278,7 @@ export function ContestSelectorScreen({ onSelectContest, initializing = false }:
               type="button"
               disabled={initializing}
               onClick={() => setManageMode((prev) => !prev)}
-              className="rounded-lg border border-border-strong bg-surface px-4 py-2 max-lg:py-2.5 max-lg:min-h-11 text-xs font-semibold text-fg-muted hover:text-fg hover:border-primary/40 transition"
+              className="rounded-lg bg-surface px-4 py-2 max-lg:py-2.5 max-lg:min-h-11 text-xs font-semibold text-fg-muted hover:text-fg transition"
             >
               {manageMode ? 'Concluir gerenciamento' : 'Gerenciar concursos'}
             </button>

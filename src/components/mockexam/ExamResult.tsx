@@ -60,7 +60,7 @@ export function ExamResult({ exam, disciplines, accuracyGoal }: ExamResultProps)
           <div
             className={cn(
               'relative flex items-center gap-4 rounded-xl p-4 pr-11',
-              totals.accuracy >= accuracyGoal ? 'border-success/40 bg-success/10' : 'border-warning/40 bg-warning/10',
+              totals.accuracy >= accuracyGoal ? 'bg-success/10' : 'bg-warning/10',
             )}
           >
             <Trophy className={cn('size-8 shrink-0', totals.accuracy >= accuracyGoal ? 'text-success' : 'text-warning')} aria-hidden />
@@ -137,11 +137,11 @@ export function ExamResult({ exam, disciplines, accuracyGoal }: ExamResultProps)
                 key={r.number}
                 title={`Questão ${r.number}: gabarito ${fmtAnswer(r.correctAnswer)}, marcada ${r.marked ? fmtAnswer(r.marked) : 'em branco'}`}
                 className={cn(
-                  'flex h-11 min-w-14 flex-col items-center justify-center rounded-md border px-1.5 text-[11px] leading-tight tabular-nums',
-                  r.outcome === 'correct' && 'border-success/40 bg-success/10 text-success',
-                  r.outcome === 'wrong' && 'border-danger/40 bg-danger/10 text-danger',
-                  r.outcome === 'blank' && 'border-border bg-surface-muted text-fg-muted',
-                  r.outcome === 'annulled' && 'border-border bg-surface text-fg-subtle line-through',
+                  'flex h-11 min-w-14 flex-col items-center justify-center rounded-md px-1.5 text-[11px] leading-tight tabular-nums',
+                  r.outcome === 'correct' && 'bg-success/10 text-success',
+                  r.outcome === 'wrong' && 'bg-danger/10 text-danger',
+                  r.outcome === 'blank' && 'bg-surface-muted text-fg-muted',
+                  r.outcome === 'annulled' && 'bg-surface text-fg-subtle line-through',
                 )}
               >
                 <span className="font-semibold">{r.number}</span>

@@ -32,6 +32,20 @@ describe('ciclo contínuo por área do edital', () => {
     data.disciplines = data.disciplines.map((d, i) => ({ ...d, order: -i }));
     expect(nextCycleActivity(data)?.discipline.id).toBe(data.disciplines[0 + 2].id);
   });
+  it('pula a posição excluída na prévia e na execução sem registrar uma conclusão', () => {
+    const data = input();
+    const [first, removed, third] = previewCycle(data, 3);
+    data.settings.skippedCycleActivities = [{
+      position: removed.position,
+      disciplineId: removed.discipline.id,
+      topicId: removed.topic?.id ?? null,
+    }];
+
+    expect(previewCycle(data, 2)).toEqual([first, third]);
+    data.sessions = [{ ...completion(first.discipline.id, '1'), topicId: first.topic?.id ?? null }];
+    expect(nextCycleActivity(data)).toEqual(third);
+    expect(cycleCompletions(data.sessions)).toHaveLength(1);
+  });
   it('não conta sessões incompletas ou sem tempo, mesmo com histórico inconsistente', () => {
     const saved = completion('portugues', '1');
     expect(cycleCompletions([{ ...saved, status: 'planejada' }, { ...saved, actualSeconds: 0 }])).toHaveLength(0);

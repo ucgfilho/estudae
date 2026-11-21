@@ -184,8 +184,8 @@ export function ErrorNotebookScreen() {
         ] as const).map(([status, label, count]) => (
           <button key={status} type="button" aria-pressed={filterStatus === status && !focusedNoteId}
             onClick={() => { if (focusedNoteId) setSearchParams({}); setFilterStatus(status); }}
-            className={cn('inline-flex min-h-11 items-center gap-2 rounded-lg border px-3 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-ring',
-              filterStatus === status && !focusedNoteId ? 'border-primary bg-primary-soft font-semibold text-primary' : 'border-transparent text-fg-muted hover:bg-surface-muted')}>
+            className={cn('inline-flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm transition-colors',
+              filterStatus === status && !focusedNoteId ? 'bg-primary-soft font-semibold text-primary' : 'text-fg-muted hover:bg-surface-muted')}>
             {label}<span className="text-xs tabular-nums">{count}</span>
           </button>
         ))}
@@ -195,7 +195,7 @@ export function ErrorNotebookScreen() {
         <Input type="search" placeholder="Busque por explicação, questão ou tópico" value={filterSearch} onChange={e => setFilterSearch(e.target.value)} />
       </Field>
       <details className="group rounded-xl bg-surface">
-        <summary className="flex min-h-11 cursor-pointer items-center gap-2 rounded-xl px-4 py-3 text-sm font-medium text-fg focus-visible:outline-2 focus-visible:outline-ring">
+        <summary className="flex min-h-11 cursor-pointer items-center gap-2 rounded-xl px-4 py-3 text-sm font-medium text-fg">
           <Filter className="size-4 text-fg-muted" aria-hidden />
           Refinar resultados
           <span className="ml-auto text-xs text-fg-muted">{[filterDisciplineId, filterMockExamId, filterType].filter(Boolean).length || 'Sem'} filtros adicionais</span>
@@ -303,7 +303,7 @@ export function ErrorNotebookScreen() {
 
             return (
               <details key={note.id} open={focusedNoteId === note.id || undefined} className="overflow-hidden rounded-xl bg-surface">
-                <summary className="cursor-pointer px-[var(--panel-padding)] py-4 text-fg focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-[-2px]">
+                <summary className="cursor-pointer px-[var(--panel-padding)] py-4 text-fg focus-visible:outline-offset-[-2px]">
                   <div className="inline-flex w-[calc(100%-1.5rem)] flex-col gap-2 align-middle">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <span className="inline-flex min-w-0 items-center gap-2 text-sm font-semibold">{d && <DisciplineDot color={d.color} />}{d?.name ?? 'Disciplina'}</span>
@@ -367,7 +367,7 @@ export function ErrorNotebookScreen() {
                       variant="secondary"
                       size="sm"
                       icon={<Trash2 className="size-3.5" />}
-                      className="text-fg-muted hover:text-danger hover:border-danger/40 hover:bg-danger-soft/20"
+                      className="text-fg-muted hover:text-danger hover:bg-danger-soft/20"
                       onClick={() => {
                         setNoteToDelete(note);
                         setDeleteConfirmOpen(true);
