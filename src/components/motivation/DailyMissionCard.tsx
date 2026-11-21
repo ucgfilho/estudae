@@ -153,7 +153,7 @@ export function DailyMissionCard({
                   max={p.questionGoal}
                   label="Questões resolvidas hoje em relação à meta diária"
                   tone={p.questionsToday >= p.questionGoal ? 'success' : 'primary'}
-                  className="!bg-surface-muted !ring-0"
+                  className="bg-surface-inset!"
                   showOverflow
                 />
               ) : (
@@ -163,7 +163,7 @@ export function DailyMissionCard({
               )}
             </div>
 
-            <div className="mt-5 space-y-3 rounded-lg bg-surface-muted p-3.5">
+            <div className="mt-5 space-y-3 rounded-lg bg-surface-inset p-3.5">
               <div className="flex items-start gap-2.5">
                 <CheckCircle2 className={cn('mt-0.5 size-4 shrink-0', completedToday > 0 ? 'text-success' : 'text-fg-muted')} aria-hidden="true" />
                 <p className="text-xs font-medium leading-relaxed text-fg">

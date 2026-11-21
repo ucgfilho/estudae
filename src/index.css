@@ -41,6 +41,8 @@
   --color-surface: var(--surface);
   --color-surface-muted: var(--surface-muted);
   --color-surface-elevated: var(--surface-elevated);
+  --color-surface-header: var(--surface-header);
+  --color-surface-inset: var(--surface-inset);
   --color-border: var(--border);
   --color-border-strong: var(--border-strong);
   --color-fg: var(--fg);
@@ -217,20 +219,22 @@
     --control-height: 2.5rem;
     --control-height-sm: 2.25rem;
     --control-height-lg: 2.75rem;
-    --canvas: #edf2f8;
+    --canvas: #d9e3ef;
     --surface: #ffffff;
-    --surface-muted: #e8eef6;
+    --surface-muted: #d4e1ef;
     --surface-elevated: #ffffff;
+    --surface-header: #e5edf8;
+    --surface-inset: #becfe3;
     --border: #dbe4ee;
     --border-strong: #b8c8da;
     --fg: #1e293b;
-    --fg-muted: #475569;
-    --fg-subtle: #52647a;
+    --fg-muted: #3d4e64;
+    --fg-subtle: #455973;
 
     --primary: #1e40af;
     --primary-hover: #1e3a8a;
     --primary-fg: #ffffff;
-    --primary-soft: #e8efff;
+    --primary-soft: #d6e3ff;
     --accent: #d97706;
     --accent-fg: #ffffff;
     --accent-soft: #fff3df;
@@ -253,6 +257,8 @@
     --surface: #111C2E;
     --surface-muted: #17243A;
     --surface-elevated: #1d2d46;
+    --surface-header: color-mix(in oklab, var(--surface-muted) 60%, transparent);
+    --surface-inset: var(--surface-muted);
     --border: #64748B;
     --border-strong: #8091aa;
     --fg: #E8EEF9;

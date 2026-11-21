@@ -47,7 +47,7 @@ export function Card({
       {(title || actions || onClose) && (
         <header
           className={cn(
-            'relative flex flex-wrap items-start justify-between gap-3 rounded-t-xl bg-surface-muted/60 px-[var(--panel-padding)] py-4',
+            'relative flex flex-wrap items-start justify-between gap-3 rounded-t-xl bg-surface-header px-[var(--panel-padding)] py-4',
             onClose && 'pr-14',
           )}
         >

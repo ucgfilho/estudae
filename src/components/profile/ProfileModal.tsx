@@ -86,7 +86,7 @@ export function ProfileModal({ open, onClose }: ProfileModalProps) {
 
         <div className="flex items-center gap-4">
           <Avatar name={name || email} src={avatar} size="xl" />
-          <div className="flex flex-col items-start gap-2">
+          <div className="flex flex-col items-stretch gap-2">
             <Button size="sm" icon={<Camera className="size-4" />} onClick={() => fileRef.current?.click()}>
               {avatar ? 'Trocar foto' : 'Enviar foto'}
             </Button>
