@@ -275,7 +275,7 @@ export function PostponeReviewModal({
         )}
 
         {/* Review Context Header */}
-        <div className="rounded-lg border border-border bg-surface-muted/40 p-3 text-sm">
+        <div className="border-t border-border bg-surface-muted/40 p-3 text-sm">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
               <span className="text-xs uppercase font-semibold text-fg-subtle">Tarefa</span>
@@ -327,7 +327,7 @@ export function PostponeReviewModal({
         </div>
 
         {/* Calendar Picker Card */}
-        <div className="rounded-xl border border-border bg-surface p-3.5 shadow-xs">
+        <div className="border-t border-border bg-surface p-3.5 shadow-xs">
           {/* Calendar Month Navigation Header */}
           <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-border mb-2.5">
             <div className="flex items-center gap-1">
@@ -412,7 +412,7 @@ export function PostponeReviewModal({
         </div>
 
         {/* Selected Date Callout */}
-        <div className="rounded-lg bg-primary-soft/30 border border-primary/20 p-3 text-xs flex flex-wrap items-center justify-between gap-2">
+        <div className="bg-primary-soft/30 border-t border-primary/20 p-3 text-xs flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
             <CalendarIcon className="size-4 text-primary shrink-0" />
             <div className="min-w-0">

@@ -412,7 +412,7 @@ export function OverviewScreen() {
       </div>
 
       {/* Gamificação em expansão progressiva para não competir com a execução do dia */}
-      <details className="group rounded-xl border border-border bg-surface">
+      <details className="group border-t border-border bg-surface">
         <summary className="flex cursor-pointer items-center justify-between gap-2 px-4 py-3 text-sm font-medium text-fg-muted hover:text-fg select-none">
           <span className="flex items-center gap-2">
             <Trophy className="size-4 text-primary" aria-hidden="true" />

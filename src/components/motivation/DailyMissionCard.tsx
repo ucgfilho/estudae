@@ -66,7 +66,7 @@ export function DailyMissionCard({
     >
       <div className="space-y-6">
         <div className="grid items-stretch gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] lg:gap-6">
-          <section className="flex min-w-0 flex-col rounded-xl border border-primary/25 bg-primary-soft/60 p-5 max-sm:p-4 sm:p-6" aria-label="Sua próxima sessão">
+          <section className="flex min-w-0 flex-col border-t border-primary/25 bg-primary-soft/60 p-5 max-sm:p-4 sm:p-6" aria-label="Sua próxima sessão">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <p className="flex items-center gap-2 text-sm font-semibold text-primary">
                 <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-brand text-primary-fg">
@@ -117,7 +117,7 @@ export function DailyMissionCard({
             </div>
           </section>
 
-          <section className="min-w-0 rounded-xl border border-border bg-surface p-5 max-sm:p-4 sm:p-6" aria-labelledby="mission-progress-title">
+          <section className="min-w-0 border-t border-border bg-surface p-5 max-sm:p-4 sm:p-6" aria-labelledby="mission-progress-title">
             <h3 id="mission-progress-title" className="flex items-center gap-2 text-sm font-semibold text-fg">
               <Target className="size-4 text-primary" aria-hidden="true" />
               Seu progresso hoje
@@ -194,8 +194,8 @@ export function DailyMissionCard({
             </button>
           </div>
           {next ? <ol className="grid gap-3 md:grid-cols-3" aria-label="Próximas atividades do ciclo">
-            {queue.slice(queueOffset, queueOffset + 3).map((activity, index) => <li key={index} className="flex min-w-0 items-start gap-3 rounded-lg border border-border bg-surface-muted/40 p-4">
-              <span className="flex size-7 shrink-0 items-center justify-center rounded-full border border-border bg-surface text-xs font-semibold tabular-nums text-fg-muted">{completed.length + index + queueOffset + 1}.</span>
+            {queue.slice(queueOffset, queueOffset + 3).map((activity, index) => <li key={index} className="flex min-w-0 items-start gap-3 border-t border-border p-4 first:border-t-0 md:border-l md:border-t-0 md:first:border-l-0">
+              <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-surface text-xs font-semibold tabular-nums text-fg-muted">{completed.length + index + queueOffset + 1}</span>
               <div className="min-w-0 space-y-1.5">
                 <p className="flex items-start gap-2 text-sm font-semibold leading-snug text-fg">
                   <span className="mt-1 shrink-0"><DisciplineDot color={activity.discipline.color} /></span>

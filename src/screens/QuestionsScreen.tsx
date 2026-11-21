@@ -336,9 +336,9 @@ export function QuestionsScreen() {
                   setFilterDisciplineId(isSelected ? '' : d.disciplineId);
                   setFilterTopicId('');
                 }}
-                className={`rounded-lg border text-left p-3 space-y-1.5 transition-all ${
+                className={`border-t text-left p-3 space-y-1.5 transition-all ${
                   isSelected
-                    ? 'border-primary bg-primary/5 ring-2 ring-primary shadow-sm'
+                    ? 'border-primary bg-primary/5 shadow-sm'
                     : 'border-border bg-surface hover:border-primary/50 hover:bg-surface-muted/30'
                 }`}
                 title={isSelected ? 'Clique para remover o filtro' : `Filtrar por ${d.name}`}
@@ -384,7 +384,7 @@ export function QuestionsScreen() {
                 return (
                   <div
                     key={log.id}
-                    className="rounded-xl border border-border bg-surface p-3.5 space-y-2.5 text-xs"
+                    className="border-t border-border bg-surface p-3.5 space-y-2.5 text-xs"
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">

@@ -104,7 +104,7 @@ export function RankCard(input: RankInput) {
               aria-valuemin={0}
               aria-valuemax={100}
               aria-valuenow={pct}
-              className="h-3 w-full overflow-hidden rounded-full bg-surface ring-1 ring-inset ring-primary/50"
+              className="h-3 w-full overflow-hidden rounded-full bg-surface-muted"
             >
               <div className="h-full rounded-full bg-primary transition-[width] duration-700 ease-out" style={{ width: `${pct}%` }} />
             </div>
@@ -156,7 +156,7 @@ export function RankCard(input: RankInput) {
               <li
                 key={r.id}
                 aria-current={i === state.rankIndex ? 'step' : undefined}
-                className={cn('flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs', i === state.rankIndex ? 'border-primary bg-primary-soft font-semibold text-fg' : reached ? 'border-border text-fg' : 'border-border text-fg-subtle opacity-70')}
+                className={cn('flex items-center gap-1.5 border-t px-2 py-1 text-xs', i === state.rankIndex ? 'border-primary bg-primary-soft font-semibold text-fg' : reached ? 'border-border text-fg' : 'border-border text-fg-subtle opacity-70')}
               >
                 <TIcon className={cn('size-3.5 shrink-0', reached ? t.color : 'text-fg-subtle')} aria-hidden />
                 <span className="wrap-anywhere">{r.name}</span>

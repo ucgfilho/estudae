@@ -382,7 +382,7 @@ export function ReportsScreen() {
                 return (
                   <div
                     key={item.topicId}
-                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2.5 rounded-lg border border-danger/30 bg-danger-soft/10 text-xs"
+                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2.5 border-t border-danger/30 bg-danger-soft/10 text-xs"
                   >
                     <div>
                       <div className="font-semibold text-fg flex items-center gap-1.5">

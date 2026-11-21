@@ -109,7 +109,7 @@ export function ExamSetup({ disciplines, onCreated }: ExamSetupProps) {
 
         {fileError && <Alert tone="danger" onClose={() => setFileError(null)}>{fileError}</Alert>}
 
-        <details className="group rounded-lg border border-border px-3 py-2">
+        <details className="group border-t border-border px-3 py-2">
           <summary className="cursor-pointer text-sm font-medium text-fg-muted select-none focus-visible:ring-2 focus-visible:ring-primary max-lg:py-1.5">
             Prefere colar ou corrigir o gabarito em texto?
           </summary>
@@ -166,7 +166,7 @@ export function ExamSetup({ disciplines, onCreated }: ExamSetupProps) {
         </div>
 
         {keyOk && parsed && (
-          <details className="rounded-lg border border-border px-3 py-2">
+          <details className="border-t border-border px-3 py-2">
             <summary className="cursor-pointer text-sm font-medium text-fg-muted select-none focus-visible:ring-2 focus-visible:ring-primary max-lg:py-1.5">
               Opcional: informar as disciplinas por faixa de questões
             </summary>

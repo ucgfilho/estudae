@@ -194,7 +194,7 @@ export function ErrorNotebookScreen() {
       <Field label="Buscar no caderno">
         <Input type="search" placeholder="Busque por explicação, questão ou tópico" value={filterSearch} onChange={e => setFilterSearch(e.target.value)} />
       </Field>
-      <details className="group rounded-xl border border-border bg-surface">
+      <details className="group border-t border-border bg-surface">
         <summary className="flex min-h-11 cursor-pointer items-center gap-2 rounded-xl px-4 py-3 text-sm font-medium text-fg focus-visible:outline-2 focus-visible:outline-ring">
           <Filter className="size-4 text-fg-muted" aria-hidden />
           Refinar resultados
@@ -302,7 +302,7 @@ export function ErrorNotebookScreen() {
             const pendingReviews = linkedReviews.filter((r) => r.status === 'pendente');
 
             return (
-              <details key={note.id} open={focusedNoteId === note.id || undefined} className="overflow-hidden rounded-xl border border-border bg-surface">
+              <details key={note.id} open={focusedNoteId === note.id || undefined} className="overflow-hidden border-t border-border bg-surface">
                 <summary className="cursor-pointer px-[var(--panel-padding)] py-4 text-fg focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-[-2px]">
                   <div className="inline-flex w-[calc(100%-1.5rem)] flex-col gap-2 align-middle">
                     <div className="flex flex-wrap items-center justify-between gap-2">

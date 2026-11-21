@@ -235,9 +235,7 @@ describe('ErrorNoteModal - Dropdown de simulados', () => {
       </ToastProvider>,
     );
 
-    expect(screen.queryByText(/Atrasadas/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/Próximas/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/Concluídas/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
 
     expect(await screen.findByText('Enunciado flashcard 1')).toBeInTheDocument();
   });

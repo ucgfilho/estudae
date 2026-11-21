@@ -216,7 +216,7 @@ export function Sidebar({
               }}
               aria-label="Trocar concurso"
               title={contestCount && contestCount > 1 ? `Trocar concurso (${contestCount} disponíveis)` : 'Trocar concurso'}
-              className="group flex w-full cursor-pointer items-center overflow-hidden rounded-lg border border-border bg-surface-muted/40 p-2.5 text-left transition-colors hover:bg-surface-muted lg:px-[7px]"
+              className="group flex w-full cursor-pointer items-center overflow-hidden border-t border-border bg-surface-muted/40 p-2.5 text-left transition-colors hover:bg-surface-muted lg:px-[7px]"
             >
               <div className="sidebar-label min-w-0 flex-1 lg:whitespace-nowrap">
                 <div className="text-xs font-semibold text-fg group-hover:text-primary transition-colors max-lg:wrap-anywhere lg:truncate">

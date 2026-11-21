@@ -354,7 +354,7 @@ export function SettingsScreen() {
         description="Seus dados são salvos automaticamente e você pode exportar ou restaurar uma cópia de segurança a qualquer momento."
       >
         <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-lg border border-border bg-surface-muted/30 p-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-t border-border bg-surface-muted/30 p-4">
             <div>
               <div className="font-semibold text-sm text-fg">Exportar cópia de segurança</div>
               <p className="text-xs text-fg-muted mt-0.5">
@@ -371,7 +371,7 @@ export function SettingsScreen() {
             </Button>
           </div>
 
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-lg border border-border bg-surface-muted/30 p-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-t border-border bg-surface-muted/30 p-4">
             <div>
               <div className="font-semibold text-sm text-fg">Restaurar cópia de segurança</div>
               <p className="text-xs text-fg-muted mt-0.5">
@@ -397,13 +397,13 @@ export function SettingsScreen() {
             </div>
           </div>
 
-          <details className="group rounded-lg border border-danger/30 bg-danger-soft/5 p-4">
+          <details className="group border-t border-danger/30 bg-danger-soft/5 p-4">
             <summary className="cursor-pointer text-xs font-semibold text-danger select-none flex items-center justify-between">
               <span>Excluir dados ou conta</span>
               <span className="text-[11px] font-normal text-fg-muted group-open:hidden">Expandir opções</span>
             </summary>
             <div className="mt-4 space-y-3 border-t border-danger/20 pt-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-lg border border-danger/25 bg-surface p-3.5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-t border-danger/25 bg-surface p-3.5">
                 <div>
                   <div className="font-semibold text-sm text-fg">Reiniciar a plataforma</div>
                   <p className="text-xs text-fg-muted mt-0.5">
@@ -421,7 +421,7 @@ export function SettingsScreen() {
                 </Button>
               </div>
 
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-lg border border-danger/25 bg-surface p-3.5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-t border-danger/25 bg-surface p-3.5">
                 <div>
                   <div className="font-semibold text-sm text-fg">
                     Excluir conta e dados pessoais

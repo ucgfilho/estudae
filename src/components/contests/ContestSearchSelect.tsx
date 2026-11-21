@@ -156,7 +156,7 @@ export function ContestSearchSelect({
         {open && (
           <div
             role="listbox"
-            className="absolute z-50 mt-1.5 w-full rounded-xl border border-border-strong bg-surface-elevated shadow-lg overflow-hidden animate-fade-in"
+            className="absolute z-50 mt-1.5 w-full border-t border-border-strong bg-surface-elevated shadow-lg overflow-hidden animate-fade-in"
           >
             <div className="p-2 border-b border-border bg-surface-muted/40">
               <div className="relative flex items-center">

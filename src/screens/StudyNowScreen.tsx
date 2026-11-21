@@ -498,7 +498,7 @@ export function StudyNowScreen() {
                   </Field>
 
                   {selectedPlannedSessionId && (
-                    <div className="rounded-lg border border-border bg-surface-muted/30 p-3.5 text-xs space-y-1.5">
+                    <div className="border-t border-border bg-surface-muted/30 p-3.5 text-xs space-y-1.5">
                       {(() => {
                         const s = sessions.find((x) => x.id === selectedPlannedSessionId);
                         if (!s) return null;

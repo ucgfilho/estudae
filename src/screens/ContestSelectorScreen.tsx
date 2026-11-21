@@ -167,7 +167,7 @@ export function ContestSelectorScreen({ onSelectContest, initializing = false }:
         </div>
 
         {errorMsg && (
-          <div className="mb-6 rounded-xl border border-danger/40 bg-danger-soft/30 px-4 py-2.5 text-xs text-danger max-w-md">
+          <div className="mb-6 border-t border-danger/40 bg-danger-soft/30 px-4 py-2.5 text-xs text-danger max-w-md">
             {errorMsg}
           </div>
         )}
@@ -191,10 +191,10 @@ export function ContestSelectorScreen({ onSelectContest, initializing = false }:
                   }
                 }}
                 className={cn(
-                  'group relative w-full max-w-[260px] min-[440px]:w-[calc(50%_-_0.5rem)] min-[440px]:max-w-[208px] sm:w-52 rounded-xl border bg-surface p-5 flex flex-col items-center text-center transition-colors duration-150 cursor-pointer select-none',
+                  'group relative w-full max-w-[260px] min-[440px]:w-[calc(50%_-_0.5rem)] min-[440px]:max-w-[208px] sm:w-52 border-t bg-surface p-5 flex flex-col items-center text-center transition-colors duration-150 cursor-pointer select-none',
                   'hover:border-primary hover:bg-surface-muted/20',
                   isCurrent
-                    ? 'border-primary ring-2 ring-primary/20'
+                    ? 'border-primary'
                     : 'border-border',
                   isLoading && 'opacity-75 pointer-events-none',
                 )}
@@ -256,7 +256,7 @@ export function ContestSelectorScreen({ onSelectContest, initializing = false }:
             disabled={initializing || atContestLimit}
             aria-describedby={atContestLimit ? "contest-limit" : undefined}
             onClick={() => setShowNewModal(true)}
-            className="group w-full max-w-[260px] min-[440px]:w-[calc(50%_-_0.5rem)] min-[440px]:max-w-[208px] sm:w-52 rounded-xl border border-dashed border-border-strong hover:border-primary bg-surface/50 hover:bg-primary-soft/15 p-5 flex flex-col items-center justify-center text-center transition-colors duration-150 cursor-pointer min-h-[210px] disabled:cursor-not-allowed disabled:opacity-60"
+            className="group w-full max-w-[260px] min-[440px]:w-[calc(50%_-_0.5rem)] min-[440px]:max-w-[208px] sm:w-52 border-t border-border-strong hover:border-primary bg-surface/50 hover:bg-primary-soft/15 p-5 flex flex-col items-center justify-center text-center transition-colors duration-150 cursor-pointer min-h-[210px] disabled:cursor-not-allowed disabled:opacity-60"
           >
             <div className="size-20 sm:size-24 rounded-xl bg-surface-muted group-hover:bg-primary/15 text-fg-muted group-hover:text-primary flex items-center justify-center mb-3.5 transition-colors duration-150">
               <Plus className="size-9 stroke-[2]" />

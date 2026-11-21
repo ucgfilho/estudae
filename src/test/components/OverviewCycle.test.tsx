@@ -63,7 +63,7 @@ describe('ciclo contínuo na visão geral', () => {
     expect(screen.getByText('1 sessão do ciclo concluída hoje')).toBeInTheDocument();
     expect(cycleCompletions(db.sessions.toArraySync())).toHaveLength(1);
     const queue = screen.getByRole('list', { name: 'Próximas atividades do ciclo' });
-    expect(within(queue).getByText('3.')).toBeInTheDocument();
+    expect(within(queue).getByText('3')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Ver ciclo de estudos' }));
     expect(await screen.findByText('Ciclo completo')).toBeInTheDocument();
   });

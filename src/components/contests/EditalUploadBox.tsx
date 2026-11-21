@@ -118,7 +118,7 @@ export function EditalUploadBox({
     return (
       <div
         data-testid="edital-upload-locked"
-        className="rounded-xl border border-dashed border-border-strong bg-surface-muted/40 p-4 text-center space-y-1.5 opacity-75"
+        className="border-t border-border-strong bg-surface-muted/40 p-4 text-center space-y-1.5 opacity-75"
       >
         <div className="mx-auto size-9 rounded-full bg-surface-muted flex items-center justify-center text-fg-subtle">
           <Lock className="size-4" />
@@ -136,7 +136,7 @@ export function EditalUploadBox({
   return (
     <div
       data-testid="edital-upload-unlocked"
-      className="rounded-xl border border-primary/35 bg-primary-soft/10 p-3.5 space-y-3 animate-fade-in"
+      className="border-t border-primary/35 bg-primary-soft/10 p-3.5 space-y-3 animate-fade-in"
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
@@ -187,7 +187,7 @@ export function EditalUploadBox({
       />
 
       {editalFileName ? (
-        <div className="flex items-center justify-between gap-2 rounded-lg border border-success/40 bg-success-soft/20 px-3 py-2 text-xs">
+        <div className="flex items-center justify-between gap-2 border-t border-success/40 bg-success-soft/20 px-3 py-2 text-xs">
           <div className="flex items-center gap-2 min-w-0">
             <CheckCircle2 className="size-4 text-success shrink-0" />
             <div className="min-w-0">
@@ -216,7 +216,7 @@ export function EditalUploadBox({
           disabled={disabled || readingFile}
           onClick={() => fileInputRef.current?.click()}
           className={cn(
-            'w-full flex flex-col items-center justify-center gap-1.5 rounded-lg border border-dashed border-primary/40 bg-surface/80 hover:bg-surface px-4 py-3.5 text-center transition cursor-pointer',
+            'w-full flex flex-col items-center justify-center gap-1.5 border-t border-primary/40 bg-surface/80 hover:bg-surface px-4 py-3.5 text-center transition cursor-pointer',
             (disabled || readingFile) && 'opacity-60 cursor-not-allowed',
           )}
         >
@@ -235,7 +235,7 @@ export function EditalUploadBox({
       )}
 
       {fileError && (
-        <div className="rounded-lg border border-danger/40 bg-danger-soft/30 px-3 py-2 text-[11px] text-danger">
+        <div className="border-t border-danger/40 bg-danger-soft/30 px-3 py-2 text-[11px] text-danger">
           {fileError}
         </div>
       )}
@@ -263,7 +263,7 @@ export function EditalUploadBox({
       )}
 
       {parsedPreview && (
-        <div className="flex items-start gap-2 rounded-lg bg-surface/90 border border-border px-3 py-2 text-[11px] text-fg-muted">
+        <div className="flex items-start gap-2 bg-surface/90 border-t border-border px-3 py-2 text-[11px] text-fg-muted">
           <Sparkles className="size-3.5 text-primary shrink-0 mt-0.5" />
           <div>
             <span className="font-semibold text-fg">Resumo do edital:</span> As{' '}

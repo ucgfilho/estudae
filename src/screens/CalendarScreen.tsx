@@ -214,7 +214,7 @@ export function CalendarScreen() {
 
 
       {/* Navigation bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-surface p-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border bg-surface p-3">
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-1.5">
             <IconButton
@@ -247,7 +247,7 @@ export function CalendarScreen() {
       {/* Main Calendar Views */}
       {view === 'monthly' && (
         <div className="space-y-4">
-          <div className="overflow-hidden rounded-xl border border-border bg-surface">
+          <div className="overflow-hidden border-t border-border bg-surface">
             {/* Weekday headers */}
             <div className="grid grid-cols-7 border-b border-border bg-surface-muted/50 text-center text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-fg-subtle">
               {WEEKDAY_LABELS.map((w) => (
@@ -406,7 +406,7 @@ export function CalendarScreen() {
                         type="button"
                         key={s.id}
                         onClick={() => setSelectedSessionDetail(s)}
-                        className="flex min-h-11 w-full items-center justify-between gap-3 rounded-xl border border-border bg-surface p-3 text-left text-sm cursor-pointer active:bg-surface-muted/60"
+                        className="flex min-h-11 w-full items-center justify-between gap-3 border-t border-border bg-surface p-3 text-left text-sm cursor-pointer active:bg-surface-muted/60"
                       >
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-1.5 font-semibold text-fg">
@@ -457,7 +457,7 @@ export function CalendarScreen() {
             return (
               <Card
                 key={dayKey}
-                className={cn('flex flex-col h-full', isToday && 'border-primary ring-1 ring-primary/30')}
+                className={cn('flex flex-col h-full', isToday && 'border-primary')}
                 bodyClassName="flex-1 p-2 space-y-2 flex flex-col justify-between"
               >
                 <div>
@@ -494,7 +494,7 @@ export function CalendarScreen() {
                           key={s.id}
                           onClick={() => setSelectedSessionDetail(s)}
                           className={cn(
-                            'rounded-lg border p-2 text-xs cursor-pointer transition-all hover:shadow-xs',
+                            'border-t p-2 text-xs cursor-pointer transition-all hover:shadow-xs',
                             s.status === 'concluida'
                               ? 'border-success/30 bg-success-soft/30'
                               : s.status === 'perdida'
@@ -554,7 +554,7 @@ export function CalendarScreen() {
                 return (
                   <div
                     key={s.id}
-                    className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 rounded-xl border border-border p-4 bg-surface"
+                    className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 border-t border-border p-4 bg-surface"
                   >
                     <div className="min-w-0 flex-1 space-y-1">
                       <div className="flex flex-wrap items-center gap-2">
@@ -696,7 +696,7 @@ export function CalendarScreen() {
             {selectedSessionDetail.objective && (
               <div>
                 <span className="text-xs text-fg-muted font-medium">Objetivo da sessão</span>
-                <p className="mt-1 text-fg bg-surface-muted/30 p-2.5 rounded-lg border border-border">
+                <p className="mt-1 text-fg bg-surface-muted/30 p-2.5 border-t border-border">
                   {selectedSessionDetail.objective}
                 </p>
               </div>
@@ -705,7 +705,7 @@ export function CalendarScreen() {
             {selectedSessionDetail.notes && (
               <div>
                 <span className="text-xs text-fg-muted font-medium">Anotações</span>
-                <p className="mt-1 whitespace-pre-line text-fg-muted bg-surface-muted/30 p-2.5 rounded-lg border border-border">
+                <p className="mt-1 whitespace-pre-line text-fg-muted bg-surface-muted/30 p-2.5 border-t border-border">
                   {selectedSessionDetail.notes}
                 </p>
               </div>
@@ -713,7 +713,7 @@ export function CalendarScreen() {
 
             {/* Execution History */}
             {selectedSessionDetail.history?.length > 0 && (
-              <details className="group rounded-lg border border-border bg-surface-muted/20 p-2.5">
+              <details className="group border-t border-border bg-surface-muted/20 p-2.5">
                 <summary className="cursor-pointer text-xs font-medium text-fg-muted select-none">
                   Histórico de alterações ({selectedSessionDetail.history.length})
                 </summary>

@@ -202,7 +202,7 @@ export function FlashcardDeck({ reviews, notes, disciplines, onComplete }: Props
   if (!current) {
     if (!redoMode && missedFlashcards.length > 0 && !sessionCompleted) {
       return (
-        <div className="mx-auto max-w-md space-y-4 rounded-2xl border border-border bg-surface p-6">
+        <div className="mx-auto max-w-md space-y-4 border-t border-border bg-surface p-6">
           <Sparkles className="mx-auto size-8 text-primary" aria-hidden />
           <h3 className="text-center text-xl font-bold text-fg">Primeira rodada concluída!</h3>
           <div className="grid grid-cols-2 gap-4 rounded-xl bg-surface-muted p-4 text-center">
@@ -221,7 +221,7 @@ export function FlashcardDeck({ reviews, notes, disciplines, onComplete }: Props
     }
     const mastered = totalCardsAnswered > 0 && (redoMode || missedFlashcards.length === 0);
     if (mastered) return (
-      <div role="status" className={cn('mx-auto max-w-3xl space-y-4 rounded-2xl border border-success/40 bg-success-soft/20 p-10 text-center', enabled && 'animate-celebrate-in motion-reduce:animate-none')}>
+      <div role="status" className={cn('mx-auto max-w-3xl space-y-4 border-t border-success/40 bg-success-soft/20 p-10 text-center', enabled && 'animate-celebrate-in motion-reduce:animate-none')}>
         {enabled && <Confetti burst={1} intensity="big" />}
         <div className={cn('mx-auto grid size-20 place-items-center rounded-full bg-success-soft text-success', enabled && 'animate-pop motion-reduce:animate-none')}><Trophy className="size-12" aria-hidden /></div>
         <Badge tone="success">Conquista desbloqueada · Meta de revisão</Badge>
@@ -235,7 +235,7 @@ export function FlashcardDeck({ reviews, notes, disciplines, onComplete }: Props
 
   // Mantém a mesma face durante a resposta e reinicia a virada na próxima tentativa.
   const attemptIndex = totalCardsAnswered - Number(!!picked);
-  const face = 'absolute inset-0 flex flex-col rounded-2xl border p-6 sm:p-8 [backface-visibility:hidden]';
+  const face = 'absolute inset-0 flex flex-col border-t p-6 sm:p-8 [backface-visibility:hidden]';
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">

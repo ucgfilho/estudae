@@ -175,7 +175,7 @@ export function ExamErrorNotebooks({ exam, disciplines }: { exam: MockExam; disc
                   <div
                     key={note.id}
                     className={cn(
-                      'rounded-xl border border-border p-4 bg-surface transition-all flex flex-col gap-3',
+                      'border-t border-border p-4 bg-surface transition-all flex flex-col gap-3',
                       note.status === 'revisar'
                         ? 'border-l-4 border-l-warning'
                         : note.status === 'revisado'
@@ -271,7 +271,7 @@ export function ExamErrorNotebooks({ exam, disciplines }: { exam: MockExam; disc
                       </div>
                     )}
 
-                    <div className="rounded-lg bg-surface-muted/40 p-3 text-xs text-fg border border-border/60">
+                    <div className="bg-surface-muted/40 p-3 text-xs text-fg border-t border-border/60">
                       <FormattedText text={note.explanation} />
                     </div>
 
@@ -304,7 +304,7 @@ export function ExamErrorNotebooks({ exam, disciplines }: { exam: MockExam; disc
           </div>
         ) : (
           rows.length === 0 && (
-            <div className="rounded-xl border border-dashed border-border p-6 text-center space-y-3 bg-surface-muted/20">
+            <div className="border-t border-border p-6 text-center space-y-3 bg-surface-muted/20">
               <div className="mx-auto flex size-10 items-center justify-center rounded-full bg-surface-muted text-fg-muted">
                 <NotebookPen className="size-5" />
               </div>
@@ -346,7 +346,7 @@ export function ExamErrorNotebooks({ exam, disciplines }: { exam: MockExam; disc
                 return (
                   <div
                     key={d.id}
-                    className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-surface-muted/30 p-3"
+                    className="flex flex-wrap items-center justify-between gap-2 border-t border-border bg-surface-muted/30 p-3"
                   >
                     <div className="flex items-center gap-2">
                       <DisciplineDot color={d.color} />

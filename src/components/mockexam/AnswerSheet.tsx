@@ -28,7 +28,7 @@ function QuestionRow({
   return (
     <div
       className={cn(
-        'flex items-center gap-2 sm:gap-3 rounded-lg border px-2.5 sm:px-3 py-2 transition-colors',
+        'flex items-center gap-2 sm:gap-3 border-t px-2.5 sm:px-3 py-2 transition-colors',
         current ? 'border-primary/30 bg-primary-soft/40' : 'border-border bg-surface',
       )}
     >

@@ -56,7 +56,7 @@ export function Dialog({ open, onClose, title, description, children, footer, si
         }
       }}
       className={cn(
-        'm-auto w-[calc(100%-1.5rem)] rounded-xl border border-border bg-surface p-0 text-fg shadow-lg',
+        'm-auto w-[calc(100%-1.5rem)] rounded-xl bg-surface p-0 text-fg shadow-lg',
         'max-h-[calc(100dvh-2rem)]',
         sizes[size],
         // Smartphones: folha inferior (bottom sheet) ocupando toda a largura.

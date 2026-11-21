@@ -43,7 +43,7 @@ export function Card({
   as?: 'section' | 'div' | 'article';
 }) {
   return (
-    <Tag className={cn('relative min-w-0 rounded-xl border border-border bg-surface', className)}>
+    <Tag className={cn('relative min-w-0 border-t border-border bg-surface', className)}>
       {(title || actions || onClose) && (
         <header
           className={cn(
@@ -96,7 +96,7 @@ export function ProgressBar({ value, max, label, tone = 'primary', className, sh
       aria-valuemax={Math.max(1, Math.round(max))}
       aria-valuenow={Math.round(Math.min(value, Math.max(max, value)))}
       aria-valuetext={`${Math.round(ratio * 100)}%`}
-      className={cn('h-2 w-full overflow-hidden rounded-full', tone === 'primary' ? 'bg-surface ring-1 ring-inset ring-primary/50' : 'bg-surface-muted', className)}
+      className={cn('h-2 w-full overflow-hidden rounded-full bg-surface-muted', className)}
     >
       <div className={cn('h-full rounded-full transition-[width] duration-500', bar, showOverflow && ratio > 1 && 'bg-success')} style={{ width: `${pct}%` }} />
     </div>
@@ -105,7 +105,7 @@ export function ProgressBar({ value, max, label, tone = 'primary', className, sh
 
 export function EmptyState({ icon, title, description, action, className }: { icon?: ReactNode; title: string; description?: ReactNode; action?: ReactNode; className?: string }) {
   return (
-    <div className={cn('flex min-w-0 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border-strong bg-surface px-5 py-10 text-center', className)}>
+    <div className={cn('flex min-w-0 flex-col items-center justify-center gap-3 border-t border-border-strong bg-surface px-5 py-10 text-center', className)}>
       {icon && <div className="text-fg-subtle" aria-hidden>{icon}</div>}
       <p className="text-base font-semibold text-fg">{title}</p>
       {description && <div className="max-w-md text-sm leading-relaxed text-fg-muted">{description}</div>}
@@ -264,7 +264,7 @@ export function StatCard({
   children?: ReactNode;
 }) {
   return (
-    <div className="panel-padding flex min-w-0 flex-col gap-3 rounded-xl border border-border bg-surface">
+    <div className="panel-padding flex min-w-0 flex-col gap-3 border-t border-border bg-surface">
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs font-medium text-fg-muted">{label}</p>
         {icon && <span className="text-fg-subtle" aria-hidden="true">{icon}</span>}
@@ -284,7 +284,7 @@ interface SegmentedOption<T extends string> {
 /** Grupo de opções exclusivas (botões com aria-pressed). */
 export function Segmented<T extends string>({ value, onChange, options, label }: { value: T; onChange: (v: T) => void; options: SegmentedOption<T>[]; label: string }) {
   return (
-    <div role="group" aria-label={label} className="inline-flex max-w-full flex-wrap gap-1 rounded-xl border border-border bg-surface-muted p-1 max-sm:w-full">
+    <div role="group" aria-label={label} className="inline-flex max-w-full flex-wrap gap-1 border-t border-border bg-surface-muted p-1 max-sm:w-full">
       {options.map((o) => (
         <button
           key={o.value}

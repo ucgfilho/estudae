@@ -51,7 +51,7 @@ export function CycleRecommendation({ showQueue = false }: { showQueue?: boolean
       <Button onClick={() => navigate('/disciplinas')}>Configurar disciplinas</Button>
     </Card> : <>
       <div className={showQueue ? 'grid items-start gap-5 xl:grid-cols-[minmax(0,1.65fr)_minmax(16rem,1fr)]' : ''}>
-        <section className="min-w-0 overflow-hidden rounded-xl border border-primary/25 bg-surface" aria-labelledby="cycle-next">
+        <section className="min-w-0 overflow-hidden border-t border-primary/25 bg-surface" aria-labelledby="cycle-next">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-primary-soft/40 px-[var(--panel-padding)] py-4">
             <h2 id="cycle-next" className="section-title flex items-center gap-2"><span className="flex size-7 items-center justify-center rounded-full bg-brand text-primary-fg"><Play className="size-3.5" aria-hidden /></span>Próxima atividade do ciclo</h2>
             <Badge tone="primary">Sessão {completed + 1}</Badge>
@@ -79,12 +79,12 @@ export function CycleRecommendation({ showQueue = false }: { showQueue?: boolean
         {showQueue && <aside className="space-y-5">
           <Card title="Como seu estudo é dividido">
             <div className="flex items-baseline justify-between gap-3"><span className="text-4xl font-semibold tracking-tight text-primary">80<span className="text-xl">%</span></span><span className="text-sm text-fg-muted">Específicos</span></div>
-            <div className="my-4 flex h-2 overflow-hidden rounded-full bg-surface ring-1 ring-inset ring-primary/50" aria-hidden><div className="w-4/5 bg-primary" /></div>
+            <div className="my-4 flex h-2 overflow-hidden rounded-full bg-surface-muted" aria-hidden><div className="w-4/5 bg-primary" /></div>
             <div className="flex justify-between gap-3 text-sm"><span className="font-semibold text-fg">20% Básicos</span><span className="text-fg-muted">1 a cada 5 sessões</span></div>
             <p className="mt-4 text-xs leading-relaxed text-fg-muted">Quatro sessões de específicos e uma de básicos. As disciplinas se alternam dentro de cada área.</p>
             {!hasBothAreas && <p className="mt-3 text-xs text-warning">Seu edital tem apenas uma área ativa. Ela ocupa todas as sessões disponíveis.</p>}
           </Card>
-          <div className="flex items-center gap-3 rounded-xl border border-border px-5 py-4"><CheckCircle2 className="size-5 shrink-0 text-primary" aria-hidden /><div><p className="text-sm font-semibold text-fg">{completed} {completed === 1 ? 'sessão concluída' : 'sessões concluídas'}</p><p className="mt-0.5 text-xs text-fg-muted">Cada sessão é um passo no seu edital.</p></div></div>
+          <div className="flex items-center gap-3 border-t border-border px-5 py-4"><CheckCircle2 className="size-5 shrink-0 text-primary" aria-hidden /><div><p className="text-sm font-semibold text-fg">{completed} {completed === 1 ? 'sessão concluída' : 'sessões concluídas'}</p><p className="mt-0.5 text-xs text-fg-muted">Cada sessão é um passo no seu edital.</p></div></div>
         </aside>}
       </div>
       {showQueue && <Card title="Na sequência" description="Estas atividades ficam disponíveis conforme você conclui as sessões.">
@@ -94,7 +94,7 @@ export function CycleRecommendation({ showQueue = false }: { showQueue?: boolean
           className="grid grid-flow-col auto-cols-[minmax(13rem,1fr)] gap-4 overflow-x-auto overscroll-x-contain snap-x snap-proximity rounded-lg pb-3"
         >
           {queue.map((activity, index) => (
-            <li key={index} className="flex min-w-0 snap-start flex-col gap-4 rounded-xl border border-border bg-surface-muted/30 p-4">
+            <li key={index} className="flex min-w-0 snap-start flex-col gap-4 border-l border-border p-4 first:border-l-0">
               <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-sm font-semibold tabular-nums text-primary">
                 {String(index + 2).padStart(2, '0')}
               </span>
