@@ -354,7 +354,7 @@ export function DisciplinesScreen() {
           {/* Topics and Subtopics Tree */}
           <div className="space-y-2" data-sort-group="topics">
             {filteredDisciplineTopics.length > 0 ? (
-              filteredDisciplineTopics.map((topic, index) => {
+              filteredDisciplineTopics.map((topic) => {
                 const subtopics = subtopicsByParent.get(topic.id) ?? [];
                 const isExpanded = expandedTopics.has(topic.id);
 
@@ -451,7 +451,7 @@ export function DisciplinesScreen() {
                             label="Mover para cima"
                             icon={<ArrowUp className="size-3.5" />}
                             size="sm"
-                            disabled={index === 0}
+                            disabled={topic.id === disciplineTopics[0]?.id}
                             onClick={() => handleMove(topic.id, -1)}
                           />
 
@@ -459,7 +459,7 @@ export function DisciplinesScreen() {
                             label="Mover para baixo"
                             icon={<ArrowDown className="size-3.5" />}
                             size="sm"
-                            disabled={index === disciplineTopics.length - 1}
+                            disabled={topic.id === disciplineTopics.at(-1)?.id}
                             onClick={() => handleMove(topic.id, 1)}
                           />
 

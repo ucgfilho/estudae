@@ -119,7 +119,10 @@ export function AppLayout({ onSwitchContestScreen }: AppLayoutProps) {
 
   return (
     <div className="flex h-dvh overflow-hidden bg-canvas text-fg">
-      <a href="#main-content" className="skip-link">
+      <a href="#main-content" className="skip-link" onClick={(event) => {
+        event.preventDefault();
+        document.getElementById('main-content')?.focus();
+      }}>
         Pular para o conteúdo principal
       </a>
       <Sidebar
@@ -141,7 +144,7 @@ export function AppLayout({ onSwitchContestScreen }: AppLayoutProps) {
           className="flex-1 bg-canvas lg:rounded-tl-xl overflow-y-auto overflow-x-hidden overscroll-y-contain px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:pb-[calc(6rem+env(safe-area-inset-bottom))] lg:pb-20 focus:outline-hidden"
           tabIndex={-1}
         >
-          <div className="mx-auto w-full min-w-0 max-w-7xl">
+          <div key={pathname} className="mx-auto w-full min-w-0 max-w-7xl motion-safe:animate-fade-in">
             <Outlet context={now} />
           </div>
         </main>

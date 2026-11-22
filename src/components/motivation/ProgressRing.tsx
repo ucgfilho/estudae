@@ -50,7 +50,7 @@ export function ProgressRing({ value, max, label, size = 120, stroke = 10, tone 
           strokeLinecap="round"
           strokeDasharray={c}
           strokeDashoffset={c * (1 - pct)}
-          className={cn('transition-[stroke-dashoffset] duration-700 ease-out', done ? 'stroke-success' : toneStroke[tone])}
+          className={cn('transition-[stroke-dashoffset] duration-400 ease-emphasized', done ? 'stroke-success' : toneStroke[tone])}
         />
       </svg>
       <div className="absolute inset-0 grid place-items-center text-center">{children}</div>

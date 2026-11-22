@@ -185,7 +185,7 @@ export function ContestSelectorScreen({ onSelectContest, initializing = false }:
                 data-testid={`contest-card-${contest.id}`}
                 onClick={() => handleChoose(contest)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
+                  if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
                     e.preventDefault();
                     void handleChoose(contest);
                   }

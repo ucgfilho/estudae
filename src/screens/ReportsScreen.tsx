@@ -18,6 +18,7 @@ import {
   CheckCircle,
   FileSpreadsheet,
 } from 'lucide-react';
+import { canAnimate } from '../lib/usePresence';
 import { updateSettings } from '../services/settings';
 import { errorMessage } from '../lib/utils';
 import { Button } from '../components/ui/Button';
@@ -265,6 +266,7 @@ export function ReportsScreen() {
                     name="Tempo Realizado"
                     fill="var(--primary)"
                     radius={[4, 4, 0, 0]}
+                    isAnimationActive={canAnimate()}
                     animationDuration={CHART_ANIMATION_MS}
                   />
                   <Bar
@@ -272,6 +274,7 @@ export function ReportsScreen() {
                     name="Tempo Planejado"
                     fill="var(--accent)"
                     radius={[4, 4, 0, 0]}
+                    isAnimationActive={canAnimate()}
                     animationDuration={CHART_ANIMATION_MS}
                   />
                 </BarChart>
@@ -307,6 +310,7 @@ export function ReportsScreen() {
                     strokeWidth={2}
                     dot={{ r: 4 }}
                     activeDot={{ r: 6 }}
+                    isAnimationActive={canAnimate()}
                     animationDuration={CHART_ANIMATION_MS}
                   />
                 </LineChart>

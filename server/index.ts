@@ -6,7 +6,7 @@ import { handleApiRequest } from './app';
 import { createAppContainer } from './container';
 
 const CONTENT_SECURITY_POLICY =
-  "default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-vs0Xugz6O9PA3O7YmuAIXGf3fdcQOeeAmLNon767+JQ=' 'sha256-KOwqzc9GLJJwOHeyVHqQ+AHTFdGUscH+/fCfUwrUBnQ='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; worker-src 'self' blob:; connect-src 'self' https://generativelanguage.googleapis.com; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'";
+  "default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-vs0Xugz6O9PA3O7YmuAIXGf3fdcQOeeAmLNon767+JQ=' 'sha256-G/zTqiKakzEsFktsmquJLclMOX0MKMjzrpi0We40TYs='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; worker-src 'self' blob:; connect-src 'self' https://generativelanguage.googleapis.com; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'";
 
 const MIME_TYPES: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',

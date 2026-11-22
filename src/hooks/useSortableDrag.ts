@@ -3,7 +3,7 @@ import type { PointerEvent as ReactPointerEvent } from 'react';
 
 /**
  * Arrastar para reordenar listas verticais com a mesma mecânica do cronograma:
- * ponteiro + fantasma clonado (levanta, inclina e acompanha o cursor), irmãos
+ * ponteiro + fantasma clonado (acompanha o cursor), irmãos
  * deslizam com translate3d abrindo espaço, encaixe animado ao soltar, Esc cancela,
  * auto-rolagem nas bordas e, em toques, só a alça `[data-drag-handle]` inicia o arrasto.
  *
@@ -80,7 +80,7 @@ export function useSortableDrag(onReorder: (draggedId: string, beforeId: string 
       if (!d.ghost) return;
       const dx = d.lastX - d.offsetX - d.left;
       const dy = d.lastY - d.offsetY - d.top;
-      d.ghost.style.transform = `translate3d(${dx}px, ${dy}px, 0) rotate(1.5deg) scale(1.03)`;
+      d.ghost.style.transform = `translate3d(${dx}px, ${dy}px, 0) ${reduce ? '' : 'scale(1.009)'}`;
     };
 
     const autoScroll = () => {
@@ -123,7 +123,7 @@ export function useSortableDrag(onReorder: (draggedId: string, beforeId: string 
       d.step = rect.height + d.gap;
 
       d.others.forEach((o) => {
-        o.el.style.transition = reduce ? 'none' : 'transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1)';
+        o.el.style.transition = reduce ? 'none' : 'transform 200ms cubic-bezier(0.22, 0.68, 0.18, 1)';
         o.el.style.willChange = 'transform';
       });
 
@@ -143,7 +143,7 @@ export function useSortableDrag(onReorder: (draggedId: string, beforeId: string 
         cursor: 'grabbing',
         opacity: '0.96',
         transformOrigin: `${d.offsetX}px ${d.offsetY}px`,
-        boxShadow: '0 18px 36px -12px rgba(0,0,0,0.45)',
+        boxShadow: '0 12px 28px -10px rgba(0,0,0,0.28)',
         willChange: 'transform',
       });
       document.body.appendChild(ghost);
@@ -159,9 +159,9 @@ export function useSortableDrag(onReorder: (draggedId: string, beforeId: string 
         ghost.animate(
           [
             { transform: 'translate3d(0, 0, 0) rotate(0deg) scale(1)', boxShadow: '0 0 0 0 rgba(0,0,0,0)' },
-            { transform: ghost.style.transform, boxShadow: '0 18px 36px -12px rgba(0,0,0,0.45)' },
+            { transform: ghost.style.transform, boxShadow: '0 12px 28px -10px rgba(0,0,0,0.28)' },
           ],
-          { duration: 160, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' },
+          { duration: 160, easing: 'cubic-bezier(0.22, 0.68, 0.18, 1)' },
         );
       }
       d.raf = requestAnimationFrame(autoScroll);
@@ -199,7 +199,7 @@ export function useSortableDrag(onReorder: (draggedId: string, beforeId: string 
           { transform: ghost.style.transform },
           { transform: `translate3d(${dx}px, ${dy}px, 0) rotate(0deg) scale(1)`, boxShadow: '0 0 0 0 rgba(0,0,0,0)' },
         ],
-        { duration: 200, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)', fill: 'forwards' },
+        { duration: 200, easing: 'cubic-bezier(0.22, 0.68, 0.18, 1)', fill: 'forwards' },
       );
       a.onfinish = done;
       a.oncancel = done;

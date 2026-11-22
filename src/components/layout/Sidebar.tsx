@@ -94,7 +94,7 @@ export function Sidebar({
         id="main-navigation"
         data-collapsed={collapsed}
         className={cn(
-          'fixed inset-y-0 left-0 z-40 max-lg:z-50 flex shrink-0 max-lg:w-80 max-lg:max-w-[90vw] max-lg:shadow-2xl max-lg:pt-[env(safe-area-inset-top)] max-lg:pb-[env(safe-area-inset-bottom)] flex-col navigation-chrome bg-surface transition-[width,translate,visibility] duration-300 ease-[cubic-bezier(0.2,0,0,1)] motion-reduce:transition-none lg:static lg:translate-x-0',
+          'fixed inset-y-0 left-0 z-40 max-lg:z-50 flex shrink-0 max-lg:w-80 max-lg:max-w-[90vw] max-lg:shadow-2xl max-lg:pt-[env(safe-area-inset-top)] max-lg:pb-[env(safe-area-inset-bottom)] flex-col navigation-chrome bg-surface transition-[width,translate,visibility] duration-240 ease-emphasized motion-reduce:transition-none lg:static lg:translate-x-0',
           collapsed ? 'lg:w-16' : 'lg:w-60 xl:w-64',
           mobileOpen ? 'translate-x-0' : '-translate-x-full max-lg:invisible max-lg:transition-discrete',
         )}

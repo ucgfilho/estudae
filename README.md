@@ -146,6 +146,8 @@ npm run typecheck  # verificação de tipos TypeScript
 npm run lint       # ESLint
 npm run test       # testes com Vitest
 npm run test:watch # testes em modo watch
+npx playwright install chromium  # instalação inicial do navegador de teste
+npm run test:e2e   # testes de interface com API local e SQLite em memória
 ```
 
 ## Docker

@@ -14,26 +14,37 @@
 .study-timer-progress::-webkit-progress-value { background: var(--primary); border-radius: 9999px; }
 .study-timer-progress::-moz-progress-bar { background: var(--primary); border-radius: 9999px; }
 
-/* Feedback compartilhado também em abas, opções e controles nativos. */
+/* Linhas, abas e opções mantêm a geometria durante a interação. */
 :where(button, a[href], summary, select, [role='button'], [role='option'], [role='tab'],
   label:has(input:is([type='checkbox'], [type='radio'])),
   input:is([type='button'], [type='submit'], [type='reset'], [type='checkbox'], [type='radio'])) {
-  transition: background-color 140ms ease-out, color 140ms ease-out, border-color 140ms ease-out,
-    box-shadow 140ms ease-out, filter 140ms ease-out, opacity 140ms ease-out, scale 140ms ease-out;
+  transition-property: color, background-color, border-color, box-shadow, opacity, filter, translate;
+  transition-duration: 180ms;
+  transition-timing-function: var(--ease-emphasized);
+}
 
-  &:not(:disabled, [aria-disabled='true'], :has(input:disabled)) {
-    @media (hover: hover) {
-      &:hover { filter: brightness(0.97); }
-    }
-    @media (hover: hover) and (prefers-reduced-motion: no-preference) {
-      &:hover { scale: 1.012; }
-    }
-    &:active {
-      filter: brightness(0.92);
-      transition-duration: 65ms;
-      @media (prefers-reduced-motion: no-preference) { scale: 0.98; }
-    }
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .action-button:enabled:hover {
+    translate: 0 -1px;
   }
+  .action-button:enabled:active {
+    translate: 0 0;
+    transition-duration: 90ms;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  :where(summary, button:not([class*='hover:']), [role='button']:not([class*='hover:'])):not(:disabled, [aria-disabled='true']):hover {
+    filter: brightness(0.96);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  details::details-content {
+    opacity: 0;
+    transition: opacity 180ms var(--ease-emphasized), content-visibility 180ms allow-discrete;
+  }
+  details[open]::details-content { opacity: 1; }
 }
 
 @theme inline {
@@ -77,12 +88,12 @@
  * respeitado globalmente (ver @layer base) e no confete (JS).
  */
 @theme {
-  --ease-emphasized: cubic-bezier(0.2, 0, 0, 1);
-  --animate-fade-in: fade-in 320ms var(--ease-emphasized) both;
+  --ease-emphasized: cubic-bezier(0.22, 0.68, 0.18, 1);
+  --animate-fade-in: fade-in 240ms var(--ease-emphasized) both;
   --animate-celebrate-in: celebrate-in 420ms var(--ease-emphasized) both;
   --animate-pop: pop 480ms var(--ease-emphasized) both;
   --animate-rank-drop: rank-drop 520ms var(--ease-emphasized) both;
-  --animate-popover-in: popover-in 140ms var(--ease-emphasized) both;
+  --animate-popover-in: popover-in 180ms var(--ease-emphasized) both;
   --animate-popover-out: popover-out 120ms ease-in both;
   --animate-toast-in: toast-in 220ms var(--ease-emphasized) both;
   --animate-toast-out: toast-out 160ms ease-in both;
@@ -90,7 +101,7 @@
   @keyframes popover-in {
     from {
       opacity: 0;
-      transform: translateY(-4px) scale(0.97);
+      transform: translateY(-3px) scale(0.992);
     }
     to {
       opacity: 1;
@@ -104,13 +115,13 @@
     }
     to {
       opacity: 0;
-      transform: translateY(-4px) scale(0.97);
+      transform: translateY(-3px) scale(0.992);
     }
   }
   @keyframes toast-in {
     from {
       opacity: 0;
-      transform: translateX(24px);
+      transform: translateY(7px);
     }
     to {
       opacity: 1;
@@ -124,13 +135,13 @@
     }
     to {
       opacity: 0;
-      transform: translateX(24px);
+      transform: translateY(7px);
     }
   }
   @keyframes dialog-in {
     from {
       opacity: 0;
-      transform: translateY(12px) scale(0.97);
+      transform: translateY(7px) scale(0.992);
     }
     to {
       opacity: 1;
@@ -144,7 +155,7 @@
     }
     to {
       opacity: 0;
-      transform: translateY(8px) scale(0.98);
+      transform: translateY(4px) scale(0.996);
     }
   }
   @keyframes backdrop-in {
@@ -177,7 +188,7 @@
   @keyframes celebrate-in {
     from {
       opacity: 0;
-      transform: translateY(16px) scale(0.96);
+      transform: translateY(8px) scale(0.99);
     }
     to {
       opacity: 1;
@@ -186,11 +197,11 @@
   }
   @keyframes rank-drop {
     0% {
-      transform: translateY(-14px) scale(1.1);
+      transform: translateY(-6px) scale(1.02);
       opacity: 0;
     }
     55% {
-      transform: translateY(3px) scale(0.97);
+      transform: translateY(1px) scale(0.995);
       opacity: 1;
     }
     100% {
@@ -199,11 +210,11 @@
   }
   @keyframes pop {
     0% {
-      transform: scale(0.6);
+      transform: scale(0.93);
       opacity: 0;
     }
     60% {
-      transform: scale(1.08);
+      transform: scale(1.012);
       opacity: 1;
     }
     100% {
@@ -380,7 +391,12 @@
   @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
-    *::after {
+    *::after,
+    ::backdrop {
+      animation-delay: 0s !important;
+      animation-iteration-count: 1 !important;
+      transition-delay: 0s !important;
+      scroll-behavior: auto !important;
       animation-duration: 0.01ms !important;
       transition-duration: 0.01ms !important;
     }
@@ -585,7 +601,7 @@ input[type='number']::-webkit-outer-spin-button {
   pointer-events: none;
   background: linear-gradient(135deg, #bfdbfe 0%, #dbeafe 26%, #eff6ff 55%, #ffffff 78%, #dbeafe 100%);
   background-size: 180% 180%;
-  animation: contest-gradient-drift 24s ease-in-out infinite alternate;
+  background-position: 50% 40%;
 }
 .contest-selector-glow {
   position: absolute;
@@ -595,13 +611,12 @@ input[type='number']::-webkit-outer-spin-button {
   border-radius: 9999px;
   pointer-events: none;
   filter: blur(100px);
-  will-change: transform;
 }
 .contest-selector-glow-primary {
   top: -18rem;
   left: 50%;
   background: rgb(37 99 235 / 0.38);
-  animation: contest-glow-float 30s ease-in-out infinite alternate;
+  animation: contest-glow-float 38s ease-in-out infinite alternate;
 }
 .contest-selector-glow-secondary {
   right: -22rem;
@@ -609,13 +624,9 @@ input[type='number']::-webkit-outer-spin-button {
   background: rgb(59 130 246 / 0.32);
   animation: contest-glow-float 36s ease-in-out -12s infinite alternate-reverse;
 }
-@keyframes contest-gradient-drift {
-  from { background-position: 0% 20%; }
-  to { background-position: 100% 80%; }
-}
 @keyframes contest-glow-float {
-  from { transform: translate3d(-12%, 0, 0) scale(0.92); }
-  to { transform: translate3d(14%, 12%, 0) scale(1.08); }
+  from { transform: translate3d(-4%, 0, 0); }
+  to { transform: translate3d(5%, 4%, 0); }
 }
 .cycle-book-animation {
   display: block;

@@ -261,13 +261,13 @@ export function FlashcardDeck({ reviews, notes, disciplines, onComplete }: Props
           aria-valuemin={0}
           aria-valuemax={100}
         >
-          <div className="h-full rounded-full bg-primary transition-all duration-500" style={{ width: `${progress}%` }} />
+          <div className="h-full rounded-full bg-primary transition-[width] duration-300 ease-emphasized" style={{ width: `${progress}%` }} />
         </div>
       </div>
 
       <div key={`${card?.id ?? review?.id}:${attemptIndex}`} className="animate-fade-in [perspective:1400px]">
         <div
-          className="relative h-[26rem] transition-transform duration-700 [transform-style:preserve-3d] motion-reduce:duration-0"
+          className="relative h-[26rem] transition-transform duration-400 ease-emphasized [transform-style:preserve-3d] motion-reduce:duration-0"
           style={{ transform: picked ? 'rotateY(180deg)' : 'none' }}
         >
           <div inert={!!picked} className={cn(face, 'bg-surface')}>
