@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Card, PageHeader, Alert } from '../components/ui/Display';
-import { Field, Input, Checkbox } from '../components/ui/Form';
+import { Field, Input } from '../components/ui/Form';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { useSettings } from '../hooks/useData';
 import { updateSettings } from '../services/settings';
@@ -34,7 +34,6 @@ export function SettingsScreen() {
   const settings = useSettings();
   // Uma sincronização pode atualizar os valores salvos enquanto o formulário está aberto.
   const savedFields = {
-    celebrationsEnabled: settings?.celebrationsEnabled ?? true,
     dailyGoalMinutes: String(settings?.dailyGoalMinutes ?? 120),
     weeklyGoalMinutes: String(settings?.weeklyGoalMinutes ?? 840),
     dailyQuestionGoal: settings?.dailyQuestionGoal ? String(settings.dailyQuestionGoal) : '',
@@ -45,7 +44,7 @@ export function SettingsScreen() {
   };
   const [draft, setDraft] = useState<Partial<typeof savedFields>>({});
   const {
-    celebrationsEnabled, dailyGoalMinutes, weeklyGoalMinutes, dailyQuestionGoal,
+    dailyGoalMinutes, weeklyGoalMinutes, dailyQuestionGoal,
     accuracyGoal, topicCompletionGoal, reviewIntervalsText, examDate,
   } = { ...savedFields, ...draft };
 
@@ -103,7 +102,6 @@ export function SettingsScreen() {
     setLoading(true);
     try {
       await updateSettings({
-        celebrationsEnabled,
         dailyGoalMinutes: daily,
         weeklyGoalMinutes: weekly,
         accuracyGoal: accuracy,
@@ -331,13 +329,6 @@ export function SettingsScreen() {
             />
           </Field>
 
-          <Checkbox
-            className="sm:col-span-2"
-            checked={celebrationsEnabled}
-            onChange={(e) => editField('celebrationsEnabled', e.target.checked)}
-            label="Animações de celebração ao concluir metas"
-            description="Mostra confetes nas conquistas. Os avisos continuam ativos sem as animações."
-          />
         </div>
       </Card>
 

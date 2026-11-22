@@ -82,7 +82,7 @@ test('backup inválido apresenta erro e mantém os dados', async ({ workspace: p
   await expect(page.getByRole('dialog')).toHaveCount(0);
 });
 
-test('valida metas e persiste data de prova, intervalos e celebrações', async ({ workspace: page }) => {
+test('valida metas, persiste preferências e mantém celebrações ativas', async ({ workspace: page }) => {
   await navigate(page, 'Configurações');
   await page.getByLabel('Meta de acerto (%)').fill('110');
   await button(page, 'Salvar alterações').click();
@@ -90,14 +90,12 @@ test('valida metas e persiste data de prova, intervalos e celebrações', async 
   await page.getByLabel('Meta de acerto (%)').fill('85');
   await page.getByLabel('Intervalos de revisão (dias)').fill('1, 4, 12');
   await page.getByLabel('Data da prova').fill('17/08/2030');
-  const checkbox = page.getByRole('checkbox', { name: /Animações de celebração/ });
-  const enabled = await checkbox.isChecked();
-  await page.getByText('Animações de celebração ao concluir metas', { exact: true }).click();
+  await expect(page.getByText('Animações de celebração ao concluir metas')).toHaveCount(0);
   await button(page, 'Salvar alterações').click();
   await expect(page.getByText('Configurações e metas salvas.')).toBeVisible();
   await navigate(page, 'Relatórios');
   await navigate(page, 'Configurações');
   await expect(page.getByLabel('Data da prova')).toHaveValue('17/08/2030');
   await expect(page.getByLabel('Intervalos de revisão (dias)')).toHaveValue('1,4,12');
-  await expect(checkbox).toBeChecked({ checked: !enabled });
+  await expect(page.getByText('Animações de celebração ao concluir metas')).toHaveCount(0);
 });
