@@ -29,7 +29,6 @@ export function useSortableDrag(onReorder: (draggedId: string, beforeId: string 
     const container = sourceEl.closest<HTMLElement>(`[data-sort-group="${CSS.escape(group)}"]`);
     if (!container) return;
     const scroller = (container.closest('main') as HTMLElement | null) ?? null;
-    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
     const rect = sourceEl.getBoundingClientRect();
     const d = {
       pointerId: e.pointerId,
@@ -80,7 +79,7 @@ export function useSortableDrag(onReorder: (draggedId: string, beforeId: string 
       if (!d.ghost) return;
       const dx = d.lastX - d.offsetX - d.left;
       const dy = d.lastY - d.offsetY - d.top;
-      d.ghost.style.transform = `translate3d(${dx}px, ${dy}px, 0) ${reduce ? '' : 'scale(1.009)'}`;
+      d.ghost.style.transform = `translate3d(${dx}px, ${dy}px, 0) scale(1.009)`;
     };
 
     const autoScroll = () => {
@@ -123,7 +122,7 @@ export function useSortableDrag(onReorder: (draggedId: string, beforeId: string 
       d.step = rect.height + d.gap;
 
       d.others.forEach((o) => {
-        o.el.style.transition = reduce ? 'none' : 'transform 200ms cubic-bezier(0.22, 0.68, 0.18, 1)';
+        o.el.style.transition = 'transform 200ms cubic-bezier(0.22, 0.68, 0.18, 1)';
         o.el.style.willChange = 'transform';
       });
 
@@ -155,7 +154,7 @@ export function useSortableDrag(onReorder: (draggedId: string, beforeId: string 
       document.body.style.userSelect = 'none';
       (document.activeElement as HTMLElement | null)?.blur?.();
       moveGhost();
-      if (!reduce && typeof ghost.animate === 'function') {
+      if (typeof ghost.animate === 'function') {
         ghost.animate(
           [
             { transform: 'translate3d(0, 0, 0) rotate(0deg) scale(1)', boxShadow: '0 0 0 0 rgba(0,0,0,0)' },
@@ -193,7 +192,7 @@ export function useSortableDrag(onReorder: (draggedId: string, beforeId: string 
 
     const animateGhostTo = (dx: number, dy: number, done: () => void) => {
       const ghost = d.ghost;
-      if (!ghost || reduce || typeof ghost.animate !== 'function') return done();
+      if (!ghost || typeof ghost.animate !== 'function') return done();
       const a = ghost.animate(
         [
           { transform: ghost.style.transform },

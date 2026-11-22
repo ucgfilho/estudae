@@ -23,7 +23,7 @@
   transition-timing-function: var(--ease-emphasized);
 }
 
-@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+@media (hover: hover) and (pointer: fine) {
   .action-button:enabled:hover {
     translate: 0 -1px;
   }
@@ -39,13 +39,11 @@
   }
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  details::details-content {
-    opacity: 0;
-    transition: opacity 180ms var(--ease-emphasized), content-visibility 180ms allow-discrete;
-  }
-  details[open]::details-content { opacity: 1; }
+details::details-content {
+  opacity: 0;
+  transition: opacity 180ms var(--ease-emphasized), content-visibility 180ms allow-discrete;
 }
+details[open]::details-content { opacity: 1; }
 
 @theme inline {
   --color-canvas: var(--canvas);
@@ -84,8 +82,7 @@
 
 /*
  * Tokens de movimento (motivação/feedback). Entradas mais lentas que saídas;
- * no máximo 1–2 elementos animados por vista. `prefers-reduced-motion` é
- * respeitado globalmente (ver @layer base) e no confete (JS).
+ * no máximo 1–2 elementos animados por vista.
  */
 @theme {
   --ease-emphasized: cubic-bezier(0.22, 0.68, 0.18, 1);
@@ -388,19 +385,6 @@
   dialog[data-state='closed']::backdrop {
     animation: backdrop-out 160ms ease-in both;
   }
-  @media (prefers-reduced-motion: reduce) {
-    *,
-    *::before,
-    *::after,
-    ::backdrop {
-      animation-delay: 0s !important;
-      animation-iteration-count: 1 !important;
-      transition-delay: 0s !important;
-      scroll-behavior: auto !important;
-      animation-duration: 0.01ms !important;
-      transition-duration: 0.01ms !important;
-    }
-  }
 }
 
 /*
@@ -653,11 +637,6 @@ input[type='number']::-webkit-outer-spin-button {
   stroke: var(--primary);
   stroke-opacity: 0.4;
   stroke-width: 1.5;
-}
-@media (prefers-reduced-motion: reduce) {
-  .contest-selector-screen::before,
-  .contest-selector-glow { animation: none; }
-  .cycle-book-turn { display: none; }
 }
 
 /* Confirmações destrutivas usam o âmbar da paleta, com contraste para o texto. */

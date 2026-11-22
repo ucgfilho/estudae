@@ -39572,6 +39572,16 @@ async function handleApiRequest(container, req, res) {
 			return true;
 		}
 		if (token && await container.authControls.isRevoked(token)) throw new UnauthorizedError("Sessão encerrada.");
+		if (method === "GET" && pathname === "/api/auth/me" && cookie && !req.headers.authorization && req.headers[BROWSER_SESSION_HEADER] === "restore") {
+			checkBrowserWrite(req);
+			const { exp } = container.tokenService.verifyToken(cookie);
+			const result = await container.authController.me(user);
+			sendJson(res, result.status, {
+				...result.data,
+				expiresIn: Math.max(0, exp - Math.floor(Date.now() / 1e3))
+			});
+			return true;
+		}
 		if (cookie && !req.headers.authorization && user.id !== req.headers[BROWSER_SESSION_HEADER]) throw new UnauthorizedError("A conta da sessão mudou.");
 		if (method === "GET" && pathname === "/api/auth/me") {
 			const result = await container.authController.me(user);

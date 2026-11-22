@@ -1,7 +1,6 @@
 import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from 'react';
 import { CheckCircle2, X, XCircle } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { canAnimate } from '../../lib/usePresence';
 
 type ToastTone = 'success' | 'danger';
 
@@ -28,7 +27,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
   const dismiss = useCallback((id: number) => {
     setToasts((prev) => prev.map((t) => (t.id === id ? { ...t, closing: true } : t)));
-    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), canAnimate() ? 160 : 0);
+    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 160);
   }, []);
 
   const push = useCallback(

@@ -784,9 +784,11 @@ async function runEnsureSeed(database: AppDatabase): Promise<void> {
         localEnvelope.deletedIds,
       );
     }
+    let version = database.getSnapshotVersion();
     try {
       await retryPendingMutations();
-      const version = database.getSnapshotVersion();
+      if (sessionId !== getLocalSessionId() || scope !== getActiveContestScopeId()) return;
+      version = database.getSnapshotVersion();
       const remoteWorkspace = await fetchUserWorkspaceFromApi();
       if (sessionId !== getLocalSessionId() || scope !== getActiveContestScopeId()) return;
       // An edit made while the GET was in flight must not be replaced by its stale response.
@@ -828,8 +830,8 @@ async function runEnsureSeed(database: AppDatabase): Promise<void> {
       }
     } catch (err) {
       if (sessionId !== getLocalSessionId() || scope !== getActiveContestScopeId()) return;
-      if (localEnvelope) {
-        database.hydrateFromWorkspace(localEnvelope.data);
+      if (localEnvelope && database.getSnapshotVersion() === version) {
+        database.hydrateFromWorkspace(loadLocalWorkspaceCacheEnvelope()?.data ?? localEnvelope.data);
       }
       console.error('Erro ao carregar dados do servidor:', err);
     }

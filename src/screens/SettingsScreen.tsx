@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useRef } from 'react';
 import {
   Download,
   Upload,
@@ -32,16 +32,26 @@ import { DateInput } from '../components/ui/DateInput';
 
 export function SettingsScreen() {
   const settings = useSettings();
-  const [celebrationsEnabled, setCelebrationsEnabled] = useState(true);
+  // Uma sincronização pode atualizar os valores salvos enquanto o formulário está aberto.
+  const savedFields = {
+    celebrationsEnabled: settings?.celebrationsEnabled ?? true,
+    dailyGoalMinutes: String(settings?.dailyGoalMinutes ?? 120),
+    weeklyGoalMinutes: String(settings?.weeklyGoalMinutes ?? 840),
+    dailyQuestionGoal: settings?.dailyQuestionGoal ? String(settings.dailyQuestionGoal) : '',
+    accuracyGoal: String(settings?.accuracyGoal ?? 80),
+    topicCompletionGoal: settings?.topicCompletionGoal ? String(settings.topicCompletionGoal) : '',
+    reviewIntervalsText: settings?.reviewIntervals.join(',') ?? '1, 7, 30',
+    examDate: settings?.examDate ?? '',
+  };
+  const [draft, setDraft] = useState<Partial<typeof savedFields>>({});
+  const {
+    celebrationsEnabled, dailyGoalMinutes, weeklyGoalMinutes, dailyQuestionGoal,
+    accuracyGoal, topicCompletionGoal, reviewIntervalsText, examDate,
+  } = { ...savedFields, ...draft };
 
-  // Settings form states
-  const [dailyGoalMinutes, setDailyGoalMinutes] = useState('120');
-  const [weeklyGoalMinutes, setWeeklyGoalMinutes] = useState('840');
-  const [dailyQuestionGoal, setDailyQuestionGoal] = useState('');
-  const [accuracyGoal, setAccuracyGoal] = useState('80');
-  const [topicCompletionGoal, setTopicCompletionGoal] = useState('');
-  const [reviewIntervalsText, setReviewIntervalsText] = useState('1, 7, 30');
-  const [examDate, setExamDate] = useState('');
+  function editField<K extends keyof typeof savedFields>(key: K, value: (typeof savedFields)[K]) {
+    setDraft((current) => ({ ...current, [key]: value }));
+  }
 
   // Backup & Restore states
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -60,21 +70,6 @@ export function SettingsScreen() {
   const setActionSuccess = useSuccessToast();
   const [loading, setLoading] = useState(false);
 
-
-  useEffect(() => {
-    if (settings) {
-      setCelebrationsEnabled(settings.celebrationsEnabled ?? true);
-      setDailyGoalMinutes(String(settings.dailyGoalMinutes));
-      setWeeklyGoalMinutes(String(settings.weeklyGoalMinutes));
-      setDailyQuestionGoal(settings.dailyQuestionGoal ? String(settings.dailyQuestionGoal) : '');
-      setAccuracyGoal(String(settings.accuracyGoal));
-      setTopicCompletionGoal(
-        settings.topicCompletionGoal ? String(settings.topicCompletionGoal) : ''
-      );
-      setReviewIntervalsText(settings.reviewIntervals.join(','));
-      setExamDate(settings.examDate ?? '');
-    }
-  }, [settings]);
 
   const handleSaveSettings = async () => {
     setActionError(null);
@@ -117,6 +112,7 @@ export function SettingsScreen() {
         reviewIntervals: intervalsParsed.value,
         examDate: examDate.trim() || null,
       });
+      setDraft((current) => current === draft ? {} : current);
       setActionSuccess('Configurações e metas salvas.');
     } catch (err) {
       setActionError(errorMessage(err));
@@ -171,6 +167,7 @@ export function SettingsScreen() {
     setLoading(true);
     try {
       await restoreBackup(pendingBackup.backup);
+      setDraft({});
       setRestoreConfirmOpen(false);
       setPendingBackup(null);
       setActionSuccess('Backup restaurado. Seus dados foram atualizados.');
@@ -187,6 +184,7 @@ export function SettingsScreen() {
     setLoading(true);
     try {
       await resetDatabase();
+      setDraft({});
       setResetConfirmOpen(false);
       setActionSuccess('Sistema reiniciado. Disciplinas padrão restauradas.');
     } catch (err) {
@@ -253,7 +251,7 @@ export function SettingsScreen() {
               min="0"
               max="1440"
               value={dailyGoalMinutes}
-              onChange={(e) => setDailyGoalMinutes(e.target.value)}
+              onChange={(e) => editField('dailyGoalMinutes', e.target.value)}
             />
           </Field>
 
@@ -263,7 +261,7 @@ export function SettingsScreen() {
               min="0"
               max="10080"
               value={weeklyGoalMinutes}
-              onChange={(e) => setWeeklyGoalMinutes(e.target.value)}
+              onChange={(e) => editField('weeklyGoalMinutes', e.target.value)}
             />
           </Field>
 
@@ -273,7 +271,7 @@ export function SettingsScreen() {
               min="1"
               max="100"
               value={accuracyGoal}
-              onChange={(e) => setAccuracyGoal(e.target.value)}
+              onChange={(e) => editField('accuracyGoal', e.target.value)}
               required
             />
           </Field>
@@ -284,7 +282,7 @@ export function SettingsScreen() {
               min="1"
               placeholder="Ex: 30"
               value={dailyQuestionGoal}
-              onChange={(e) => setDailyQuestionGoal(e.target.value)}
+              onChange={(e) => editField('dailyQuestionGoal', e.target.value)}
             />
           </Field>
 
@@ -295,14 +293,14 @@ export function SettingsScreen() {
               max="100"
               placeholder="Ex: 90"
               value={topicCompletionGoal}
-              onChange={(e) => setTopicCompletionGoal(e.target.value)}
+              onChange={(e) => editField('topicCompletionGoal', e.target.value)}
             />
           </Field>
 
           <Field label="Data da prova" hint="Opcional. Defina quando a data for confirmada.">
             <DateInput
               value={examDate}
-              onChange={(e) => setExamDate(e.target.value)}
+              onChange={(e) => editField('examDate', e.target.value)}
             />
           </Field>
         </div>
@@ -327,7 +325,7 @@ export function SettingsScreen() {
             <Input
               type="text"
               value={reviewIntervalsText}
-              onChange={(e) => setReviewIntervalsText(e.target.value)}
+              onChange={(e) => editField('reviewIntervalsText', e.target.value)}
               placeholder="1, 7, 30"
               required
             />
@@ -336,7 +334,7 @@ export function SettingsScreen() {
           <Checkbox
             className="sm:col-span-2"
             checked={celebrationsEnabled}
-            onChange={(e) => setCelebrationsEnabled(e.target.checked)}
+            onChange={(e) => editField('celebrationsEnabled', e.target.checked)}
             label="Animações de celebração ao concluir metas"
             description="Mostra confetes nas conquistas. Os avisos continuam ativos sem as animações."
           />

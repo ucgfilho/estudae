@@ -265,6 +265,14 @@ describe('Backend SOLID Architecture, DTOs, JWT Bearer & LGPD Compliance', () =>
       const cookie = setCookie.split(';')[0];
       const headers = { cookie, 'X-Estudae-Session': user.id };
       expect((await fetch(`${api}/me`, { headers })).status).toBe(200);
+      const restoreHeaders = { cookie, 'X-Estudae-Session': 'restore' };
+      const restored = await fetch(`${api}/me`, { headers: restoreHeaders });
+      expect(restored.status).toBe(200);
+      expect(await restored.json()).toMatchObject({ user: { id: user.id }, expiresIn: expect.any(Number) });
+      expect((await fetch(`${api}/me`, {
+        headers: { ...restoreHeaders, 'Sec-Fetch-Site': 'cross-site' },
+      })).status).toBe(403);
+
       const bearer = cookie.slice('estudae_session='.length);
       const migrationHeaders = {
         Authorization: `Bearer ${bearer}`,
@@ -294,6 +302,7 @@ describe('Backend SOLID Architecture, DTOs, JWT Bearer & LGPD Compliance', () =>
       expect(logout.status).toBe(200);
       expect(logout.headers.get('set-cookie')).toContain('Max-Age=0');
       expect((await fetch(`${api}/me`, { headers })).status).toBe(401);
+      expect((await fetch(`${api}/me`, { headers: restoreHeaders })).status).toBe(401);
     } finally {
       await new Promise<void>((resolve, reject) => server.close((err) => err ? reject(err) : resolve()));
     }

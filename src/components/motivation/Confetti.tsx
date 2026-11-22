@@ -20,10 +20,6 @@ interface Particle {
 
 const DURATION_MS = 1800;
 
-function prefersReducedMotion(): boolean {
-  return typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-}
-
 /** Cores da identidade BNB lidas dos tokens. */
 function paletteFromTokens(): string[] {
   const css = getComputedStyle(document.documentElement);
@@ -33,14 +29,13 @@ function paletteFromTokens(): string[] {
 
 /**
  * Confete leve em canvas (sem dependências), curto e não bloqueante:
- * `pointer-events: none`, oculto de leitores de tela e desativado quando o
- * usuário prefere movimento reduzido.
+ * `pointer-events: none` e oculto de leitores de tela.
  */
 export function Confetti({ burst, intensity = 'small' }: ConfettiProps) {
   const ref = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
-    if (!burst || prefersReducedMotion()) return;
+    if (!burst) return;
     const canvas = ref.current;
     let ctx: CanvasRenderingContext2D | null = null;
     try {

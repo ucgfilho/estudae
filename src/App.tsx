@@ -8,6 +8,7 @@ import {
   getActiveContestScopeId,
   setActiveContestScopeId,
   subscribeAuth,
+  restoreCurrentSession,
   verifyCurrentSession,
   TEST_LOCAL_SESSION_ID,
   type AuthSessionDto,
@@ -30,7 +31,7 @@ export function App() {
 
   useEffect(() => {
     let previousSessionId = getAuthSession()?.sessionId;
-    return subscribeAuth(() => {
+    const unsubscribe = subscribeAuth(() => {
       const next = getAuthSession();
       if (previousSessionId !== next?.sessionId) {
         previousSessionId = next?.sessionId;
@@ -39,6 +40,8 @@ export function App() {
       }
       setSession(next);
     });
+    void restoreCurrentSession();
+    return unsubscribe;
   }, []);
 
   const activeSessionId = session?.sessionId ?? null;
@@ -58,7 +61,7 @@ export function App() {
       } catch (err) {
         console.error('Falha ao carregar concursos da conta:', err);
       }
-      if (cancelled) return;
+      if (cancelled || getLocalSessionId() !== activeSessionId) return;
       const contests = getUserContests();
       if (!contests.some((contest) => contest.id === getActiveContestScopeId())) {
         db.clearMemory();

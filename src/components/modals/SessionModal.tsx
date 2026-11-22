@@ -1,4 +1,4 @@
-import { useState, useEffect, type FormEvent } from 'react';
+import { useState, useEffect, useRef, type FormEvent } from 'react';
 import { Dialog } from '../ui/Dialog';
 import { Button } from '../ui/Button';
 import { Alert } from '../ui/Display';
@@ -41,7 +41,17 @@ export function SessionModal({
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  const initializedForm = useRef<string | null>(null);
+
   useEffect(() => {
+    if (!open) {
+      initializedForm.current = null;
+      return;
+    }
+    const formKey = sessionToEdit ? `edit:${sessionToEdit.id}` : 'new';
+    if (initializedForm.current === formKey) return;
+    initializedForm.current = formKey;
+
     if (sessionToEdit) {
       setDate(sessionToEdit.date);
       setDisciplineId(sessionToEdit.disciplineId);

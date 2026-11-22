@@ -5,8 +5,7 @@ if (typeof window !== 'undefined') {
   window.scrollTo = () => {};
   if (!window.matchMedia) {
     window.matchMedia = (query: string) => ({
-      // Movimento reduzido nos testes: animações de saída não atrasam a desmontagem.
-      matches: query.includes('prefers-reduced-motion'),
+      matches: false,
       media: query,
       onchange: null,
       addListener: () => {},

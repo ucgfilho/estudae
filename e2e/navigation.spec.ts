@@ -44,7 +44,7 @@ test('hover de ação, foco por teclado e tema', async ({ page }) => {
   await submit.hover();
   await expect(submit).toHaveCSS('translate', '0px -1px');
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  await expect(submit).toHaveCSS('translate', 'none');
+  await expect(submit).toHaveCSS('translate', '0px -1px');
   const tab = page.getByRole('tab', { name: 'Já tenho conta' });
   await tab.focus();
   await page.keyboard.press('ArrowRight');

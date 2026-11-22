@@ -176,6 +176,16 @@ export async function handleApiRequest(
     if (token && await container.authControls.isRevoked(token)) {
       throw new UnauthorizedError('Sessão encerrada.');
     }
+    // Reconstitui os metadados do navegador a partir de uma sessão ainda válida.
+    if (method === 'GET' && pathname === '/api/auth/me' && cookie && !req.headers.authorization &&
+        req.headers[BROWSER_SESSION_HEADER] === 'restore') {
+      checkBrowserWrite(req);
+      const { exp } = container.tokenService.verifyToken(cookie);
+      const result = await container.authController.me(user);
+      sendJson(res, result.status, { ...result.data, expiresIn: Math.max(0, exp - Math.floor(Date.now() / 1000)) });
+      return true;
+    }
+
     if (cookie && !req.headers.authorization && user.id !== req.headers[BROWSER_SESSION_HEADER]) {
       throw new UnauthorizedError('A conta da sessão mudou.');
     }

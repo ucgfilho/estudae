@@ -224,7 +224,7 @@
   }
 }
 
-@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+@media (hover: hover) and (pointer: fine) {
   .auth-submit:hover:not(:disabled) .auth-submit-arrow {
     transform: translateX(3px);
   }
@@ -409,20 +409,18 @@
   }
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .auth-intro {
-    animation: auth-enter 360ms var(--ease-emphasized) backwards;
-  }
+.auth-intro {
+  animation: auth-enter 360ms var(--ease-emphasized) backwards;
+}
 
-  .auth-preview {
-    animation: auth-enter 400ms var(--ease-emphasized) 90ms backwards;
-  }
+.auth-preview {
+  animation: auth-enter 400ms var(--ease-emphasized) 90ms backwards;
+}
 
-  @keyframes auth-enter {
-    from {
-      opacity: 0;
-      translate: 0 0.375rem;
-    }
+@keyframes auth-enter {
+  from {
+    opacity: 0;
+    translate: 0 0.375rem;
   }
 }
 

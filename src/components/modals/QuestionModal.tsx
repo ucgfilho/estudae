@@ -1,4 +1,4 @@
-import { useState, useEffect, type FormEvent } from 'react';
+import { useState, useEffect, useRef, type FormEvent } from 'react';
 import { Dialog } from '../ui/Dialog';
 import { Button } from '../ui/Button';
 import { Field, Input, Select, Textarea } from '../ui/Form';
@@ -48,7 +48,17 @@ export function QuestionModal({
   const [loading, setLoading] = useState(false);
   const [attempted, setAttempted] = useState(false);
 
+  const initializedForm = useRef<string | null>(null);
+
   useEffect(() => {
+    if (!open) {
+      initializedForm.current = null;
+      return;
+    }
+    const formKey = logToEdit ? `edit:${logToEdit.id}` : 'new';
+    if (initializedForm.current === formKey) return;
+    initializedForm.current = formKey;
+
     if (logToEdit) {
       setForm(questionLogToForm(logToEdit));
     } else {

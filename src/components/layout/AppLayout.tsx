@@ -144,7 +144,7 @@ export function AppLayout({ onSwitchContestScreen }: AppLayoutProps) {
           className="flex-1 bg-canvas lg:rounded-tl-xl overflow-y-auto overflow-x-hidden overscroll-y-contain px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:pb-[calc(6rem+env(safe-area-inset-bottom))] lg:pb-20 focus:outline-hidden"
           tabIndex={-1}
         >
-          <div key={pathname} className="mx-auto w-full min-w-0 max-w-7xl motion-safe:animate-fade-in">
+          <div key={pathname} className="mx-auto w-full min-w-0 max-w-7xl animate-fade-in">
             <Outlet context={now} />
           </div>
         </main>

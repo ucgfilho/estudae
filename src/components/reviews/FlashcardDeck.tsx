@@ -221,9 +221,9 @@ export function FlashcardDeck({ reviews, notes, disciplines, onComplete }: Props
     }
     const mastered = totalCardsAnswered > 0 && (redoMode || missedFlashcards.length === 0);
     if (mastered) return (
-      <div role="status" className={cn('mx-auto max-w-3xl space-y-4 rounded-2xl bg-success-soft/20 p-10 text-center', enabled && 'animate-celebrate-in motion-reduce:animate-none')}>
+      <div role="status" className={cn('mx-auto max-w-3xl space-y-4 rounded-2xl bg-success-soft/20 p-10 text-center', enabled && 'animate-celebrate-in')}>
         {enabled && <Confetti burst={1} intensity="big" />}
-        <div className={cn('mx-auto grid size-20 place-items-center rounded-full bg-success-soft text-success', enabled && 'animate-pop motion-reduce:animate-none')}><Trophy className="size-12" aria-hidden /></div>
+        <div className={cn('mx-auto grid size-20 place-items-center rounded-full bg-success-soft text-success', enabled && 'animate-pop')}><Trophy className="size-12" aria-hidden /></div>
         <Badge tone="success">Conquista desbloqueada · Meta de revisão</Badge>
         <h3 className="text-2xl font-bold text-fg">Revisão do dia concluída!</h3>
         <p className="text-fg-muted">Você acertou todos os flashcards em revisão. Ótimo trabalho!</p>
@@ -267,7 +267,7 @@ export function FlashcardDeck({ reviews, notes, disciplines, onComplete }: Props
 
       <div key={`${card?.id ?? review?.id}:${attemptIndex}`} className="animate-fade-in [perspective:1400px]">
         <div
-          className="relative h-[26rem] transition-transform duration-400 ease-emphasized [transform-style:preserve-3d] motion-reduce:duration-0"
+          className="relative h-[26rem] transition-transform duration-400 ease-emphasized [transform-style:preserve-3d]"
           style={{ transform: picked ? 'rotateY(180deg)' : 'none' }}
         >
           <div inert={!!picked} className={cn(face, 'bg-surface')}>

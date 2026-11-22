@@ -41,12 +41,14 @@ const ACTIVE_CONTEST_SCOPE_KEY = 'estudae_active_contest_scope_v1';
 type AuthListener = () => void;
 const authListeners = new Set<AuthListener>();
 
+let authRevision = 0;
 let cachedSession: AuthSessionDto | null = loadStoredSession();
 let activeContestScopeId: string = loadStoredContestScope();
 
 if (typeof window !== 'undefined') {
   window.addEventListener('storage', (event) => {
     if (event.storageArea !== window.localStorage || event.key !== AUTH_STORAGE_KEY) return;
+    authRevision++;
     cachedSession = loadStoredSession();
     activeContestScopeId = cachedSession ? loadStoredContestScope() : 'default';
     notifyAuthListeners();
@@ -127,6 +129,7 @@ export function getLocalSessionId(): string | null {
 
 export function setAuthSession(session: AuthSessionDto | null): void {
   const previousEmail = cachedSession?.user?.email?.toLowerCase();
+  authRevision++;
   cachedSession = session;
   if (typeof window !== 'undefined' && window.localStorage) {
     try {
@@ -177,11 +180,11 @@ export function buildSessionHeaders(extra: Record<string, string> = {}): Record<
   return headers;
 }
 
-async function parseApiJson<T>(res: Response): Promise<T> {
+async function parseApiJson<T>(res: Response, sessionId?: string): Promise<T> {
   const body = (await res.json().catch(() => ({}))) as { error?: string } & T;
   if (!res.ok) {
-    if (res.status === 401) {
-      setAuthSession(null);
+    if (res.status === 401 && sessionId && getLocalSessionId() === sessionId) {
+      await verifyCurrentSession();
     }
     throw new Error(body.error ?? `Erro na requisição (${res.status}).`);
   }
@@ -214,6 +217,31 @@ export async function registerUserAccount(input: RegisterInputDto): Promise<Auth
   return session;
 }
 
+let sessionRecovery: Promise<void> | undefined;
+
+export function restoreCurrentSession(): Promise<void> {
+  if (cachedSession) return Promise.resolve();
+  if (sessionRecovery) return sessionRecovery;
+
+  const revision = authRevision;
+  sessionRecovery = fetch('/api/auth/me', {
+    cache: 'no-store',
+    headers: { [BROWSER_SESSION_HEADER]: 'restore' },
+  }).then(async (response) => {
+    if (!response.ok) return;
+    const { user, expiresIn } = await parseApiJson<Pick<AuthSessionDto, 'user' | 'expiresIn'>>(response);
+    if (revision === authRevision) {
+      setAuthSession({ sessionId: createId(), user, expiresIn });
+    }
+  }).catch(() => {
+    // Uma falha de rede deixa o formulário de acesso disponível.
+  }).finally(() => {
+    sessionRecovery = undefined;
+  });
+
+  return sessionRecovery;
+}
+
 export async function verifyCurrentSession(): Promise<AuthUserDto | null> {
   const session = getAuthSession();
   if (!session) return null;
@@ -225,11 +253,15 @@ export async function verifyCurrentSession(): Promise<AuthUserDto | null> {
       headers,
     });
     if (getLocalSessionId() !== session.sessionId) return null;
+    if (res.status === 401) {
+      setAuthSession(null);
+      return null;
+    }
     const data = await parseApiJson<{ user: AuthUserDto; exchanged?: boolean }>(res);
     if (getLocalSessionId() === session.sessionId && (!session.legacyToken || data.exchanged)) {
       setAuthSession({ ...session, legacyToken: undefined, user: data.user });
     }
-    return data.user;
+    return getLocalSessionId() === session.sessionId ? data.user : null;
   } catch {
     return null;
   }
@@ -257,8 +289,8 @@ export async function updateUserProfile(input: UpdateProfileInput): Promise<Auth
     headers: buildSessionHeaders(),
     body: JSON.stringify(input),
   });
-  const data = await parseApiJson<{ user: AuthUserDto }>(res);
-  if (cachedSession) {
+  const data = await parseApiJson<{ user: AuthUserDto }>(res, sessionId);
+  if (cachedSession?.sessionId === sessionId) {
     setAuthSession({ ...cachedSession, user: data.user });
   }
   return data.user;
@@ -272,7 +304,8 @@ export async function deleteUserAccount(): Promise<void> {
       method: 'DELETE',
       headers: buildSessionHeaders(),
     });
-    await parseApiJson<{ deleted: boolean }>(res);
+    await parseApiJson<{ deleted: boolean }>(res, sessionId);
+    if (getLocalSessionId() !== sessionId) return;
   }
   if (previousEmail) {
     purgeWorkspaceStorage(previousEmail);
@@ -332,7 +365,7 @@ export async function fetchContestWorkspaces(): Promise<ContestWorkspaceSummary[
   const sessionId = getLocalSessionId();
   if (!sessionId || sessionId === TEST_LOCAL_SESSION_ID) return null;
   const res = await fetch('/api/study-data/contests', { cache: 'no-store', headers: buildSessionHeaders() });
-  const body = await parseApiJson<{ contests: ContestWorkspaceSummary[] }>(res);
+  const body = await parseApiJson<{ contests: ContestWorkspaceSummary[] }>(res, sessionId);
   if (!Array.isArray(body.contests)) throw new Error('Resposta inválida ao carregar seus concursos.');
   return body.contests;
 }
@@ -345,7 +378,7 @@ export async function fetchUserWorkspaceFromApi(): Promise<Record<DataTableName,
     cache: 'no-store',
     headers: buildSessionHeaders(),
   });
-  const body = await parseApiJson<{ data: Record<DataTableName, unknown[]> }>(res);
+  const body = await parseApiJson<{ data: Record<DataTableName, unknown[]> }>(res, sessionId);
   if (!body.data) throw new Error('Resposta inválida ao carregar os dados de estudo.');
   return body.data;
 }

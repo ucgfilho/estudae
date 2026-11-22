@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Select } from '../../components/ui/Select';
 import { Checkbox, Field, Radio } from '../../components/ui/Form';
@@ -56,7 +56,7 @@ describe('Custom Select Component (UI-UX Pro Max)', () => {
 
     expect(handleChange).toHaveBeenCalled();
     // Popover closes after selection
-    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole('listbox')).not.toBeInTheDocument());
   });
 
   it('supports keyboard navigation with arrow keys and Enter', async () => {
@@ -100,7 +100,7 @@ describe('Custom Select Component (UI-UX Pro Max)', () => {
     expect(screen.getByRole('listbox')).toBeInTheDocument();
 
     await user.keyboard('{Escape}');
-    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole('listbox')).not.toBeInTheDocument());
   });
 
   it('keeps highlighted index on hover without resetting back to top option', async () => {
