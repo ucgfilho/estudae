@@ -1,6 +1,7 @@
 import { db } from '../db/db';
 import type { Topic, TopicStatus } from '../db/types';
 import type { ParsedTopic } from '../domain/checklist';
+import { topicTitleKey } from '../domain/duplicateTopics';
 import { createId, nowIso } from '../lib/utils';
 import { ValidationError } from './sessions';
 import { saveTopicWithStatus } from './topicStatus';
@@ -18,24 +19,28 @@ function validateTitle(title: string): string {
   return t;
 }
 
-async function nextOrder(disciplineId: string, parentTopicId: string | null): Promise<number> {
-  const siblings = await db.topics
-    .where('disciplineId')
-    .equals(disciplineId)
-    .filter((t) => t.parentTopicId === parentTopicId)
-    .toArray();
-  return siblings.reduce((max, t) => Math.max(max, t.order + 1), 0);
+function validateUniqueTitle(title: string, siblings: Topic[], currentId?: string) {
+  const key = topicTitleKey(title);
+  if (siblings.some((topic) => topic.id !== currentId && topicTitleKey(topic.title) === key)) {
+    throw new ValidationError('Já existe um tópico com esse título neste nível da disciplina.');
+  }
+}
+
+function topicsInDiscipline(disciplineId: string): Topic[] {
+  return db.topics.toArraySync().filter((topic) => topic.disciplineId === disciplineId);
 }
 
 export async function createTopic(disciplineId: string, parentTopicId: string | null, input: TopicInput): Promise<Topic> {
   const title = validateTitle(input.title);
   return db.transaction('rw', db.topics, db.disciplines, async () => {
-    if (!(await db.disciplines.get(disciplineId))) throw new ValidationError('Disciplina não encontrada.');
+    if (!db.disciplines.getSync(disciplineId)) throw new ValidationError('Disciplina não encontrada.');
     if (parentTopicId) {
-      const parent = await db.topics.get(parentTopicId);
-      if (!parent) throw new ValidationError('Tópico pai não encontrado.');
+      const parent = db.topics.getSync(parentTopicId);
+      if (!parent || parent.disciplineId !== disciplineId) throw new ValidationError('Tópico pai não encontrado.');
       if (parent.parentTopicId) throw new ValidationError('Subtópicos não podem ter novos níveis.');
     }
+    const siblings = topicsInDiscipline(disciplineId).filter((topic) => topic.parentTopicId === parentTopicId);
+    validateUniqueTitle(title, siblings);
     const now = nowIso();
     const topic: Topic = {
       id: createId(),
@@ -44,7 +49,7 @@ export async function createTopic(disciplineId: string, parentTopicId: string | 
       parentTopicId,
       status: input.status,
       notes: input.notes.trim(),
-      order: await nextOrder(disciplineId, parentTopicId),
+      order: siblings.reduce((max, topic) => Math.max(max, topic.order + 1), 0),
       active: true,
       createdAt: now,
       updatedAt: now,
@@ -58,6 +63,11 @@ export async function updateTopic(id: string, input: TopicInput): Promise<void> 
   const title = validateTitle(input.title);
   const current = db.topics.getSync(id);
   if (!current) throw new ValidationError('Tópico não encontrado.');
+  if (topicTitleKey(title) !== topicTitleKey(current.title)) {
+    const siblings = topicsInDiscipline(current.disciplineId)
+      .filter((topic) => topic.parentTopicId === current.parentTopicId);
+    validateUniqueTitle(title, siblings, id);
+  }
   const updated = { ...current, title, status: input.status, notes: input.notes.trim(), updatedAt: nowIso() };
   if (updated.status === current.status) {
     await db.topics.put(updated);
@@ -178,16 +188,36 @@ export async function reorderTopic(draggedId: string, targetId: string | null): 
 export async function importTopics(disciplineId: string, parsed: readonly ParsedTopic[]): Promise<number> {
   if (parsed.length === 0) throw new ValidationError('Nenhum tópico para importar.');
   return db.transaction('rw', db.topics, db.disciplines, async () => {
-    if (!(await db.disciplines.get(disciplineId))) throw new ValidationError('Disciplina não encontrada.');
-    let order = await nextOrder(disciplineId, null);
+    if (!db.disciplines.getSync(disciplineId)) throw new ValidationError('Disciplina não encontrada.');
     const now = nowIso();
     const records: Topic[] = [];
+    const siblingsByParent = new Map<string | null, Map<string, Topic>>();
+    const nextOrders = new Map<string | null, number>();
+    const indexTopic = (topic: Topic) => {
+      const parentId = topic.parentTopicId;
+      const siblings = siblingsByParent.get(parentId) ?? new Map<string, Topic>();
+      const key = topicTitleKey(topic.title);
+      if (!siblings.has(key)) siblings.set(key, topic);
+      siblingsByParent.set(parentId, siblings);
+      nextOrders.set(parentId, Math.max(nextOrders.get(parentId) ?? 0, topic.order + 1));
+    };
+    topicsInDiscipline(disciplineId).forEach(indexTopic);
+
+    const addIfNew = (title: string, parent: Topic | null): Topic => {
+      const parentTopicId = parent?.id ?? null;
+      const existing = siblingsByParent.get(parentTopicId)?.get(topicTitleKey(title));
+      if (existing) return existing;
+      const topic: Topic = {
+        id: createId(), disciplineId, title, parentTopicId, status: 'nao-iniciado', notes: '',
+        order: nextOrders.get(parentTopicId) ?? 0, active: parent?.active ?? true, createdAt: now, updatedAt: now,
+      };
+      indexTopic(topic);
+      records.push(topic);
+      return topic;
+    };
     for (const p of parsed) {
-      const parentId = createId();
-      records.push({ id: parentId, disciplineId, title: p.title, parentTopicId: null, status: 'nao-iniciado', notes: '', order: order++, active: true, createdAt: now, updatedAt: now });
-      p.subtopics.forEach((title, index) => {
-        records.push({ id: createId(), disciplineId, title, parentTopicId: parentId, status: 'nao-iniciado', notes: '', order: index, active: true, createdAt: now, updatedAt: now });
-      });
+      const parent = addIfNew(p.title, null);
+      p.subtopics.forEach((title) => addIfNew(title, parent));
     }
     await db.topics.bulkAdd(records);
     return records.length;

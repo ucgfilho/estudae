@@ -614,7 +614,9 @@ export function DisciplinesScreen() {
         disciplineId={currentDiscipline?.id ?? ''}
         disciplineName={currentDiscipline?.name ?? ''}
         onImported={(cnt) =>
-          setActionSuccess(cnt === 1 ? '1 tópico importado.' : `${cnt} tópicos importados.`)
+          setActionSuccess(cnt === 0
+            ? 'Todos os tópicos informados já estão na disciplina.'
+            : cnt === 1 ? '1 tópico importado.' : `${cnt} tópicos importados.`)
         }
       />
 

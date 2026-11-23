@@ -104,6 +104,66 @@ async function assertCyclePersistence(repository: IStudyDataRepository, ownerId:
   return workspace;
 }
 
+async function assertTopicMerge(repository: IStudyDataRepository, ownerId: string) {
+  const original: Topic = {
+    id: 'original', disciplineId: 'banco-dados', title: 'Arquitetura de dados', parentTopicId: null,
+    status: 'em-andamento', notes: 'Primeira anotação', order: 0, active: true,
+    createdAt: '2026-11-21T10:00:00Z', updatedAt: '2026-11-21T10:00:00Z',
+  };
+  const copy: Topic = {
+    ...original, id: 'copy', title: ' ARQUITETURA  DE DADOS. ', order: 12,
+    status: 'dominado', notes: 'Segunda anotação', createdAt: '2026-11-22T10:00:00Z', updatedAt: '2026-11-22T10:00:00Z',
+  };
+  const child: Topic = { ...original, id: 'child', parentTopicId: original.id, title: 'Modelagem lógica', notes: '' };
+  const childCopy: Topic = { ...child, id: 'child-copy', parentTopicId: copy.id, title: 'Modelagem logica', createdAt: copy.createdAt };
+  const otherChild: Topic = { ...child, id: 'other-child', parentTopicId: copy.id, title: 'Modelo físico' };
+  const otherDiscipline: Topic = { ...original, id: 'other-discipline', disciplineId: 'arquitetura' };
+  const review = {
+    id: 'review-copy', disciplineId: copy.disciplineId, topicId: childCopy.id, title: 'Revisar modelagem',
+    errorNoteId: 'note-copy', dueDate: '2026-11-23', intervalDays: 1, status: 'pendente',
+    completedAt: null, createdAt: copy.createdAt,
+  };
+  await repository.applyBatch(ownerId, [
+    { table: 'topics', action: 'upsert', records: [copy, childCopy, otherChild, original, child, otherDiscipline] },
+    { table: 'timer', action: 'upsert', records: [{ ...cycleTimer, disciplineId: copy.disciplineId, topicId: copy.id }] },
+    { table: 'sessions', action: 'upsert', records: [{ ...cycleSession, disciplineId: copy.disciplineId, topicId: childCopy.id }] },
+    { table: 'questionLogs', action: 'upsert', records: [{
+      id: 'log-copy', date: '2026-11-22', disciplineId: copy.disciplineId, topicId: copy.id,
+      source: 'Prova', total: 2, correct: 1, incorrect: 1, blank: 0, durationMinutes: null,
+      notes: '', sessionId: cycleSession.id, createdAt: copy.createdAt, updatedAt: copy.updatedAt,
+    }] },
+    { table: 'errorNotes', action: 'upsert', records: [{
+      id: 'note-copy', questionLogId: 'log-copy', disciplineId: copy.disciplineId, topicId: copy.id,
+      sourceReference: 'Prova', errorType: 'falta-conteudo', explanation: 'Estudar o assunto',
+      errorDate: '2026-11-22', status: 'revisar', nextReviewDate: review.dueDate,
+      createdAt: copy.createdAt, updatedAt: copy.updatedAt,
+    }] },
+    { table: 'reviews', action: 'upsert', records: [review] },
+    { table: 'settings', action: 'patch', changes: {
+      skippedCycleActivities: [{ position: 1, disciplineId: copy.disciplineId, topicId: copy.id }],
+    } },
+  ]);
+
+  const workspace = await repository.getWorkspace(ownerId);
+  expect(workspace.topics).toHaveLength(4);
+  const merged = workspace.topics.find(({ id }) => id === original.id)!;
+  expect(merged).toMatchObject({
+    title: original.title, status: 'dominado', order: 0, notes: 'Primeira anotação\n\nSegunda anotação',
+  });
+  expect(workspace.topics.find(({ id }) => id === otherChild.id)?.parentTopicId).toBe(original.id);
+  expect(workspace.topics).toContainEqual(otherDiscipline);
+  expect(workspace.timer[0].topicId).toBe(original.id);
+  expect(workspace.sessions[0].topicId).toBe(child.id);
+  expect(workspace.questionLogs[0].topicId).toBe(original.id);
+  expect(workspace.errorNotes[0].topicId).toBe(original.id);
+  expect(workspace.reviews[0].topicId).toBe(child.id);
+  expect(workspace.settings[0].skippedCycleActivities?.[0].topicId).toBe(original.id);
+  expect(await repository.getWorkspace(ownerId)).toEqual(workspace);
+
+  await repository.upsertTable(ownerId, 'topics', [{ ...merged, title: 'Arquitetura de dados revisada' }]);
+  expect((await repository.getWorkspace(ownerId)).topics.map(({ id }) => id)).not.toContain(copy.id);
+}
+
 describe('Backend SOLID Architecture, DTOs, JWT Bearer & LGPD Compliance', () => {
   let container: AppContainer;
 
@@ -133,6 +193,11 @@ describe('Backend SOLID Architecture, DTOs, JWT Bearer & LGPD Compliance', () =>
       createdAt: user.createdAt, updatedAt: user.updatedAt,
     });
     await assertReusableTopicCompletion(container.studyDataRepository, user.id, 'other-user');
+  });
+
+  it('consolida tópicos existentes e persiste os vínculos no SQLite', async () => {
+    const user = (await container.userRepository.findByEmail(TEST_USER.email))!;
+    await assertTopicMerge(container.studyDataRepository, user.id);
   });
 
   it('persiste o ciclo e cronômetro no SQLite, isolados por usuário e concurso', async () => {
@@ -678,6 +743,12 @@ describe('MongoDB Row-Level Security (RLS) & Zero Explicit Data at Rest', () => 
     const repository = new MongoStudyDataRepository(db, cipher);
     await repository.initIndexes();
     await assertReusableTopicCompletion(repository, 'owner-topic', 'other-topic');
+  });
+
+  it('consolida tópicos existentes e persiste os vínculos no MongoDB', async () => {
+    const { db } = createInMemoryMongoDbMock();
+    const repository = new MongoStudyDataRepository(db, cipher);
+    await assertTopicMerge(repository, 'owner-topic');
   });
 
   it('enforces zero explicit PII in MongoDB users collection with Blind Indexing and AAD tenant encryption', async () => {

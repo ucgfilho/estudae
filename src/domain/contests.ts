@@ -1,5 +1,6 @@
 import { EDITAL_VERTICALIZADO_BNB_2022, DEFAULT_DISCIPLINES } from '../db/seed';
 import type { Discipline, DisciplineKind, Topic } from '../db/types';
+import { mergeDuplicateTopics } from './duplicateTopics';
 
 export interface ContestCatalogItem {
   id: string;
@@ -1089,20 +1090,20 @@ export function buildContestDefaultSyllabus(contestId: string): ParsedEditalResu
     kind: d.kind,
   }));
 
-  const topics: Topic[] = catalogItem.disciplines.flatMap((d) =>
+  const topics = mergeDuplicateTopics(catalogItem.disciplines.flatMap((d) =>
     d.topics.map((title, idx) => ({
       id: `edital-${catalogItem.id}-${d.id}-${String(idx + 1).padStart(2, '0')}`,
       disciplineId: d.id,
       title,
       parentTopicId: null,
-      status: 'nao-iniciado' as const,
+      status: 'nao-iniciado',
       notes: '',
       order: idx,
       active: true,
       createdAt: now,
       updatedAt: now,
     })),
-  );
+  ));
 
   const distribution = computeBalancedDistribution(disciplines);
   return {
@@ -1283,13 +1284,14 @@ export function parseEditalVerticalizado(
   });
 
   const distribution = computeBalancedDistribution(disciplines);
+  const uniqueTopics = mergeDuplicateTopics(topics);
   return {
     disciplines,
-    topics,
+    topics: uniqueTopics,
     distribution,
     summary: {
       disciplineCount: disciplines.length,
-      topicCount: topics.length,
+      topicCount: uniqueTopics.length,
     },
   };
 }

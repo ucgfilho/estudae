@@ -1,6 +1,7 @@
 import type { ClientSession, Db } from 'mongodb';
 import { CONTEST_LIMIT_MESSAGE, MAX_USER_CONTESTS } from '../../src/domain/contestLimit';
 import { canReuseCompletion, findReusableCompletions, type ContestSyllabus } from '../../src/domain/topicCompletion';
+import { mergeWorkspaceTopics } from '../../src/domain/duplicateTopics';
 import { ConflictError, NotFoundError } from '../errors/AppError';
 import { DEFAULT_DISCIPLINES, DEFAULT_SETTINGS } from '../../src/db/seed';
 import {
@@ -306,23 +307,12 @@ export class MongoStudyDataRepository implements IStudyDataRepository {
       if (!doc) return buildDefaultWorkspaceDto();
 
       const { ownerId } = assertWorkspaceDocumentOwnership(doc, userId);
-      const workspace = this.decryptAndDeserializeWorkspace(ownerId, doc.encryptedPayload);
-      if (workspace.settings[0]?.contestHidden || !workspace.topics.some(canReuseCompletion)) return workspace;
-
-      const sources: ContestSyllabus[] = [];
-      for await (const source of this.collection().find({ ownerId })) {
-        if (source._id === doc._id) continue;
-        assertWorkspaceDocumentOwnership(source, source._id);
-        const syllabus = this.decryptAndDeserializeWorkspace(ownerId, source.encryptedPayload);
-        if (!syllabus.settings[0]?.contestHidden) sources.push(syllabus);
-      }
-      const matches = new Set(findReusableCompletions(workspace, sources).map(({ id }) => id));
-      if (matches.size === 0) return workspace;
-
+      const stored = this.decryptAndDeserializeWorkspace(ownerId, doc.encryptedPayload);
+      const workspace = mergeWorkspaceTopics(stored);
       const now = new Date().toISOString();
-      workspace.topics = workspace.topics.map((topic) =>
-        matches.has(topic.id) ? { ...topic, status: 'concluido', updatedAt: now } : topic,
-      );
+      const completedTopics = await this.reuseTopicCompletions(workspace, doc._id, ownerId, now);
+      if (workspace === stored && completedTopics === workspace.topics) return workspace;
+      workspace.topics = completedTopics;
       const result = await this.collection().updateOne(
         { ...filter, encryptedPayload: doc.encryptedPayload },
         { $set: { encryptedPayload: this.serializeAndEncryptWorkspace(ownerId, workspace), updatedAt: now } },
@@ -330,6 +320,23 @@ export class MongoStudyDataRepository implements IStudyDataRepository {
       if (result.matchedCount === 1) return workspace;
     }
     throw new ConflictError('Dados alterados em outro dispositivo. Tente novamente.');
+  }
+
+  private async reuseTopicCompletions(workspace: StudyWorkspaceDto, scopedId: string, ownerId: string, now: string): Promise<Topic[]> {
+    if (workspace.settings[0]?.contestHidden || !workspace.topics.some(canReuseCompletion)) return workspace.topics;
+
+    const sources: ContestSyllabus[] = [];
+    for await (const source of this.collection().find({ ownerId })) {
+      if (source._id === scopedId) continue;
+      assertWorkspaceDocumentOwnership(source, source._id);
+      const syllabus = this.decryptAndDeserializeWorkspace(ownerId, source.encryptedPayload);
+      if (!syllabus.settings[0]?.contestHidden) sources.push(syllabus);
+    }
+    const matches = new Set(findReusableCompletions(workspace, sources).map(({ id }) => id));
+    if (matches.size === 0) return workspace.topics;
+    return workspace.topics.map((topic) =>
+      matches.has(topic.id) ? { ...topic, status: 'concluido', updatedAt: now } : topic,
+    );
   }
 
   public async isContestActive(userId: string): Promise<boolean> {
@@ -361,7 +368,7 @@ export class MongoStudyDataRepository implements IStudyDataRepository {
     const ctx = parseTenantScope(userId);
     const rlsFilter = buildWorkspaceRlsFilter(userId);
 
-    const normalized: StudyWorkspaceDto = {
+    const normalized = mergeWorkspaceTopics({
       disciplines:
         workspace.disciplines && workspace.disciplines.length > 0
           ? workspace.disciplines
@@ -378,7 +385,7 @@ export class MongoStudyDataRepository implements IStudyDataRepository {
           ? workspace.settings
           : [{ ...DEFAULT_SETTINGS, distribution: { ...DEFAULT_SETTINGS.distribution } }],
       mockExams: workspace.mockExams || [],
-    };
+    });
 
     const doc: UserWorkspaceDocument = {
       _id: ctx.scopedId,

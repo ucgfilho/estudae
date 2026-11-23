@@ -24,7 +24,7 @@ import {
   toCsv,
 } from '../../services/backup';
 import { completeReview, reconcileReviewsAndErrorNotes, saveErrorNote, saveQuestionLog, scheduleTopicReviews } from '../../services/performance';
-import { createTopic, deleteAllTopics, setTopicStatus, updateTopic } from '../../services/topics';
+import { createTopic, deleteAllTopics, importTopics, setTopicStatus, updateTopic } from '../../services/topics';
 import { computeRank } from '../../domain/rank';
 import { reviewBuckets } from '../../domain/metrics';
 import { addDays, todayKey } from '../../lib/dates';
@@ -57,6 +57,24 @@ describe('services/persistence & workflows', () => {
     expect(settings).toBeDefined();
     expect(settings?.dailyGoalMinutes).toBe(120);
     expect(settings?.weeklyGoalMinutes).toBe(840);
+  });
+
+  it('reaproveita tópicos na reimportação e impede títulos duplicados entre irmãos', async () => {
+    const input = { title: 'Modelagem lógica', status: 'em-andamento', notes: 'Minha anotação' } as const;
+    const parent = await createTopic('banco-dados', null, input);
+    const checklist = [
+      { title: '  MODELAGEM  LOGICA. ', subtopics: ['Normalização', 'normalizacao.'] },
+      { title: input.title, subtopics: ['Integridade'] },
+    ];
+    expect(await importTopics('banco-dados', checklist)).toBe(2);
+    expect(await importTopics('banco-dados', checklist)).toBe(0);
+    expect(db.topics.getSync(parent.id)).toEqual(parent);
+    expect(db.topics.toArraySync().filter(({ parentTopicId }) => parentTopicId === parent.id).map(({ title }) => title))
+      .toEqual(['Normalização', 'Integridade']);
+    await expect(createTopic('banco-dados', null, { ...input, title: 'modelagem logica' })).rejects.toThrow('Já existe');
+    const distinct = await createTopic('banco-dados', null, { ...input, title: 'Consultas' });
+    await expect(updateTopic(distinct.id, input)).rejects.toThrow('Já existe');
+    await expect(createTopic('arquitetura', null, input)).resolves.toMatchObject({ title: input.title });
   });
 
   it.each(['dominado', 'concluido', 'em-andamento', 'nao-iniciado'] as const)('marca os subtópicos ao definir o pai como %s e reabre o pai ao reabrir um filho', async (status) => {
@@ -203,6 +221,9 @@ describe('services/persistence & workflows', () => {
     expect(backup.app).toBe('bnb-estudos');
     expect(backup.schemaVersion).toBe(2);
     expect(backup.data.sessions.length).toBe(1);
+    const copy = { ...topic, id: 'topic-copy', title: 'CRASE.', order: topic.order + 1, status: 'nao-iniciado' as const };
+    backup.data.topics.push(copy);
+    backup.data.settings[0].skippedCycleActivities = [{ position: 1, disciplineId: topic.disciplineId, topicId: copy.id }];
 
     const jsonText = JSON.stringify(backup);
     const validation = validateBackup(jsonText);
@@ -223,6 +244,8 @@ describe('services/persistence & workflows', () => {
       expect(db.topics.getSync(topic.id)).toMatchObject({
         status: 'em-andamento', completionReuseDisabled: true,
       });
+      expect(db.topics.getSync(copy.id)).toBeUndefined();
+      expect(db.settings.getSync('settings')?.skippedCycleActivities?.[0].topicId).toBe(topic.id);
     }
   });
 

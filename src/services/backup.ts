@@ -4,6 +4,7 @@
  */
 import { z } from 'zod';
 import { workspacePreferenceFields } from '../db/settingsFields';
+import { mergeWorkspaceTopics } from '../domain/duplicateTopics';
 import {
   DATA_TABLES,
   db,
@@ -297,9 +298,10 @@ export function validateBackup(text: string): BackupValidation {
 /** Substitui todos os dados pelo conteúdo do backup (em uma única transação). */
 export async function restoreBackup(backup: BackupFile): Promise<void> {
   await waitForPendingSync();
+  const workspace = mergeWorkspaceTopics(backup.data);
   const restoredData: Record<DataTableName, unknown[]> = {
-    ...backup.data,
-    settings: backup.data.settings.map((s) => ({ ...s })),
+    ...workspace,
+    settings: workspace.settings.map((s) => ({ ...s })),
   };
 
   const sessionId = getLocalSessionId();

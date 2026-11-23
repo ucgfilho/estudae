@@ -36965,6 +36965,87 @@ function findReusableCompletions(target, sources) {
 	const matchingChildren = new Set(matches.filter(({ topic }) => topic.parentTopicId).map(({ topic }) => topic.id));
 	return matches.filter(({ children }) => children.every((child) => isTopicCompleted(child.status) || matchingChildren.has(child.id))).map(({ topic }) => topic);
 }
+// src/domain/duplicateTopics.ts
+function topicTitleKey(title) {
+	return title.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase().trim().replace(/\s+/g, " ").replace(/\.$/, "").trimEnd();
+}
+var statusRank = {
+	"nao-iniciado": 0,
+	"em-andamento": 1,
+	concluido: 2,
+	dominado: 3
+};
+function planTopicMerge(topics) {
+	const redirects = /* @__PURE__ */ new Map();
+	const changes = /* @__PURE__ */ new Map();
+	for (const isChild of [false, true]) {
+		const groups = /* @__PURE__ */ new Map();
+		for (const topic of topics) {
+			if (Boolean(topic.parentTopicId) !== isChild) continue;
+			const parentTopicId = topic.parentTopicId && redirects.get(topic.parentTopicId) || topic.parentTopicId;
+			const current = parentTopicId === topic.parentTopicId ? topic : {
+				...topic,
+				parentTopicId
+			};
+			if (current !== topic) changes.set(topic.id, current);
+			const key = JSON.stringify([
+				topic.disciplineId,
+				parentTopicId || null,
+				topicTitleKey(topic.title)
+			]);
+			const siblings = groups.get(key);
+			if (siblings) siblings.push(current);
+			else groups.set(key, [current]);
+		}
+		for (const group of groups.values()) {
+			if (group.length < 2) continue;
+			group.sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.order - b.order || a.id.localeCompare(b.id));
+			const [original, ...copies] = group;
+			const merged = { ...original };
+			for (const copy of copies) {
+				redirects.set(copy.id, original.id);
+				if (statusRank[copy.status] > statusRank[merged.status]) merged.status = copy.status;
+				if (copy.updatedAt > merged.updatedAt) merged.updatedAt = copy.updatedAt;
+				if (copy.completionReuseDisabled) merged.completionReuseDisabled = true;
+				merged.order = Math.min(merged.order, copy.order);
+			}
+			merged.notes = [...new Set(group.map(({ notes }) => notes).filter((notes) => notes.trim()))].join("\n\n");
+			changes.set(original.id, merged);
+		}
+	}
+	return {
+		redirects,
+		topics: redirects.size === 0 ? topics : topics.flatMap((topic) => redirects.has(topic.id) ? [] : [changes.get(topic.id) ?? topic])
+	};
+}
+function mergeWorkspaceTopics(workspace) {
+	const { topics, redirects } = planTopicMerge(workspace.topics);
+	if (redirects.size === 0) return workspace;
+	function redirectTopic(row) {
+		const replacement = row.topicId && redirects.get(row.topicId);
+		return replacement ? {
+			...row,
+			topicId: replacement
+		} : row;
+	}
+	return {
+		...workspace,
+		topics,
+		sessions: workspace.sessions.map(redirectTopic),
+		timer: workspace.timer.map(redirectTopic),
+		questionLogs: workspace.questionLogs.map(redirectTopic),
+		errorNotes: workspace.errorNotes.map(redirectTopic),
+		reviews: workspace.reviews.map(redirectTopic),
+		settings: workspace.settings.map((settings) => {
+			const skipped = settings.skippedCycleActivities;
+			if (!skipped?.some(({ topicId }) => topicId && redirects.has(topicId))) return settings;
+			return {
+				...settings,
+				skippedCycleActivities: skipped.map(redirectTopic)
+			};
+		})
+	};
+}
 // src/db/seed.ts
 /** As oito disciplinas do cargo Analista de Sistemas — Desenvolvimento de Sistemas. */
 var DEFAULT_DISCIPLINES = [
@@ -37694,23 +37775,12 @@ var MongoStudyDataRepository = class {
 			const doc = await this.collection().findOne(filter);
 			if (!doc) return buildDefaultWorkspaceDto();
 			const { ownerId } = assertWorkspaceDocumentOwnership(doc, userId);
-			const workspace = this.decryptAndDeserializeWorkspace(ownerId, doc.encryptedPayload);
-			if (workspace.settings[0]?.contestHidden || !workspace.topics.some(canReuseCompletion)) return workspace;
-			const sources = [];
-			for await (const source of this.collection().find({ ownerId })) {
-				if (source._id === doc._id) continue;
-				assertWorkspaceDocumentOwnership(source, source._id);
-				const syllabus = this.decryptAndDeserializeWorkspace(ownerId, source.encryptedPayload);
-				if (!syllabus.settings[0]?.contestHidden) sources.push(syllabus);
-			}
-			const matches = new Set(findReusableCompletions(workspace, sources).map(({ id }) => id));
-			if (matches.size === 0) return workspace;
+			const stored = this.decryptAndDeserializeWorkspace(ownerId, doc.encryptedPayload);
+			const workspace = mergeWorkspaceTopics(stored);
 			const now = (/* @__PURE__ */ new Date()).toISOString();
-			workspace.topics = workspace.topics.map((topic) => matches.has(topic.id) ? {
-				...topic,
-				status: "concluido",
-				updatedAt: now
-			} : topic);
+			const completedTopics = await this.reuseTopicCompletions(workspace, doc._id, ownerId, now);
+			if (workspace === stored && completedTopics === workspace.topics) return workspace;
+			workspace.topics = completedTopics;
 			if ((await this.collection().updateOne({
 				...filter,
 				encryptedPayload: doc.encryptedPayload
@@ -37720,6 +37790,23 @@ var MongoStudyDataRepository = class {
 			} })).matchedCount === 1) return workspace;
 		}
 		throw new ConflictError("Dados alterados em outro dispositivo. Tente novamente.");
+	}
+	async reuseTopicCompletions(workspace, scopedId, ownerId, now) {
+		if (workspace.settings[0]?.contestHidden || !workspace.topics.some(canReuseCompletion)) return workspace.topics;
+		const sources = [];
+		for await (const source of this.collection().find({ ownerId })) {
+			if (source._id === scopedId) continue;
+			assertWorkspaceDocumentOwnership(source, source._id);
+			const syllabus = this.decryptAndDeserializeWorkspace(ownerId, source.encryptedPayload);
+			if (!syllabus.settings[0]?.contestHidden) sources.push(syllabus);
+		}
+		const matches = new Set(findReusableCompletions(workspace, sources).map(({ id }) => id));
+		if (matches.size === 0) return workspace.topics;
+		return workspace.topics.map((topic) => matches.has(topic.id) ? {
+			...topic,
+			status: "concluido",
+			updatedAt: now
+		} : topic);
 	}
 	async isContestActive(userId) {
 		const doc = await this.collection().findOne(buildWorkspaceRlsFilter(userId));
@@ -37741,7 +37828,7 @@ var MongoStudyDataRepository = class {
 	async replaceWorkspace(userId, workspace) {
 		const ctx = parseTenantScope(userId);
 		const rlsFilter = buildWorkspaceRlsFilter(userId);
-		const normalized = {
+		const normalized = mergeWorkspaceTopics({
 			disciplines: workspace.disciplines && workspace.disciplines.length > 0 ? workspace.disciplines : [...DEFAULT_DISCIPLINES],
 			topics: workspace.topics || [],
 			sessions: workspace.sessions || [],
@@ -37755,7 +37842,7 @@ var MongoStudyDataRepository = class {
 				distribution: { ...DEFAULT_SETTINGS.distribution }
 			}],
 			mockExams: workspace.mockExams || []
-		};
+		});
 		const doc = {
 			_id: ctx.scopedId,
 			ownerId: ctx.ownerId,
@@ -38035,26 +38122,36 @@ var SqlStudyDataRepository = class {
 		});
 	}
 	getWorkspace(userId) {
-		this.ensureUserSeed(userId);
-		return {
-			...this.db.transaction(() => this.reuseTopicCompletions(userId)),
-			sessions: this.getSessions(userId),
-			timer: this.getTimers(userId),
-			questionLogs: this.getQuestionLogs(userId),
-			errorNotes: this.getErrorNotes(userId),
-			reviews: this.getReviews(userId),
-			weeklyPlans: this.getWeeklyPlans(userId),
-			settings: this.getSettingsList(userId),
-			mockExams: this.getMockExams(userId)
-		};
+		return this.db.transaction(() => {
+			this.ensureUserSeed(userId);
+			const stored = {
+				disciplines: this.getDisciplines(userId),
+				topics: this.getTopics(userId),
+				sessions: this.getSessions(userId),
+				timer: this.getTimers(userId),
+				questionLogs: this.getQuestionLogs(userId),
+				errorNotes: this.getErrorNotes(userId),
+				reviews: this.getReviews(userId),
+				weeklyPlans: this.getWeeklyPlans(userId),
+				settings: this.getSettingsList(userId),
+				mockExams: this.getMockExams(userId)
+			};
+			const workspace = mergeWorkspaceTopics(stored);
+			if (workspace !== stored) {
+				const remaining = new Set(workspace.topics.map(({ id }) => id));
+				for (const table of DATA_TABLES) {
+					if (workspace[table] === stored[table]) continue;
+					const unchanged = new Set(stored[table]);
+					this.upsertTableInternal(userId, table, workspace[table].filter((row) => !unchanged.has(row)));
+				}
+				this.deleteFromTableInternal(userId, "topics", stored.topics.filter(({ id }) => !remaining.has(id)).map(({ id }) => id));
+			}
+			workspace.topics = this.reuseTopicCompletions(userId, workspace);
+			return workspace;
+		});
 	}
-	reuseTopicCompletions(userId) {
-		const disciplines = this.getDisciplines(userId);
-		const topics = this.getTopics(userId);
-		if (!topics.some(canReuseCompletion) || !this.isContestActive(userId)) return {
-			disciplines,
-			topics
-		};
+	reuseTopicCompletions(userId, { disciplines, topics, settings }) {
+		if (!settings[0] || settings[0].contestHidden || !topics.some(canReuseCompletion)) return topics;
 		const { ownerId } = parseTenantScope(userId);
 		const sources = this.listContestWorkspaces(ownerId).flatMap(({ id }) => {
 			const sourceId = id === "default" ? ownerId : `${ownerId}::contest::${id}`;
@@ -38067,10 +38164,7 @@ var SqlStudyDataRepository = class {
 			disciplines,
 			topics
 		}, sources).map(({ id }) => id));
-		if (matches.size === 0) return {
-			disciplines,
-			topics
-		};
+		if (matches.size === 0) return topics;
 		const now = (/* @__PURE__ */ new Date()).toISOString();
 		const completed = topics.filter(({ id }) => matches.has(id)).map((topic) => ({
 			...topic,
@@ -38078,10 +38172,7 @@ var SqlStudyDataRepository = class {
 			updatedAt: now
 		}));
 		this.upsertTopics(userId, completed);
-		return {
-			disciplines,
-			topics: this.getTopics(userId)
-		};
+		return this.getTopics(userId);
 	}
 	isContestActive(userId) {
 		const settings = this.getSettingsList(userId)[0];

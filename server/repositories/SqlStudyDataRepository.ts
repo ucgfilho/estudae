@@ -1,5 +1,6 @@
 import { CONTEST_LIMIT_MESSAGE, MAX_USER_CONTESTS } from '../../src/domain/contestLimit';
 import { canReuseCompletion, findReusableCompletions, type ContestSyllabus } from '../../src/domain/topicCompletion';
+import { mergeWorkspaceTopics } from '../../src/domain/duplicateTopics';
 import { ConflictError, NotFoundError } from '../errors/AppError';
 import { parseTenantScope } from '../security/MongoRlsGuard';
 import { DEFAULT_DISCIPLINES, DEFAULT_SETTINGS } from '../../src/db/seed';
@@ -84,25 +85,37 @@ export class SqlStudyDataRepository implements IStudyDataRepository {
   }
 
   public getWorkspace(userId: string): StudyWorkspaceDto {
-    this.ensureUserSeed(userId);
-    const syllabus = this.db.transaction(() => this.reuseTopicCompletions(userId));
-    return {
-      ...syllabus,
-      sessions: this.getSessions(userId),
-      timer: this.getTimers(userId),
-      questionLogs: this.getQuestionLogs(userId),
-      errorNotes: this.getErrorNotes(userId),
-      reviews: this.getReviews(userId),
-      weeklyPlans: this.getWeeklyPlans(userId),
-      settings: this.getSettingsList(userId),
-      mockExams: this.getMockExams(userId),
-    };
+    return this.db.transaction(() => {
+      this.ensureUserSeed(userId);
+      const stored: StudyWorkspaceDto = {
+        disciplines: this.getDisciplines(userId),
+        topics: this.getTopics(userId),
+        sessions: this.getSessions(userId),
+        timer: this.getTimers(userId),
+        questionLogs: this.getQuestionLogs(userId),
+        errorNotes: this.getErrorNotes(userId),
+        reviews: this.getReviews(userId),
+        weeklyPlans: this.getWeeklyPlans(userId),
+        settings: this.getSettingsList(userId),
+        mockExams: this.getMockExams(userId),
+      };
+      const workspace = mergeWorkspaceTopics(stored);
+      if (workspace !== stored) {
+        const remaining = new Set(workspace.topics.map(({ id }) => id));
+        for (const table of DATA_TABLES) {
+          if (workspace[table] === stored[table]) continue;
+          const unchanged = new Set<unknown>(stored[table]);
+          this.upsertTableInternal(userId, table, workspace[table].filter((row) => !unchanged.has(row)));
+        }
+        this.deleteFromTableInternal(userId, 'topics', stored.topics.filter(({ id }) => !remaining.has(id)).map(({ id }) => id));
+      }
+      workspace.topics = this.reuseTopicCompletions(userId, workspace);
+      return workspace;
+    });
   }
 
-  private reuseTopicCompletions(userId: string): { disciplines: Discipline[]; topics: Topic[] } {
-    const disciplines = this.getDisciplines(userId);
-    const topics = this.getTopics(userId);
-    if (!topics.some(canReuseCompletion) || !this.isContestActive(userId)) return { disciplines, topics };
+  private reuseTopicCompletions(userId: string, { disciplines, topics, settings }: StudyWorkspaceDto): Topic[] {
+    if (!settings[0] || settings[0].contestHidden || !topics.some(canReuseCompletion)) return topics;
 
     const { ownerId } = parseTenantScope(userId);
     const sources = this.listContestWorkspaces(ownerId).flatMap(({ id }): ContestSyllabus[] => {
@@ -110,13 +123,13 @@ export class SqlStudyDataRepository implements IStudyDataRepository {
       return sourceId === userId ? [] : [{ disciplines: this.getDisciplines(sourceId), topics: this.getTopics(sourceId) }];
     });
     const matches = new Set(findReusableCompletions({ disciplines, topics }, sources).map(({ id }) => id));
-    if (matches.size === 0) return { disciplines, topics };
+    if (matches.size === 0) return topics;
 
     const now = new Date().toISOString();
     const completed = topics.filter(({ id }) => matches.has(id))
       .map((topic): Topic => ({ ...topic, status: 'concluido', updatedAt: now }));
     this.upsertTopics(userId, completed);
-    return { disciplines, topics: this.getTopics(userId) };
+    return this.getTopics(userId);
   }
 
   public isContestActive(userId: string): boolean {

@@ -82,13 +82,16 @@ test('mantém a próxima rodada na fila e credita XP apenas após concluir as re
   await expect(todayXp.getByText('+120', { exact: true })).toBeVisible();
 });
 
-test('importa checklist com subtópico e localiza o conteúdo na disciplina', async ({ workspace: page }) => {
+test('reimporta checklist sem duplicar tópicos ou subtópicos', async ({ workspace: page }) => {
   await navigate(page, 'Disciplinas e conteúdos');
-  await button(page, 'Importar checklist').click();
   const dialog = page.getByRole('dialog');
-  await dialog.getByLabel('Texto do edital / checklist').fill('1. Pesquisa E2E\n  1.1 Busca binária');
-  await dialog.getByRole('button', { name: /Importar 1 tópico e 1 subtópico/ }).click();
-  await expect(dialog).toHaveCount(0);
+  for (const checklist of ['1. Pesquisa E2E\n  1.1 Busca binária', '1. PESQUISA E2E\n  1.1 Busca binaria']) {
+    await button(page, 'Importar checklist').click();
+    await dialog.getByLabel('Texto do edital / checklist').fill(checklist);
+    await dialog.getByRole('button', { name: /Importar 1 tópico e 1 subtópico/ }).click();
+    await expect(dialog).toHaveCount(0);
+  }
+  await expect(page.getByText('Todos os tópicos informados já estão na disciplina.')).toBeVisible();
   await page.getByPlaceholder('Buscar tópico por palavra-chave...').fill('Pesquisa E2E');
-  await expect(page.getByText('1. Pesquisa E2E', { exact: true })).toBeVisible();
+  await expect(page.getByText(/Pesquisa E2E$/i)).toHaveCount(1);
 });
