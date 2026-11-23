@@ -38,6 +38,7 @@ const topicSchema = z.object({
   title: z.string().min(1),
   parentTopicId: z.string().nullable(),
   status: z.enum(['nao-iniciado', 'em-andamento', 'concluido', 'dominado']),
+  completionReuseDisabled: z.boolean().optional(),
   notes: z.string(),
   order: z.number().int(),
   active: z.boolean(),
@@ -302,7 +303,9 @@ export async function restoreBackup(backup: BackupFile): Promise<void> {
   };
 
   const sessionId = getLocalSessionId();
-  if (sessionId && sessionId !== TEST_LOCAL_SESSION_ID && !await replaceUserWorkspaceInApi(restoredData)) {
+  if (sessionId && sessionId !== TEST_LOCAL_SESSION_ID && !await replaceUserWorkspaceInApi(restoredData, undefined, ({ topics }) => {
+    if (Array.isArray(topics)) restoredData.topics = topics;
+  })) {
     throw new Error('O servidor não confirmou a restauração do backup. Tente novamente.');
   }
   db.replaceAllFromBackup(restoredData);

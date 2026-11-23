@@ -7,7 +7,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { SqliteDatabaseClient } from '../../../server/database/SqliteDatabaseClient';
 import { RELATIONAL_SCHEMA_SQL } from '../../../server/database/schema';
 import { CYCLE_COMPLETION, cycleCompletions, nextCycleActivity } from '../../domain/schedule';
-import type { StudySession, TimerState } from '../../db/types';
+import type { StudySession, TimerState, Topic } from '../../db/types';
 import type { IStudyDataRepository } from '../../../server/interfaces/IStudyDataRepository';
 import { SqlStudyDataRepository } from '../../../server/repositories/SqlStudyDataRepository';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
@@ -54,6 +54,41 @@ const cycleSession: StudySession = {
   history: [{ type: 'executada', at: '2026-11-17T10:02:00Z', description: CYCLE_COMPLETION }],
   createdAt: '2026-11-17T10:02:00Z', updatedAt: '2026-11-17T10:02:00Z',
 };
+async function assertReusableTopicCompletion(repository: IStudyDataRepository, owner: string, otherUser: string) {
+  const target = `${owner}::contest::outro`;
+  const source: Topic = {
+    id: 'topic', disciplineId: 'portugues', title: 'Interpretação de textos', parentTopicId: null,
+    status: 'concluido', notes: '', order: 0, active: true,
+    createdAt: '2026-11-22T10:00:00Z', updatedAt: '2026-11-22T10:00:00Z',
+  };
+  const pending: Topic = { ...source, title: 'Interpretação de texto', status: 'em-andamento', notes: 'Anotação local' };
+  await repository.ensureUserSeed(target);
+  await repository.ensureUserSeed(otherUser);
+  await repository.upsertTable(target, 'topics', [pending]);
+  await repository.upsertTable(otherUser, 'topics', [pending]);
+  await repository.upsertTable(owner, 'topics', [source, { ...pending, id: 'same-contest' }]);
+
+  expect((await repository.getWorkspace(otherUser)).topics).toEqual([pending]);
+  expect((await repository.getWorkspace(owner)).topics.find(({ id }) => id === 'same-contest')?.status).toBe('em-andamento');
+  const [completed] = (await repository.getWorkspace(target)).topics;
+  expect(completed).toEqual({ ...pending, status: 'concluido', updatedAt: expect.any(String) });
+  expect((await repository.getWorkspace(target)).topics).toEqual([completed]);
+  const reopened: Topic = { ...completed, status: 'nao-iniciado', completionReuseDisabled: true };
+  await repository.upsertTable(target, 'topics', [reopened]);
+  expect((await repository.getWorkspace(target)).topics).toEqual([reopened]);
+
+  await repository.applyBatch(target, [{ table: 'settings', action: 'patch', changes: { contestHidden: true } }]);
+  const hiddenTopic = { ...source, id: 'hidden-topic', title: 'Pontuação' };
+  // A different scope owned by the same user can be hidden after storing completed content.
+  const hidden = `${owner}::contest::hidden`;
+  await repository.ensureUserSeed(hidden);
+  await repository.upsertTable(hidden, 'topics', [hiddenTopic]);
+  await repository.applyBatch(hidden, [{ table: 'settings', action: 'patch', changes: { contestHidden: true } }]);
+  const activeTopic: Topic = { ...hiddenTopic, status: 'nao-iniciado' };
+  await repository.upsertTable(owner, 'topics', [activeTopic]);
+  expect((await repository.getWorkspace(owner)).topics.find(({ id }) => id === activeTopic.id)).toEqual(activeTopic);
+}
+
 async function assertCyclePersistence(repository: IStudyDataRepository, ownerId: string) {
   await repository.upsertTable(ownerId, 'timer', [cycleTimer]);
   await repository.upsertTable(ownerId, 'sessions', [cycleSession]);
@@ -91,6 +126,15 @@ describe('Backend SOLID Architecture, DTOs, JWT Bearer & LGPD Compliance', () =>
     container.dbClient?.close();
   });
 
+  it('reaproveita a conclusão entre editais do mesmo usuário no SQLite', async () => {
+    const user = (await container.userRepository.findByEmail(TEST_USER.email))!;
+    await container.userRepository.create({
+      id: 'other-user', name: 'Outro titular', email: 'other@example.test', passwordHash: user.passwordHash,
+      createdAt: user.createdAt, updatedAt: user.updatedAt,
+    });
+    await assertReusableTopicCompletion(container.studyDataRepository, user.id, 'other-user');
+  });
+
   it('persiste o ciclo e cronômetro no SQLite, isolados por usuário e concurso', async () => {
     const user = await container.userRepository.findByEmail(TEST_USER.email);
     const saved = await assertCyclePersistence(container.studyDataRepository, user!.id);
@@ -100,22 +144,32 @@ describe('Backend SOLID Architecture, DTOs, JWT Bearer & LGPD Compliance', () =>
     expect(() => repository.upsertTable(user!.id, 'timer', [{ ...cycleTimer, cycleStudy: 'sim' }])).toThrow(DtoValidationError);
   });
 
-  it('migra SQLite antigo e preserva ciclo após fechar e reabrir o banco', async () => {
+  it('migra SQLite antigo e preserva ciclo e escolha de reestudo após reabrir o banco', async () => {
     const directory = mkdtempSync(join(tmpdir(), 'estudae-cycle-'));
     const file = join(directory, 'study.sqlite');
     let client: SqliteDatabaseClient | undefined;
     try {
       const legacy = new DatabaseSync(file);
-      legacy.exec(RELATIONAL_SCHEMA_SQL.replace('  cycle_study INTEGER NULL CHECK (cycle_study IN (0, 1)),\n', ''));
+      legacy.exec(RELATIONAL_SCHEMA_SQL
+        .replace('  cycle_study INTEGER NULL CHECK (cycle_study IN (0, 1)),\n', '')
+        .replace('  completion_reuse_disabled INTEGER NOT NULL DEFAULT 0 CHECK (completion_reuse_disabled IN (0, 1)),\n', ''));
       legacy.exec("INSERT INTO users (id, name, email, password_hash, created_at, updated_at) VALUES ('cycle-user', 'Teste', 'cycle@test.local', 'hash', '2026-11-17', '2026-11-17')");
       legacy.close();
       client = new SqliteDatabaseClient(file);
-      await assertCyclePersistence(new SqlStudyDataRepository(client), 'cycle-user');
+      const repository = new SqlStudyDataRepository(client);
+      await assertCyclePersistence(repository, 'cycle-user');
+      const topic: Topic = {
+        id: 'reopened-topic', disciplineId: 'portugues', title: 'Pontuação', parentTopicId: null,
+        status: 'em-andamento', completionReuseDisabled: true, notes: '', order: 0, active: true,
+        createdAt: '2026-11-22T10:00:00Z', updatedAt: '2026-11-22T10:00:00Z',
+      };
+      repository.upsertTable('cycle-user', 'topics', [topic]);
       client.close();
       client = new SqliteDatabaseClient(file);
       const restored = new SqlStudyDataRepository(client).getWorkspace('cycle-user');
       expect(restored.timer).toEqual([cycleTimer]);
       expect(cycleCompletions(restored.sessions)).toHaveLength(1);
+      expect(restored.topics).toEqual([topic]);
     } finally { client?.close(); rmSync(directory, { recursive: true, force: true }); }
   });
 
@@ -504,6 +558,9 @@ function createInMemoryMongoDbMock(): {
         dropIndex: async () => ({ ok: 1 }),
         createIndex: async () => 'ok',
         find: (filter: Record<string, unknown> = {}) => ({
+          async *[Symbol.asyncIterator]() {
+            for (const doc of await this.toArray()) yield doc;
+          },
           toArray: async () =>
             Array.from(store.values())
               .filter((d) => matchesFilter(d, filter))
@@ -614,6 +671,13 @@ describe('MongoDB Row-Level Security (RLS) & Zero Explicit Data at Rest', () => 
     const saved = await second.getWorkspace('user-concurrent');
     expect(saved.reviews[0].status).toBe('concluida');
     expect(saved.sessions).toEqual([cycleSession]);
+  });
+
+  it('reaproveita a conclusão entre editais do mesmo usuário no MongoDB', async () => {
+    const { db } = createInMemoryMongoDbMock();
+    const repository = new MongoStudyDataRepository(db, cipher);
+    await repository.initIndexes();
+    await assertReusableTopicCompletion(repository, 'owner-topic', 'other-topic');
   });
 
   it('enforces zero explicit PII in MongoDB users collection with Blind Indexing and AAD tenant encryption', async () => {

@@ -184,6 +184,8 @@ describe('services/persistence & workflows', () => {
   });
 
   it('creates, validates, and restores backups with schema checking', async () => {
+    const topic = await createTopic('portugues', null, { title: 'Crase', status: 'concluido', notes: '' });
+    await setTopicStatus(topic.id, 'em-andamento');
     await createSession({
       date: '2026-10-14',
       disciplineId: 'nuvem',
@@ -209,11 +211,15 @@ describe('services/persistence & workflows', () => {
 
     // Clear and restore
     await db.sessions.clear();
+    await db.topics.delete(topic.id);
     expect(await db.sessions.count()).toBe(0);
 
     if (validation.ok) {
       await restoreBackup(validation.backup);
       expect(await db.sessions.count()).toBe(1);
+      expect(db.topics.getSync(topic.id)).toMatchObject({
+        status: 'em-andamento', completionReuseDisabled: true,
+      });
     }
   });
 

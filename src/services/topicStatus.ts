@@ -1,22 +1,28 @@
 import { db } from '../db/db';
-import type { Topic, TopicStatus } from '../db/types';
+import type { Topic } from '../db/types';
+import { isTopicCompleted } from '../domain/topicCompletion';
 
-function isCompleted(status: TopicStatus): boolean {
-  return status === 'concluido' || status === 'dominado';
+function rememberCompletionChoice(topic: Topic, previous?: Topic): Topic {
+  if (isTopicCompleted(topic.status)) {
+    delete topic.completionReuseDisabled;
+  } else if (previous && isTopicCompleted(previous.status)) {
+    topic.completionReuseDisabled = true;
+  }
+  return topic;
 }
 
 export async function saveTopicWithStatus(topic: Topic): Promise<void> {
-  const changes = [topic];
+  const changes = [rememberCompletionChoice({ ...topic }, db.topics.getSync(topic.id))];
 
   if (topic.parentTopicId) {
     const parent = db.topics.getSync(topic.parentTopicId);
-    if (parent && isCompleted(parent.status) && !isCompleted(topic.status)) {
-      changes.push({ ...parent, status: 'em-andamento', updatedAt: topic.updatedAt });
+    if (parent && isTopicCompleted(parent.status) && !isTopicCompleted(topic.status)) {
+      changes.push(rememberCompletionChoice({ ...parent, status: 'em-andamento', updatedAt: topic.updatedAt }, parent));
     }
   } else {
     for (const child of db.topics.toArraySync()) {
       if (child.parentTopicId === topic.id && child.status !== topic.status) {
-        changes.push({ ...child, status: topic.status, updatedAt: topic.updatedAt });
+        changes.push(rememberCompletionChoice({ ...child, status: topic.status, updatedAt: topic.updatedAt }, child));
       }
     }
   }

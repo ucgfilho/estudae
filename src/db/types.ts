@@ -36,6 +36,8 @@ export interface Topic {
   title: string;
   parentTopicId: string | null;
   status: TopicStatus;
+  /** O usuário optou por estudar este tópico novamente neste concurso. */
+  completionReuseDisabled?: boolean;
   notes: string;
   order: number;
   active: boolean;

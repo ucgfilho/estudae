@@ -36203,6 +36203,7 @@ var topicDtoSchema = object({
 		"concluido",
 		"dominado"
 	]),
+	completionReuseDisabled: boolean().optional(),
 	notes: string(),
 	order: number().int(),
 	active: boolean(),
@@ -36576,6 +36577,7 @@ CREATE TABLE IF NOT EXISTS topics (
   title TEXT NOT NULL,
   parent_topic_id TEXT NULL,
   status TEXT NOT NULL CHECK (status IN ('nao-iniciado', 'em-andamento', 'concluido', 'dominado')),
+  completion_reuse_disabled INTEGER NOT NULL DEFAULT 0 CHECK (completion_reuse_disabled IN (0, 1)),
   notes TEXT NOT NULL DEFAULT '',
   sort_order INTEGER NOT NULL DEFAULT 0,
   active INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1)),
@@ -36791,6 +36793,7 @@ var SqliteDatabaseClient = class {
 		}
 		this.db.exec(RELATIONAL_SCHEMA_SQL);
 		if (!this.db.prepare("PRAGMA table_info(user_settings)").all().some((column) => column.name === "preferences_json")) this.db.exec("ALTER TABLE user_settings ADD COLUMN preferences_json TEXT NOT NULL DEFAULT '{}';");
+		if (!this.db.prepare("PRAGMA table_info(topics)").all().some((column) => column.name === "completion_reuse_disabled")) this.db.exec("ALTER TABLE topics ADD COLUMN completion_reuse_disabled INTEGER NOT NULL DEFAULT 0 CHECK (completion_reuse_disabled IN (0, 1));");
 		try {
 			this.db.exec("ALTER TABLE timer_states ADD COLUMN cycle_study INTEGER NULL;");
 		} catch {}
@@ -36887,6 +36890,81 @@ var BearerAuthGuard = class {
 	}
 };
 var CONTEST_LIMIT_MESSAGE = `Você atingiu o limite de 3 concursos. Exclua um concurso para adicionar outro.`;
+// src/domain/topicCompletion.ts
+var disciplineAliases = /* @__PURE__ */ new Map([["lingua portuguesa", "portugues"], ["lingua inglesa", "ingles"]]);
+var knownPlurals = /* @__PURE__ */ new Map([
+	["administrativos", "administrativo"],
+	["atos", "ato"],
+	["textos", "texto"],
+	["verbais", "verbal"],
+	["nominais", "nominal"],
+	["computadores", "computador"],
+	["digitais", "digital"],
+	["redes", "rede"]
+]);
+var topicAliases = /* @__PURE__ */ new Map([
+	["interpretacao textual", "interpretacao de texto"],
+	["lei geral de protecao de dados (lgpd)", "lgpd"],
+	["lei geral de protecao de dados", "lgpd"]
+]);
+function normalizeLabel(value) {
+	return value.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase().trim().replace(/^(?:\d+(?:\.\d+)*[.)]|\d+(?:\.\d+)*\s+[-–—]|\d+(?:\.\d+)+)\s+/, "").replace(/[.!?;:]$/, "").replace(/\s*[-–—]\s*/g, "-").replace(/\s+/g, " ");
+}
+function normalizeTopic(value) {
+	const title = normalizeLabel(value).replace(/\b[a-z]+\b/g, (word) => knownPlurals.get(word) ?? word);
+	return topicAliases.get(title) ?? title;
+}
+function isTopicCompleted(status) {
+	return status === "concluido" || status === "dominado";
+}
+function canReuseCompletion(topic) {
+	return topic.active && !isTopicCompleted(topic.status) && !topic.completionReuseDisabled;
+}
+function describeSyllabus({ disciplines, topics }) {
+	const subjects = new Map(disciplines.filter((subject) => subject.active).map((subject) => {
+		const name = normalizeLabel(subject.name);
+		return [subject.id, disciplineAliases.get(name) ?? name];
+	}));
+	const byId = new Map(topics.map((topic) => [topic.id, topic]));
+	const children = /* @__PURE__ */ new Map();
+	for (const topic of topics) {
+		if (!topic.active || !topic.parentTopicId) continue;
+		const siblings = children.get(topic.parentTopicId) ?? [];
+		siblings.push(topic);
+		children.set(topic.parentTopicId, siblings);
+	}
+	return topics.flatMap((topic) => {
+		const subject = subjects.get(topic.disciplineId);
+		const title = normalizeTopic(topic.title);
+		if (!topic.active || !subject || !/[a-z0-9]/.test(title)) return [];
+		let parentTitle = "";
+		if (topic.parentTopicId) {
+			const parent = byId.get(topic.parentTopicId);
+			if (!parent?.active || parent.parentTopicId || parent.disciplineId !== topic.disciplineId) return [];
+			parentTitle = normalizeTopic(parent.title);
+			if (!/[a-z0-9]/.test(parentTitle)) return [];
+		}
+		return [{
+			topic,
+			key: JSON.stringify([
+				subject,
+				parentTitle,
+				title
+			]),
+			children: children.get(topic.id) ?? []
+		}];
+	});
+}
+/** Encontra tópicos que podem aproveitar conteúdo concluído em outros concursos da conta. */
+function findReusableCompletions(target, sources) {
+	const pending = describeSyllabus(target).filter(({ topic }) => canReuseCompletion(topic));
+	if (pending.length === 0) return [];
+	const completedKeys = /* @__PURE__ */ new Set();
+	for (const source of sources) for (const { topic, key, children } of describeSyllabus(source)) if (isTopicCompleted(topic.status) && children.every((child) => isTopicCompleted(child.status))) completedKeys.add(key);
+	const matches = pending.filter(({ key }) => completedKeys.has(key));
+	const matchingChildren = new Set(matches.filter(({ topic }) => topic.parentTopicId).map(({ topic }) => topic.id));
+	return matches.filter(({ children }) => children.every((child) => isTopicCompleted(child.status) || matchingChildren.has(child.id))).map(({ topic }) => topic);
+}
 // src/db/seed.ts
 /** As oito disciplinas do cargo Analista de Sistemas — Desenvolvimento de Sistemas. */
 var DEFAULT_DISCIPLINES = [
@@ -37611,11 +37689,37 @@ var MongoStudyDataRepository = class {
 	}
 	async getWorkspace(userId) {
 		await this.ensureUserSeed(userId);
-		const rlsFilter = buildWorkspaceRlsFilter(userId);
-		const doc = await this.collection().findOne(rlsFilter);
-		if (!doc) return buildDefaultWorkspaceDto();
-		const ctx = assertWorkspaceDocumentOwnership(doc, userId);
-		return this.decryptAndDeserializeWorkspace(ctx.ownerId, doc.encryptedPayload);
+		const filter = buildWorkspaceRlsFilter(userId);
+		for (let attempt = 0; attempt < 10; attempt++) {
+			const doc = await this.collection().findOne(filter);
+			if (!doc) return buildDefaultWorkspaceDto();
+			const { ownerId } = assertWorkspaceDocumentOwnership(doc, userId);
+			const workspace = this.decryptAndDeserializeWorkspace(ownerId, doc.encryptedPayload);
+			if (workspace.settings[0]?.contestHidden || !workspace.topics.some(canReuseCompletion)) return workspace;
+			const sources = [];
+			for await (const source of this.collection().find({ ownerId })) {
+				if (source._id === doc._id) continue;
+				assertWorkspaceDocumentOwnership(source, source._id);
+				const syllabus = this.decryptAndDeserializeWorkspace(ownerId, source.encryptedPayload);
+				if (!syllabus.settings[0]?.contestHidden) sources.push(syllabus);
+			}
+			const matches = new Set(findReusableCompletions(workspace, sources).map(({ id }) => id));
+			if (matches.size === 0) return workspace;
+			const now = (/* @__PURE__ */ new Date()).toISOString();
+			workspace.topics = workspace.topics.map((topic) => matches.has(topic.id) ? {
+				...topic,
+				status: "concluido",
+				updatedAt: now
+			} : topic);
+			if ((await this.collection().updateOne({
+				...filter,
+				encryptedPayload: doc.encryptedPayload
+			}, { $set: {
+				encryptedPayload: this.serializeAndEncryptWorkspace(ownerId, workspace),
+				updatedAt: now
+			} })).matchedCount === 1) return workspace;
+		}
+		throw new ConflictError("Dados alterados em outro dispositivo. Tente novamente.");
 	}
 	async isContestActive(userId) {
 		const doc = await this.collection().findOne(buildWorkspaceRlsFilter(userId));
@@ -37933,8 +38037,7 @@ var SqlStudyDataRepository = class {
 	getWorkspace(userId) {
 		this.ensureUserSeed(userId);
 		return {
-			disciplines: this.getDisciplines(userId),
-			topics: this.getTopics(userId),
+			...this.db.transaction(() => this.reuseTopicCompletions(userId)),
 			sessions: this.getSessions(userId),
 			timer: this.getTimers(userId),
 			questionLogs: this.getQuestionLogs(userId),
@@ -37943,6 +38046,41 @@ var SqlStudyDataRepository = class {
 			weeklyPlans: this.getWeeklyPlans(userId),
 			settings: this.getSettingsList(userId),
 			mockExams: this.getMockExams(userId)
+		};
+	}
+	reuseTopicCompletions(userId) {
+		const disciplines = this.getDisciplines(userId);
+		const topics = this.getTopics(userId);
+		if (!topics.some(canReuseCompletion) || !this.isContestActive(userId)) return {
+			disciplines,
+			topics
+		};
+		const { ownerId } = parseTenantScope(userId);
+		const sources = this.listContestWorkspaces(ownerId).flatMap(({ id }) => {
+			const sourceId = id === "default" ? ownerId : `${ownerId}::contest::${id}`;
+			return sourceId === userId ? [] : [{
+				disciplines: this.getDisciplines(sourceId),
+				topics: this.getTopics(sourceId)
+			}];
+		});
+		const matches = new Set(findReusableCompletions({
+			disciplines,
+			topics
+		}, sources).map(({ id }) => id));
+		if (matches.size === 0) return {
+			disciplines,
+			topics
+		};
+		const now = (/* @__PURE__ */ new Date()).toISOString();
+		const completed = topics.filter(({ id }) => matches.has(id)).map((topic) => ({
+			...topic,
+			status: "concluido",
+			updatedAt: now
+		}));
+		this.upsertTopics(userId, completed);
+		return {
+			disciplines,
+			topics: this.getTopics(userId)
 		};
 	}
 	isContestActive(userId) {
@@ -38115,13 +38253,14 @@ var SqlStudyDataRepository = class {
 		]);
 	}
 	upsertTopics(userId, items) {
-		for (const t of items) this.db.run(`INSERT INTO topics (user_id, id, discipline_id, title, parent_topic_id, status, notes, sort_order, active, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		for (const t of items) this.db.run(`INSERT INTO topics (user_id, id, discipline_id, title, parent_topic_id, status, completion_reuse_disabled, notes, sort_order, active, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(user_id, id) DO UPDATE SET
            discipline_id = excluded.discipline_id,
            title = excluded.title,
            parent_topic_id = excluded.parent_topic_id,
            status = excluded.status,
+           completion_reuse_disabled = excluded.completion_reuse_disabled,
            notes = excluded.notes,
            sort_order = excluded.sort_order,
            active = excluded.active,
@@ -38133,6 +38272,7 @@ var SqlStudyDataRepository = class {
 			t.title,
 			t.parentTopicId,
 			t.status,
+			Number(t.completionReuseDisabled === true),
 			t.notes,
 			t.order,
 			t.active ? 1 : 0,
@@ -38472,7 +38612,7 @@ var SqlStudyDataRepository = class {
 		}));
 	}
 	getTopics(userId) {
-		return this.db.all(`SELECT id, discipline_id, title, parent_topic_id, status, notes, sort_order, active, created_at, updated_at
+		return this.db.all(`SELECT id, discipline_id, title, parent_topic_id, status, completion_reuse_disabled, notes, sort_order, active, created_at, updated_at
        FROM topics
        WHERE user_id = ?
        ORDER BY sort_order ASC, created_at ASC`, [userId]).map((r) => ({
@@ -38481,6 +38621,7 @@ var SqlStudyDataRepository = class {
 			title: r.title,
 			parentTopicId: r.parent_topic_id,
 			status: r.status,
+			...r.completion_reuse_disabled ? { completionReuseDisabled: true } : {},
 			notes: r.notes,
 			order: r.sort_order,
 			active: Boolean(r.active),

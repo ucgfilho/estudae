@@ -37,6 +37,7 @@ export const topicDtoSchema = z.object({
   title: z.string().min(1),
   parentTopicId: z.string().nullable(),
   status: z.enum(['nao-iniciado', 'em-andamento', 'concluido', 'dominado']),
+  completionReuseDisabled: z.boolean().optional(),
   notes: z.string(),
   order: z.number().int(),
   active: z.boolean(),

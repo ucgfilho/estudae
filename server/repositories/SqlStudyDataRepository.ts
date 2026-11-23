@@ -1,4 +1,5 @@
 import { CONTEST_LIMIT_MESSAGE, MAX_USER_CONTESTS } from '../../src/domain/contestLimit';
+import { canReuseCompletion, findReusableCompletions, type ContestSyllabus } from '../../src/domain/topicCompletion';
 import { ConflictError, NotFoundError } from '../errors/AppError';
 import { parseTenantScope } from '../security/MongoRlsGuard';
 import { DEFAULT_DISCIPLINES, DEFAULT_SETTINGS } from '../../src/db/seed';
@@ -84,9 +85,9 @@ export class SqlStudyDataRepository implements IStudyDataRepository {
 
   public getWorkspace(userId: string): StudyWorkspaceDto {
     this.ensureUserSeed(userId);
+    const syllabus = this.db.transaction(() => this.reuseTopicCompletions(userId));
     return {
-      disciplines: this.getDisciplines(userId),
-      topics: this.getTopics(userId),
+      ...syllabus,
       sessions: this.getSessions(userId),
       timer: this.getTimers(userId),
       questionLogs: this.getQuestionLogs(userId),
@@ -96,6 +97,26 @@ export class SqlStudyDataRepository implements IStudyDataRepository {
       settings: this.getSettingsList(userId),
       mockExams: this.getMockExams(userId),
     };
+  }
+
+  private reuseTopicCompletions(userId: string): { disciplines: Discipline[]; topics: Topic[] } {
+    const disciplines = this.getDisciplines(userId);
+    const topics = this.getTopics(userId);
+    if (!topics.some(canReuseCompletion) || !this.isContestActive(userId)) return { disciplines, topics };
+
+    const { ownerId } = parseTenantScope(userId);
+    const sources = this.listContestWorkspaces(ownerId).flatMap(({ id }): ContestSyllabus[] => {
+      const sourceId = id === 'default' ? ownerId : `${ownerId}::contest::${id}`;
+      return sourceId === userId ? [] : [{ disciplines: this.getDisciplines(sourceId), topics: this.getTopics(sourceId) }];
+    });
+    const matches = new Set(findReusableCompletions({ disciplines, topics }, sources).map(({ id }) => id));
+    if (matches.size === 0) return { disciplines, topics };
+
+    const now = new Date().toISOString();
+    const completed = topics.filter(({ id }) => matches.has(id))
+      .map((topic): Topic => ({ ...topic, status: 'concluido', updatedAt: now }));
+    this.upsertTopics(userId, completed);
+    return { disciplines, topics: this.getTopics(userId) };
   }
 
   public isContestActive(userId: string): boolean {
@@ -312,13 +333,14 @@ export class SqlStudyDataRepository implements IStudyDataRepository {
   private upsertTopics(userId: string, items: readonly Topic[]): void {
     for (const t of items) {
       this.db.run(
-        `INSERT INTO topics (user_id, id, discipline_id, title, parent_topic_id, status, notes, sort_order, active, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `INSERT INTO topics (user_id, id, discipline_id, title, parent_topic_id, status, completion_reuse_disabled, notes, sort_order, active, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(user_id, id) DO UPDATE SET
            discipline_id = excluded.discipline_id,
            title = excluded.title,
            parent_topic_id = excluded.parent_topic_id,
            status = excluded.status,
+           completion_reuse_disabled = excluded.completion_reuse_disabled,
            notes = excluded.notes,
            sort_order = excluded.sort_order,
            active = excluded.active,
@@ -331,6 +353,7 @@ export class SqlStudyDataRepository implements IStudyDataRepository {
           t.title,
           t.parentTopicId,
           t.status,
+          Number(t.completionReuseDisabled === true),
           t.notes,
           t.order,
           t.active ? 1 : 0,
@@ -738,13 +761,14 @@ export class SqlStudyDataRepository implements IStudyDataRepository {
       title: string;
       parent_topic_id: string | null;
       status: Topic['status'];
+      completion_reuse_disabled: number;
       notes: string;
       sort_order: number;
       active: number;
       created_at: string;
       updated_at: string;
     }>(
-      `SELECT id, discipline_id, title, parent_topic_id, status, notes, sort_order, active, created_at, updated_at
+      `SELECT id, discipline_id, title, parent_topic_id, status, completion_reuse_disabled, notes, sort_order, active, created_at, updated_at
        FROM topics
        WHERE user_id = ?
        ORDER BY sort_order ASC, created_at ASC`,
@@ -756,6 +780,7 @@ export class SqlStudyDataRepository implements IStudyDataRepository {
       title: r.title,
       parentTopicId: r.parent_topic_id,
       status: r.status,
+      ...(r.completion_reuse_disabled ? { completionReuseDisabled: true } : {}),
       notes: r.notes,
       order: r.sort_order,
       active: Boolean(r.active),

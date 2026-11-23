@@ -1,5 +1,6 @@
 import type { ClientSession, Db } from 'mongodb';
 import { CONTEST_LIMIT_MESSAGE, MAX_USER_CONTESTS } from '../../src/domain/contestLimit';
+import { canReuseCompletion, findReusableCompletions, type ContestSyllabus } from '../../src/domain/topicCompletion';
 import { ConflictError, NotFoundError } from '../errors/AppError';
 import { DEFAULT_DISCIPLINES, DEFAULT_SETTINGS } from '../../src/db/seed';
 import {
@@ -299,14 +300,36 @@ export class MongoStudyDataRepository implements IStudyDataRepository {
 
   public async getWorkspace(userId: string): Promise<StudyWorkspaceDto> {
     await this.ensureUserSeed(userId);
-    const rlsFilter = buildWorkspaceRlsFilter(userId);
-    const doc = await this.collection().findOne(rlsFilter);
-    if (!doc) {
-      return buildDefaultWorkspaceDto();
-    }
+    const filter = buildWorkspaceRlsFilter(userId);
+    for (let attempt = 0; attempt < 10; attempt++) {
+      const doc = await this.collection().findOne(filter);
+      if (!doc) return buildDefaultWorkspaceDto();
 
-    const ctx = assertWorkspaceDocumentOwnership(doc, userId);
-    return this.decryptAndDeserializeWorkspace(ctx.ownerId, doc.encryptedPayload);
+      const { ownerId } = assertWorkspaceDocumentOwnership(doc, userId);
+      const workspace = this.decryptAndDeserializeWorkspace(ownerId, doc.encryptedPayload);
+      if (workspace.settings[0]?.contestHidden || !workspace.topics.some(canReuseCompletion)) return workspace;
+
+      const sources: ContestSyllabus[] = [];
+      for await (const source of this.collection().find({ ownerId })) {
+        if (source._id === doc._id) continue;
+        assertWorkspaceDocumentOwnership(source, source._id);
+        const syllabus = this.decryptAndDeserializeWorkspace(ownerId, source.encryptedPayload);
+        if (!syllabus.settings[0]?.contestHidden) sources.push(syllabus);
+      }
+      const matches = new Set(findReusableCompletions(workspace, sources).map(({ id }) => id));
+      if (matches.size === 0) return workspace;
+
+      const now = new Date().toISOString();
+      workspace.topics = workspace.topics.map((topic) =>
+        matches.has(topic.id) ? { ...topic, status: 'concluido', updatedAt: now } : topic,
+      );
+      const result = await this.collection().updateOne(
+        { ...filter, encryptedPayload: doc.encryptedPayload },
+        { $set: { encryptedPayload: this.serializeAndEncryptWorkspace(ownerId, workspace), updatedAt: now } },
+      );
+      if (result.matchedCount === 1) return workspace;
+    }
+    throw new ConflictError('Dados alterados em outro dispositivo. Tente novamente.');
   }
 
   public async isContestActive(userId: string): Promise<boolean> {

@@ -337,7 +337,11 @@ export async function createAndActivateContest(
   };
 
   const sessionId = getLocalSessionId();
-  if (sessionId && sessionId !== TEST_LOCAL_SESSION_ID && !await replaceUserWorkspaceInApi(workspacePayload, contestScopeId)) {
+  if (sessionId && sessionId !== TEST_LOCAL_SESSION_ID && !await replaceUserWorkspaceInApi(
+    workspacePayload, contestScopeId, ({ topics: syncedTopics }) => {
+      if (Array.isArray(syncedTopics)) workspacePayload.topics = syncedTopics as Topic[];
+    },
+  )) {
     if (!options.isInitialRegistration && sessionId === getLocalSessionId()) {
       await refreshUserContests();
       if (getUserContests().length >= MAX_USER_CONTESTS) throw new Error(CONTEST_LIMIT_MESSAGE);

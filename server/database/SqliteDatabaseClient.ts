@@ -28,6 +28,9 @@ export class SqliteDatabaseClient implements IDatabaseClient {
     if (!this.db.prepare('PRAGMA table_info(user_settings)').all().some((column) => column.name === 'preferences_json')) {
       this.db.exec("ALTER TABLE user_settings ADD COLUMN preferences_json TEXT NOT NULL DEFAULT '{}';");
     }
+    if (!this.db.prepare('PRAGMA table_info(topics)').all().some((column) => column.name === 'completion_reuse_disabled')) {
+      this.db.exec('ALTER TABLE topics ADD COLUMN completion_reuse_disabled INTEGER NOT NULL DEFAULT 0 CHECK (completion_reuse_disabled IN (0, 1));');
+    }
     try {
       this.db.exec('ALTER TABLE timer_states ADD COLUMN cycle_study INTEGER NULL;');
     } catch { /* Coluna já presente em bancos novos ou migrados. */ }

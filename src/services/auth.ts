@@ -411,19 +411,29 @@ export async function waitForPendingSync(): Promise<void> {
   await syncQueue;
 }
 
-async function putWorkspaceDirect(workspace: Record<DataTableName, unknown[]>, headers: Record<string, string>): Promise<boolean> {
+type SyncedWorkspace = Partial<Record<DataTableName, unknown[]>>;
+type OnWorkspaceSynced = (workspace: SyncedWorkspace) => void;
+
+async function putWorkspaceDirect(
+  workspace: Record<DataTableName, unknown[]>,
+  headers: Record<string, string>,
+  onSynced?: OnWorkspaceSynced,
+): Promise<boolean> {
   const res = await fetch('/api/study-data/workspace', {
     method: 'PUT',
     headers,
     body: JSON.stringify(workspace),
   });
-  const body = await res.json().catch(() => null) as { ok?: boolean } | null;
-  return res.ok && body?.ok === true;
+  const body = await res.json().catch(() => null) as { ok?: boolean; data?: SyncedWorkspace } | null;
+  if (!res.ok || body?.ok !== true) return false;
+  if (body.data) onSynced?.(body.data);
+  return true;
 }
 
 export async function replaceUserWorkspaceInApi(
   workspace: Record<DataTableName, unknown[]>,
   scope = getActiveContestScopeId(),
+  onSynced?: OnWorkspaceSynced,
 ): Promise<boolean> {
   const sessionId = getLocalSessionId();
   if (!sessionId || sessionId === TEST_LOCAL_SESSION_ID) return false;
@@ -432,7 +442,7 @@ export async function replaceUserWorkspaceInApi(
   const superseded = new Set(key ? readPendingBatches(key).map((batch) => batch.id) : []);
   return enqueueSyncTask(async () => {
     try {
-      const ok = await putWorkspaceDirect(workspace, headers);
+      const ok = await putWorkspaceDirect(workspace, headers, onSynced);
       if (ok && key) storePendingBatches(key, readPendingBatches(key).filter((batch) => !superseded.has(batch.id)));
       return ok;
     } catch (err) {
@@ -494,6 +504,7 @@ async function drainPendingBatches(
   sessionId: string,
   currentBatch?: PendingBatch,
   retryThroughId?: string,
+  onSynced?: OnWorkspaceSynced,
 ): Promise<boolean> {
   let confirmed = true;
   for (const saved of readPendingBatches(key)) {
@@ -503,7 +514,7 @@ async function drainPendingBatches(
       const res = await fetch('/api/study-data/batch', {
         method: 'POST', headers, body: JSON.stringify({ operations: batch.operations }),
       });
-      const body = await res.json().catch(() => null) as { ok?: boolean; error?: string } | null;
+      const body = await res.json().catch(() => null) as { ok?: boolean; error?: string; data?: SyncedWorkspace } | null;
       if (getLocalSessionId() !== sessionId) return false;
       if (!res.ok || body?.ok !== true) {
         if (res.status !== 400 && res.status !== 422) return false;
@@ -515,7 +526,10 @@ async function drainPendingBatches(
         console.error('Alterações rejeitadas pelo servidor:', body?.error ?? res.status);
       }
       storePendingBatches(key, readPendingBatches(key).filter((item) => item.id !== batch.id));
-      if (saved.id === currentBatch?.id || saved.id === retryThroughId) return confirmed;
+      if (saved.id === currentBatch?.id || saved.id === retryThroughId) {
+        if (confirmed && body?.data) onSynced?.(body.data);
+        return confirmed;
+      }
     } catch (err) {
       console.error('Falha ao sincronizar alterações com o banco de dados:', err);
       return false;
@@ -545,6 +559,7 @@ export async function retryPendingMutations(): Promise<void> {
 export async function syncBatchMutationsToApi(
   operations: readonly RemoteTableMutation[],
   scope = getActiveContestScopeId(),
+  onSynced?: OnWorkspaceSynced,
 ): Promise<boolean> {
   const sessionId = getLocalSessionId();
   const key = pendingBatchKey(scope);
@@ -555,5 +570,5 @@ export async function syncBatchMutationsToApi(
     operations: structuredClone([...operations]),
   };
   storePendingBatches(key, [...readPendingBatches(key), batch]);
-  return enqueueSyncTask(() => drainPendingBatches(key, headers, sessionId, batch));
+  return enqueueSyncTask(() => drainPendingBatches(key, headers, sessionId, batch, undefined, onSynced));
 }

@@ -12,6 +12,7 @@ import {
   waitForPendingSync,
   type RemoteTableMutation,
 } from '../services/auth';
+import { canReuseCompletion } from '../domain/topicCompletion';
 import { DEFAULT_DISCIPLINES, DEFAULT_SETTINGS, DEFAULT_TOPICS } from './seed';
 import {
   DATA_TABLES,
@@ -284,7 +285,7 @@ export class AppDatabase {
       } else {
         this.persistLocalWorkspaceCache();
         this.notifyListeners();
-        void syncBatchMutationsToApi([mutation]);
+        this.syncMutations([mutation]);
       }
     };
 
@@ -300,6 +301,31 @@ export class AppDatabase {
     this.mockExams = new MemoryTable<MockExam>('mockExams', handleMutation);
 
     this.seedDefaultsSilent();
+  }
+
+  private syncMutations(operations: readonly RemoteTableMutation[]): void {
+    const version = this.versionCounter;
+    const scope = getActiveContestScopeId();
+    void syncBatchMutationsToApi(operations, scope, ({ topics }) => {
+      if (!Array.isArray(topics) || version !== this.versionCounter || scope !== getActiveContestScopeId()) return;
+
+      const completed = new Map((topics as Topic[])
+        .filter((topic) => topic.status === 'concluido')
+        .map((topic) => [topic.id, topic]));
+      let changed = false;
+      const rows = this.topics.toArraySync().map((topic) => {
+        const remote = completed.get(topic.id);
+        if (!remote || !canReuseCompletion(topic) || remote.title !== topic.title ||
+          remote.disciplineId !== topic.disciplineId || remote.parentTopicId !== topic.parentTopicId) return topic;
+        changed = true;
+        return { ...topic, status: remote.status, updatedAt: remote.updatedAt };
+      });
+      if (!changed) return;
+      this.topics.replaceAllSilent(rows);
+      this.versionCounter++;
+      this.persistLocalWorkspaceCache();
+      this.notifyListeners();
+    });
   }
 
   public seedDefaultsSilent(): void {
@@ -527,7 +553,7 @@ export class AppDatabase {
         this.pendingMutations = [];
         this.persistLocalWorkspaceCache();
         this.notifyListeners();
-        void syncBatchMutationsToApi(batch);
+        this.syncMutations(batch);
       }
     }
   }
