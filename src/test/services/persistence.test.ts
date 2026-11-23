@@ -25,6 +25,9 @@ import {
 } from '../../services/backup';
 import { completeReview, reconcileReviewsAndErrorNotes, saveErrorNote, saveQuestionLog, scheduleTopicReviews } from '../../services/performance';
 import { createTopic, deleteAllTopics, setTopicStatus, updateTopic } from '../../services/topics';
+import { computeRank } from '../../domain/rank';
+import { reviewBuckets } from '../../domain/metrics';
+import { addDays, todayKey } from '../../lib/dates';
 
 describe('services/persistence & workflows', () => {
   beforeEach(async () => {
@@ -319,6 +322,49 @@ describe('services/persistence & workflows', () => {
     reviews = await db.reviews.where('disciplineId').equals('logica-programacao').toArray();
     expect(reviews.length).toBe(4);
     expect(reviews.filter(r => r.status === 'pendente').map(r => r.intervalDays)).toEqual([30]);
+  });
+
+  it('mantém a próxima revisão de um erro revisado na fila até a conclusão explícita', async () => {
+    const today = todayKey();
+    const firstDate = addDays(today, -7);
+    const note = await saveErrorNote({
+      disciplineId: 'arquitetura',
+      topicId: null,
+      questionLogId: null,
+      sourceReference: 'Prova BNB · questão 65',
+      errorType: 'falta-conteudo',
+      explanation: 'Revisar microsserviços.',
+      errorDate: addDays(firstDate, -1),
+      status: 'revisar',
+      nextReviewDate: null,
+    }, { scheduleReviews: true });
+    const [first] = await db.reviews.toArray();
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+      vi.setSystemTime(new Date(`${firstDate}T15:00:00Z`));
+      await completeReview(first.id);
+    } finally {
+      vi.useRealTimers();
+    }
+    expect(await db.errorNotes.get(note.id)).toMatchObject({
+      status: 'revisado', nextReviewDate: addDays(today, -1),
+    });
+    const before = await db.reviews.toArray();
+    const [due] = reviewBuckets(before, today).overdue;
+    expect(due).toMatchObject({ intervalDays: 7, status: 'pendente', completedAt: null });
+
+    await reconcileReviewsAndErrorNotes();
+    await reconcileReviewsAndErrorNotes();
+    const after = await db.reviews.toArray();
+    expect(after).toEqual(before);
+    expect(computeRank({ sessions: [], reviews: after, settings: undefined, today }).todayXp).toBe(0);
+
+    await completeReview(due.id);
+    await reconcileReviewsAndErrorNotes();
+    const completed = await db.reviews.toArray();
+    expect(completed.filter((r) => r.status === 'concluida').map((r) => r.id)).toEqual([first.id, due.id]);
+    expect(completed.filter((r) => r.status === 'pendente')).toMatchObject([{ intervalDays: 30 }]);
+    expect(computeRank({ sessions: [], reviews: completed, settings: undefined, today }).todayXp).toBe(30);
   });
 
   it('synchronizes review dueDate when nextReviewDate is changed on an ErrorNote and prunes legacy future reviews', async () => {

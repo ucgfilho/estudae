@@ -72,7 +72,9 @@ describe('patentes e sistema de gamificação', () => {
     const revs = Array.from({ length: 6 }, (_, i) => review(`r-${i}`, '2026-10-10T15:00:00Z'));
     // 100 (dia estudado) + 4 * 30 (limite de 4 revisões recompensadas por dia) = 220 XP
     expect(XP.reviewsPerDayCap).toBe(4);
-    expect(run([sess('2026-10-10', 30)], '2026-10-10', revs).xp).toBe(220);
+    const state = run([sess('2026-10-10', 30)], '2026-10-10', revs);
+    expect(state.xp).toBe(220);
+    expect(state.events).toMatchObject([{ label: 'dia estudado + 6 revisões (4 com XP)', delta: 220 }]);
   });
 
   it('menos de 30 min não é estudo válido', () => {

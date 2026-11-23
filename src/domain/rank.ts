@@ -312,10 +312,12 @@ export function computeRank(input: RankInput): RankState {
           parts.push('meta diária');
         }
       }
-      const rv = Math.min(a!.reviews, XP.reviewsPerDayCap);
-      if (rv > 0) {
-        gain += rv * XP.review;
-        parts.push(rv === 1 ? '1 revisão' : `${rv} revisões`);
+      const completedReviews = a!.reviews;
+      if (completedReviews > 0) {
+        const rewardedReviews = Math.min(completedReviews, XP.reviewsPerDayCap);
+        gain += rewardedReviews * XP.review;
+        const label = completedReviews === 1 ? '1 revisão' : `${completedReviews} revisões`;
+        parts.push(rewardedReviews < completedReviews ? `${label} (${rewardedReviews} com XP)` : label);
       }
       if (a && a.flashHits > 0) {
         gain += a.flashHits * XP.flashcardHit;

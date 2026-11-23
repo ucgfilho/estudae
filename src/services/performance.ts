@@ -416,15 +416,7 @@ export interface ReconcileReviewsResult {
  * e sincroniza rigorosamente datas, títulos, disciplinas e tópicos entre `reviews` e `errorNotes`.
  */
 export async function reconcileReviewsAndErrorNotes(): Promise<ReconcileReviewsResult> {
-  // Erros já marcados como revisados com revisão vencida (dados antigos): conclui a revisão para sincronizar.
-  const today = todayKey();
-  const [notesNow, reviewsNow] = await Promise.all([db.errorNotes.toArray(), db.reviews.toArray()]);
-  for (const n of notesNow) {
-    if (n.status !== 'revisado') continue;
-    if (reviewsNow.some((r) => r.errorNoteId === n.id && r.status === 'pendente' && r.dueDate <= today)) {
-      await completePendingReviewsOfNote(n.id);
-    }
-  }
+  // Uma anotação revisada pode ter outra rodada pendente no ciclo.
   return db.transaction('rw', db.reviews, db.errorNotes, db.settings, async () => {
     const [allReviews, allNotes, settings] = await Promise.all([
       db.reviews.toArray(),
