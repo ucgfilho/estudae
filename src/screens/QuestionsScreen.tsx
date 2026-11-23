@@ -292,6 +292,7 @@ export function QuestionsScreen() {
 
             <Field label="Tópico">
               <Select
+                searchPlaceholder="Pesquisar tópico…"
                 value={filterTopicId}
                 onChange={(e) => setFilterTopicId(e.target.value)}
                 disabled={!filterDisciplineId}

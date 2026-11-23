@@ -196,6 +196,7 @@ export function QuestionModal({
 
           <Field label="Tópico" hint="Opcional">
             <Select
+              searchPlaceholder="Pesquisar tópico…"
               value={form.topicId}
               onChange={(e) => setForm({ ...form, topicId: e.target.value })}
               disabled={!form.disciplineId || filteredTopics.length === 0}

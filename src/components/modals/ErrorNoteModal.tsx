@@ -286,6 +286,7 @@ export function ErrorNoteModal({
 
           <Field label="Tópico" hint="Opcional">
             <Select
+              searchPlaceholder="Pesquisar tópico…"
               value={topicId}
               onChange={(e) => setTopicId(e.target.value)}
               disabled={!disciplineId || filteredTopics.length === 0}

@@ -15,7 +15,7 @@ import {
   type KeyboardEvent,
 } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronDown, Check } from 'lucide-react';
+import { ChevronDown, Check, Search } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 export interface SelectOption {
@@ -27,8 +27,13 @@ export interface SelectOption {
 export interface SelectProps extends Omit<SelectHTMLAttributes<HTMLSelectElement>, 'size'> {
   size?: 'sm' | 'md';
   placeholder?: string;
+  searchPlaceholder?: string;
   options?: SelectOption[];
   onValueChange?: (value: string) => void;
+}
+
+function normalizeSearch(text: string) {
+  return text.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().trim();
 }
 
 /** Extrai recursivamente opções passadas via <option> children para construir a lista customizada. */
@@ -92,6 +97,7 @@ export function Select({
   onChange,
   onValueChange,
   placeholder,
+  searchPlaceholder,
   size = 'md',
   disabled = false,
   required = false,
@@ -108,6 +114,7 @@ export function Select({
 
   const triggerRef = useRef<HTMLButtonElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
   const nativeSelectRef = useRef<HTMLSelectElement>(null);
 
   const [isOpen, setIsOpen] = useState(false);
@@ -115,7 +122,8 @@ export function Select({
   const [uncontrolledValue, setUncontrolledValue] = useState<string>(
     defaultValue !== undefined ? String(defaultValue) : ''
   );
-  const [highlightedIndex, setHighlightedIndex] = useState<number>(-1);
+  const [highlightedOptionIndex, setHighlightedIndex] = useState<number | null>(null);
+  const [query, setQuery] = useState('');
 
   // Valor ativo (controlado ou não-controlado)
   const currentValue = value !== undefined ? String(value) : uncontrolledValue;
@@ -123,6 +131,11 @@ export function Select({
   // Lista consolidada de opções (memoizada para evitar disparos espúrios de efeitos)
   const parsedOptions = useMemo(() => parseChildrenOptions(children), [children]);
   const allOptions = explicitOptions || parsedOptions;
+  const normalizedQuery = normalizeSearch(query);
+  const visibleOptions = searchPlaceholder && normalizedQuery
+    ? allOptions.filter(({ label }) => normalizeSearch(label).includes(normalizedQuery))
+    : allOptions;
+  const highlightedIndex = highlightedOptionIndex ?? visibleOptions.findIndex((opt) => !opt.disabled);
 
   // Encontra a opção selecionada atualmente
   const selectedOption = allOptions.find((opt) => opt.value === currentValue);
@@ -220,6 +233,7 @@ export function Select({
       const targetIdx = idx >= 0 ? idx : 0;
       setHighlightedIndex(targetIdx);
       scrollItemIntoView(targetIdx);
+      searchRef.current?.focus({ preventScroll: true });
     }
     prevIsOpenRef.current = isOpen;
   }, [isOpen, currentValue, allOptions, scrollItemIntoView]);
@@ -247,13 +261,20 @@ export function Select({
     triggerRef.current?.focus();
   };
 
-  const handleKeyDown = (e: KeyboardEvent<HTMLButtonElement>) => {
-    if (disabled) return;
+  const openPopover = () => {
+    setQuery('');
+    setIsOpen(true);
+  };
 
-    if (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter' || e.key === ' ') {
+  const handleKeyDown = (e: KeyboardEvent<HTMLButtonElement | HTMLInputElement>) => {
+    if (disabled || e.nativeEvent.isComposing) return;
+    const isSearchInput = e.currentTarget === searchRef.current;
+    const isActivation = e.key === 'Enter' || (!isSearchInput && e.key === ' ');
+
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp' || isActivation) {
       e.preventDefault();
       if (!isOpen) {
-        setIsOpen(true);
+        openPopover();
         return;
       }
     }
@@ -263,41 +284,35 @@ export function Select({
     if (e.key === 'Escape') {
       e.preventDefault();
       setIsOpen(false);
+      if (isSearchInput) triggerRef.current?.focus();
       return;
     }
 
     if (e.key === 'Tab') {
+      // O portal fica fora da ordem do formulário. Retoma o Tab a partir do gatilho.
+      if (isSearchInput) triggerRef.current?.focus();
       setIsOpen(false);
       return;
     }
 
     if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      setHighlightedIndex((prev) => {
-        let next = prev + 1;
-        while (next < allOptions.length && allOptions[next].disabled) next++;
-        const target = next < allOptions.length ? next : prev;
-        scrollItemIntoView(target);
-        return target;
-      });
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      setHighlightedIndex((prev) => {
-        let next = prev - 1;
-        while (next >= 0 && allOptions[next].disabled) next--;
-        const target = next >= 0 ? next : prev;
-        scrollItemIntoView(target);
-        return target;
-      });
-    } else if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      if (highlightedIndex >= 0 && highlightedIndex < allOptions.length) {
-        const opt = allOptions[highlightedIndex];
-        if (!opt.disabled) {
-          handleSelectValue(opt.value);
-        }
+      let next = highlightedIndex + 1;
+      while (next < visibleOptions.length && visibleOptions[next].disabled) next++;
+      if (next < visibleOptions.length) {
+        setHighlightedIndex(next);
+        scrollItemIntoView(next);
       }
-    } else if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
+    } else if (e.key === 'ArrowUp') {
+      let next = Math.min(highlightedIndex, visibleOptions.length) - 1;
+      while (next >= 0 && visibleOptions[next].disabled) next--;
+      if (next >= 0) {
+        setHighlightedIndex(next);
+        scrollItemIntoView(next);
+      }
+    } else if (isActivation) {
+      const opt = visibleOptions[highlightedIndex];
+      if (opt && !opt.disabled) handleSelectValue(opt.value);
+    } else if (!isSearchInput && e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
       const char = e.key.toLowerCase();
       const matchIdx = allOptions.findIndex(
         (opt, i) => i > highlightedIndex && opt.label.toLowerCase().startsWith(char) && !opt.disabled
@@ -354,7 +369,7 @@ export function Select({
         ref={triggerRef}
         type="button"
         id={selectId}
-        role="combobox"
+        role={searchPlaceholder ? undefined : 'combobox'}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
         aria-controls={listboxId}
@@ -364,7 +379,8 @@ export function Select({
         disabled={disabled}
         onClick={() => {
           if (disabled) return;
-          setIsOpen((prev) => !prev);
+          if (isOpen) setIsOpen(false);
+          else openPopover();
         }}
         onKeyDown={handleKeyDown}
         className={cn(
@@ -397,9 +413,7 @@ export function Select({
           <div
             ref={popoverRef}
             data-state={popover.state}
-            id={listboxId}
-            role="listbox"
-            aria-label={ariaLabel || 'Opções'}
+            inert={searchPlaceholder ? !isOpen : undefined}
             style={{
               position: 'fixed',
               top: coords.top !== undefined ? `${coords.top}px` : 'auto',
@@ -408,14 +422,42 @@ export function Select({
               width: `${coords.width}px`,
             }}
             className={cn(
-              'z-50 max-h-60 max-lg:max-h-[min(20rem,50dvh)] overflow-y-auto overscroll-contain rounded-lg bg-surface p-1 shadow-xl shadow-black/30',
+              'z-50 flex max-h-60 max-lg:max-h-[min(20rem,50dvh)] flex-col rounded-lg bg-surface shadow-xl shadow-black/30',
               popover.state === 'open' ? 'animate-popover-in' : 'animate-popover-out pointer-events-none'
             )}
           >
-            {allOptions.length === 0 ? (
-              <div className="px-3 py-2 text-xs text-fg-subtle text-center">Nenhuma opção disponível</div>
-            ) : (
-              allOptions.map((opt, index) => {
+            {searchPlaceholder && (
+              <div className="relative mt-1 shrink-0 px-1">
+                <Search aria-hidden="true" className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-fg-subtle" />
+                <input
+                  ref={searchRef}
+                  type="text"
+                  role="combobox"
+                  aria-label={searchPlaceholder}
+                  aria-expanded={isOpen}
+                  aria-autocomplete="list"
+                  aria-controls={listboxId}
+                  aria-activedescendant={visibleOptions[highlightedIndex] ? `${listboxId}-option-${highlightedIndex}` : undefined}
+                  autoComplete="off"
+                  placeholder={searchPlaceholder}
+                  value={query}
+                  onChange={(e) => {
+                    setQuery(e.target.value);
+                    setHighlightedIndex(null);
+                    scrollItemIntoView(0);
+                  }}
+                  onKeyDown={handleKeyDown}
+                  className="input-base control-height w-full pl-8 text-sm"
+                />
+              </div>
+            )}
+            {visibleOptions.length === 0 && (
+              <div role="status" className="px-3 py-2 text-xs text-fg-subtle text-center">
+                {normalizedQuery ? 'Nenhuma opção encontrada' : 'Nenhuma opção disponível'}
+              </div>
+            )}
+            <div id={listboxId} role="listbox" aria-label={ariaLabel || 'Opções'} className="min-h-0 overflow-y-auto overscroll-contain p-1">
+              {visibleOptions.map((opt, index) => {
                 const isSelected = opt.value === currentValue;
                 const isHighlighted = index === highlightedIndex;
                 const isItemPlaceholder = opt.value === '';
@@ -423,6 +465,7 @@ export function Select({
                 return (
                   <div
                     key={`${opt.value}-${index}`}
+                    id={`${listboxId}-option-${index}`}
                     data-index={index}
                     role="option"
                     aria-selected={isSelected}
@@ -460,8 +503,8 @@ export function Select({
                     )}
                   </div>
                 );
-              })
-            )}
+              })}
+            </div>
           </div>,
           // Dentro de um <dialog> modal o popover precisa ficar na mesma camada (top layer).
           triggerRef.current?.closest('dialog') ?? document.body

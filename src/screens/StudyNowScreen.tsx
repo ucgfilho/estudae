@@ -579,6 +579,7 @@ export function StudyNowScreen() {
                     </button>
                   </div>
                   <Select
+                    searchPlaceholder="Pesquisar tópico…"
                     id="study-topic"
                     value={adHocTopicId}
                     onChange={(e) => setAdHocTopicId(e.target.value)}
