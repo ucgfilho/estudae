@@ -180,7 +180,7 @@ export function buildSessionHeaders(extra: Record<string, string> = {}): Record<
   return headers;
 }
 
-async function parseApiJson<T>(res: Response, sessionId?: string): Promise<T> {
+export async function parseApiJson<T>(res: Response, sessionId?: string): Promise<T> {
   const body = (await res.json().catch(() => ({}))) as { error?: string } & T;
   if (!res.ok) {
     if (res.status === 401 && sessionId && getLocalSessionId() === sessionId) {

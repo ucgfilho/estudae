@@ -2,6 +2,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { AuthResponseDto } from './dtos/auth.dto';
 import type { AppContainer } from './container';
 import { AppError, DtoValidationError, ForbiddenError, NotFoundError, UnauthorizedError } from './errors/AppError';
+import { generateErrorNoteFlashcards } from './services/ErrorNoteFlashcardGenerator';
 
 const MAX_BODY_BYTES = 10 * 1024 * 1024; // 10 MB
 
@@ -246,6 +247,13 @@ export async function handleApiRequest(
       const body = await readJsonBody(req);
       const result = await container.studyDataController.executeBatch(studyUser, body);
       sendJson(res, result.status, result.data);
+      return true;
+    }
+
+    if (method === 'POST' && pathname === '/api/study-data/error-notes/flashcards/generate') {
+      await container.authControls.limitFlashcardGeneration(user.id);
+      const cards = await generateErrorNoteFlashcards(await readJsonBody(req), container.env.geminiApiKey);
+      sendJson(res, 200, { cards });
       return true;
     }
 

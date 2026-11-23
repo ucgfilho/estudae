@@ -1,11 +1,14 @@
 import { db } from '../db/db';
+import { MAX_FLASHCARDS_PER_ERROR_NOTE } from '../db/types';
 import type { ErrorFlashcard, ErrorNote, ErrorStatus, ErrorType, QuestionLog, ReviewTask } from '../db/types';
 import { findDuplicateLog, type NormalizedQuestionValues } from '../domain/questions';
 import { buildNextReviewTask, buildReviewTasks, nextPendingDate, postponedDueDate } from '../domain/reviews';
 import { isValidDateKey, todayKey, type DateKey } from '../lib/dates';
 import { createId, nowIso } from '../lib/utils';
 import { getSettings } from './settings';
-import { hasUnsyncedChanges, waitForPendingSync } from './auth';
+import {
+  buildSessionHeaders, getActiveContestScopeId, getLocalSessionId, hasUnsyncedChanges, parseApiJson, waitForPendingSync,
+} from './auth';
 import { ValidationError } from './sessions';
 
 /* ------------------------------ Questões ------------------------------ */
@@ -612,7 +615,7 @@ function validateFlashcardInput(input: FlashcardInput): { statement: string; ans
 /** Adiciona um flashcard manual ao erro (é possível criar vários por erro). */
 export async function addFlashcard(noteId: string, input: FlashcardInput): Promise<ErrorFlashcard> {
   const valid = validateFlashcardInput(input);
-  const note = await db.errorNotes.get(noteId);
+  const note = db.errorNotes.getSync(noteId);
   if (!note) throw new ValidationError('Erro não encontrado no caderno.');
   const card: ErrorFlashcard = {
     id: createId(),
@@ -627,10 +630,62 @@ export async function addFlashcard(noteId: string, input: FlashcardInput): Promi
   return card;
 }
 
+function normalizeStatement(statement: string): string {
+  return statement.normalize('NFC').trim().toLocaleLowerCase('pt-BR').replace(/\s+/g, ' ').replace(/[.!?]+$/, '');
+}
+
+export async function generateFlashcardsForErrorNote(noteId: string, explanation: string, signal: AbortSignal): Promise<number> {
+  const note = db.errorNotes.getSync(noteId);
+  if (!note) throw new ValidationError('Erro não encontrado no caderno.');
+  const existingStatements = (note.flashcards ?? []).map((card) => card.statement.slice(0, 600));
+  if (existingStatements.length >= MAX_FLASHCARDS_PER_ERROR_NOTE) {
+    throw new ValidationError('Esta anotação atingiu o limite de flashcards.');
+  }
+
+  const sessionId = getLocalSessionId();
+  if (!sessionId) throw new ValidationError('Entre na sua conta para gerar flashcards com IA.');
+  const contestId = getActiveContestScopeId();
+  const response = await fetch('/api/study-data/error-notes/flashcards/generate', {
+    method: 'POST',
+    headers: buildSessionHeaders(),
+    body: JSON.stringify({ explanation, existingStatements }),
+    signal,
+  });
+  const { cards } = await parseApiJson<{ cards: FlashcardInput[] }>(response, sessionId);
+  signal.throwIfAborted();
+  if (sessionId !== getLocalSessionId() || contestId !== getActiveContestScopeId()) {
+    throw new ValidationError('A conta ou o concurso mudou durante a geração.');
+  }
+
+  const currentNote = db.errorNotes.getSync(noteId);
+  if (!currentNote) throw new ValidationError('Erro não encontrado no caderno.');
+  const existingCards = currentNote.flashcards ?? [];
+  const seen = new Set(existingCards.map((card) => normalizeStatement(card.statement)));
+  const createdAt = nowIso();
+  const newCards: ErrorFlashcard[] = [];
+  for (const input of cards) {
+    const card = validateFlashcardInput(input);
+    const key = normalizeStatement(card.statement);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    newCards.push({ ...card, id: createId(), createdAt, generatedByAi: true });
+  }
+
+  if (newCards.length === 0) return 0;
+  if (existingCards.length + newCards.length > MAX_FLASHCARDS_PER_ERROR_NOTE) {
+    throw new ValidationError('O lote gerado ultrapassa o limite de flashcards desta anotação.');
+  }
+  await db.errorNotes.update(noteId, {
+    flashcards: [...existingCards, ...newCards],
+    updatedAt: createdAt,
+  });
+  return newCards.length;
+}
+
 /** Atualiza um flashcard existente vinculado a um erro. */
 export async function updateFlashcard(noteId: string, cardId: string, input: FlashcardInput): Promise<ErrorFlashcard> {
   const valid = validateFlashcardInput(input);
-  const note = await db.errorNotes.get(noteId);
+  const note = db.errorNotes.getSync(noteId);
   if (!note) throw new ValidationError('Erro não encontrado no caderno.');
   const cards = note.flashcards ?? [];
   const idx = cards.findIndex((c) => c.id === cardId);
@@ -644,7 +699,7 @@ export async function updateFlashcard(noteId: string, cardId: string, input: Fla
 
 /** Remove um flashcard vinculado a um erro. */
 export async function deleteFlashcard(noteId: string, cardId: string): Promise<void> {
-  const note = await db.errorNotes.get(noteId);
+  const note = db.errorNotes.getSync(noteId);
   if (!note) return;
   const nextCards = (note.flashcards ?? []).filter((c) => c.id !== cardId);
   await db.errorNotes.put({ ...note, flashcards: nextCards, updatedAt: nowIso() });

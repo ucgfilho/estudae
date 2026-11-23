@@ -240,15 +240,16 @@ export function FlashcardDeck({ reviews, notes, disciplines, onComplete }: Props
   return (
     <div className="mx-auto max-w-3xl space-y-4">
       <div className="space-y-2">
-        <div className="flex items-center justify-between text-sm">
+        <div className="flex flex-wrap items-center gap-2 text-sm">
           <span className="font-semibold text-fg">
             {redoMode
               ? `Revisão de erros ${doneReviews + 1} de ${currentTotalItems}`
               : `Revisão ${Math.min(doneReviews + 1, currentTotalItems)} de ${currentTotalItems}`}
             {!redoMode && cards.length > 1 ? ` · Flashcard ${cardIndex + 1} de ${cards.length}` : ''}
           </span>
+          {card?.generatedByAi && <Badge tone="info">Gerado por IA</Badge>}
           {streak > 0 && (
-            <span className="flex items-center gap-1 font-semibold text-warning">
+            <span className="ml-auto flex items-center gap-1 font-semibold text-warning">
               <Flame className="size-4" aria-hidden /> {streak} em sequência
             </span>
           )}

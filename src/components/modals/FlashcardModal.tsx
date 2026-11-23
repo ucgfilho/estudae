@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { CheckCircle2, XCircle } from 'lucide-react';
 import { Dialog } from '../ui/Dialog';
 import { Button } from '../ui/Button';
-import { Alert } from '../ui/Display';
+import { Alert, Badge } from '../ui/Display';
 import { Field, Radio, Textarea } from '../ui/Form';
 import { addFlashcard, updateFlashcard } from '../../services/performance';
 import type { ErrorFlashcard, ErrorNote } from '../../db/types';
@@ -72,6 +72,7 @@ export function FlashcardModal({ open, onClose, note, cardToEdit, onSaved }: Fla
       }
     >
       <form id="flashcard-form" onSubmit={handleSubmit} className="space-y-4">
+        {cardToEdit?.generatedByAi && <Badge tone="info">Gerado por IA</Badge>}
         {error && (
           <Alert tone="danger" onClose={() => setError(null)}>
             {error}

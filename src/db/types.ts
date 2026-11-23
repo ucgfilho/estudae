@@ -150,13 +150,16 @@ export const ERROR_STATUS_LABELS: Record<ErrorStatus, string> = {
   dominado: 'Dominado',
 };
 
-/** Flashcard (certo/errado) criado manualmente pelo estudante a partir de um erro do caderno. */
+export const MAX_FLASHCARDS_PER_ERROR_NOTE = 100;
+
+/** Flashcard de certo ou errado vinculado a uma anotação do caderno de erros. */
 export interface ErrorFlashcard {
   id: string;
   statement: string;
   answer: 'certo' | 'errado';
   explanation: string;
   createdAt: string;
+  generatedByAi?: true;
 }
 
 export interface ErrorNote {

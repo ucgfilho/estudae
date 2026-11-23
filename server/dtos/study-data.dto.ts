@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { workspacePreferenceFields } from '../../src/db/settingsFields';
 import {
   DATA_TABLES,
+  MAX_FLASHCARDS_PER_ERROR_NOTE,
   type DataTableName,
   type Discipline,
   type ErrorNote,
@@ -127,9 +128,10 @@ export const errorNoteDtoSchema = z.object({
         answer: z.enum(['certo', 'errado']),
         explanation: z.string().max(20000),
         createdAt: z.string(),
+        generatedByAi: z.literal(true).optional(),
       }),
     )
-    .max(100)
+    .max(MAX_FLASHCARDS_PER_ERROR_NOTE)
     .optional(),
   createdAt: iso,
   updatedAt: iso,

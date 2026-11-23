@@ -1,12 +1,12 @@
 import { useState, useEffect, useMemo, useRef, type FormEvent } from 'react';
-import { Edit2, Layers, Plus, Trash2 } from 'lucide-react';
+import { Edit2, Layers, Plus, Sparkles, Trash2 } from 'lucide-react';
 import { Dialog } from '../ui/Dialog';
 import { Button, IconButton } from '../ui/Button';
 import { Alert, Badge } from '../ui/Display';
 import { Field, Input, Select, Checkbox } from '../ui/Form';
 import { RichTextEditor } from '../ui/RichText';
 import { useDisciplines, useTopics, useErrorNotes, useMockExams } from '../../hooks/useData';
-import { deleteFlashcard, saveErrorNote, type ErrorNoteInput } from '../../services/performance';
+import { deleteFlashcard, generateFlashcardsForErrorNote, saveErrorNote, type ErrorNoteInput } from '../../services/performance';
 import {
   ERROR_TYPE_LABELS,
   ERROR_STATUS_LABELS,
@@ -103,6 +103,41 @@ export function ErrorNoteModal({
   const [loading, setLoading] = useState(false);
   const [flashcardModalOpen, setFlashcardModalOpen] = useState(false);
   const [cardToEdit, setCardToEdit] = useState<ErrorFlashcard | null>(null);
+  const [generating, setGenerating] = useState(false);
+  const [generationError, setGenerationError] = useState<string | null>(null);
+  const [generatedCount, setGeneratedCount] = useState<number | null>(null);
+  const generationRequest = useRef<AbortController | null>(null);
+  const flashcardNoteId = effectiveNote?.id;
+
+  useEffect(() => {
+    setGenerating(false);
+    setGenerationError(null);
+    setGeneratedCount(null);
+    return () => {
+      generationRequest.current?.abort();
+      generationRequest.current = null;
+    };
+  }, [open, flashcardNoteId]);
+
+  const handleGenerateFlashcards = async () => {
+    if (!flashcardNoteId || !explanation.trim() || generationRequest.current) return;
+    const request = new AbortController();
+    generationRequest.current = request;
+    setGenerating(true);
+    setGenerationError(null);
+    setGeneratedCount(null);
+    try {
+      const count = await generateFlashcardsForErrorNote(flashcardNoteId, explanation.trim(), request.signal);
+      if (!request.signal.aborted) setGeneratedCount(count);
+    } catch (err) {
+      if (!request.signal.aborted) setGenerationError(errorMessage(err));
+    } finally {
+      if (generationRequest.current === request) {
+        generationRequest.current = null;
+        setGenerating(false);
+      }
+    }
+  };
 
   const formKey = questionLogId ? `log:${questionLogId}` : noteToEdit ? `note:${noteToEdit.id}` : 'new';
   const initializedForm = useRef<string | null>(null);
@@ -176,6 +211,7 @@ export function ErrorNoteModal({
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (generationRequest.current) return;
     setError(null);
 
     if (!disciplineId) {
@@ -252,7 +288,7 @@ export function ErrorNoteModal({
           <Button variant="secondary" onClick={onClose} disabled={loading}>
             Cancelar
           </Button>
-          <Button variant="primary" type="submit" form="error-note-form" loading={loading}>
+          <Button variant="primary" type="submit" form="error-note-form" loading={loading} disabled={generating}>
             {effectiveNote ? 'Salvar alterações' : 'Salvar no caderno'}
           </Button>
         </>
@@ -390,19 +426,51 @@ export function ErrorNoteModal({
                 <Layers className="size-4 text-primary" />
                 <span>Flashcards relacionados ({effectiveNote.flashcards?.length ?? 0})</span>
               </div>
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                icon={<Plus className="size-3.5" />}
-                onClick={() => {
-                  setCardToEdit(null);
-                  setFlashcardModalOpen(true);
-                }}
-              >
-                Novo flashcard
-              </Button>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  variant="subtle"
+                  size="sm"
+                  icon={<Sparkles className="size-3.5" />}
+                  loading={generating}
+                  disabled={loading || !explanation.trim()}
+                  aria-describedby="flashcard-ai-hint"
+                  onClick={() => void handleGenerateFlashcards()}
+                >
+                  {generating ? 'Gerando flashcards…' : 'Gerar flashcards com IA'}
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  icon={<Plus className="size-3.5" />}
+                  onClick={() => {
+                    setCardToEdit(null);
+                    setFlashcardModalOpen(true);
+                  }}
+                >
+                  Novo flashcard
+                </Button>
+              </div>
             </div>
+
+            <p id="flashcard-ai-hint" className="text-xs text-fg-subtle">
+              {explanation.trim()
+                ? 'Ao gerar, a explicação acima e os enunciados dos cartões existentes são enviados ao Gemini.'
+                : 'Preencha a explicação do erro para gerar flashcards com IA.'}
+            </p>
+            {generationError && (
+              <Alert tone="danger" onClose={() => setGenerationError(null)}>{generationError}</Alert>
+            )}
+            {generatedCount !== null && (
+              <p role="status" className="text-xs text-fg">
+                {generatedCount === 0
+                  ? 'A IA não encontrou novos pontos para transformar em flashcards.'
+                  : generatedCount === 1
+                    ? '1 flashcard adicionado.'
+                    : `${generatedCount} flashcards adicionados.`}
+              </p>
+            )}
 
             {effectiveNote.flashcards && effectiveNote.flashcards.length > 0 ? (
               <ul className="space-y-2">
@@ -412,11 +480,12 @@ export function ErrorNoteModal({
                     className="flex items-center justify-between gap-2 rounded-lg bg-surface px-3 py-2 text-xs"
                   >
                     <div className="min-w-0 flex-1 space-y-0.5">
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex flex-wrap items-center gap-1.5">
                         <span className="font-semibold text-fg">Flashcard {idx + 1}</span>
                         <Badge tone={card.answer === 'certo' ? 'success' : 'danger'}>
                           {card.answer === 'certo' ? 'Certo' : 'Errado'}
                         </Badge>
+                        {card.generatedByAi && <Badge tone="info">Gerado por IA</Badge>}
                       </div>
                       <p className="wrap-anywhere text-fg-muted">{card.statement}</p>
                     </div>

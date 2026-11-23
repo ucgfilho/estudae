@@ -101,6 +101,10 @@ export class AuthControls {
     if (email && email.length <= 255) await this.limit('account', email, 12);
   }
 
+  public async limitFlashcardGeneration(userId: string): Promise<void> {
+    await this.limit('flashcard-generation', userId, 6);
+  }
+
   private async limit(scope: string, value: string, maximum: number): Promise<void> {
     const expiresAt = (Math.floor(Date.now() / 60_000) + 1) * 60_000;
     const digest = createHmac('sha256', this.secret).update(value).digest('hex');

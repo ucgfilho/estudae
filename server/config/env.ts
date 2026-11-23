@@ -39,6 +39,7 @@ export interface ServerEnv {
   defaultUserEmail: string;
   defaultUserPassword: string;
   defaultUserName: string;
+  geminiApiKey: string;
 }
 
 export function getServerEnv(): ServerEnv {
@@ -62,6 +63,7 @@ export function getServerEnv(): ServerEnv {
     defaultUserEmail: (process.env.DEFAULT_USER_EMAIL ?? '').trim(),
     defaultUserPassword: process.env.DEFAULT_USER_PASSWORD ?? '',
     defaultUserName: (process.env.DEFAULT_USER_NAME ?? '').trim(),
+    geminiApiKey: process.env.GEMINI_API_KEY?.trim() ?? '',
   };
 }
 

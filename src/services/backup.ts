@@ -129,6 +129,7 @@ const errorNoteSchema = z.object({
     answer: z.enum(['certo', 'errado']),
     explanation: z.string().max(20_000),
     createdAt: z.string(),
+    generatedByAi: z.literal(true).optional(),
   })).max(100).optional(),
   createdAt: iso,
   updatedAt: iso,
