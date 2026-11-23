@@ -39676,10 +39676,7 @@ function createAppContainer(overrides = {}) {
 // server/services/ErrorNoteFlashcardGenerator.ts
 var MODELS = [
 	"gemini-4-hydrogen",
-	"gemini-4-neon",
-	"gemini-4-argon",
 	"gemini-3.8-flash",
-	"gemini-3.6-flash",
 	"gemini-3.5-flash-lite",
 	"gemini-2.5-flash",
 	"gemini-2.5-flash-lite"
@@ -39763,8 +39760,9 @@ async function generateErrorNoteFlashcards(body, apiKey) {
 					generationConfig
 				})
 			});
-			if (response.status !== 503 && response.status !== 404) break;
+			if (response.ok) break;
 			console.error(`[Flashcard AI Error] HTTP ${response.status} on ${model}`, await response.text().catch(() => ""));
+			if (response.status !== 503 && response.status !== 429 && response.status !== 404) break;
 		}
 		if (!response) throw unavailable();
 		if (response.status === 429) throw new AppError("O Gemini atingiu o limite de uso. Tente novamente mais tarde.", 429, "FLASHCARD_AI_QUOTA");
