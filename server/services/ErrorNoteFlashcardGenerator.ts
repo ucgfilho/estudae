@@ -61,17 +61,24 @@ export async function generateErrorNoteFlashcards(body: unknown, apiKey: string)
     if (response.status === 429) {
       throw new AppError('O Gemini atingiu o limite de uso. Tente novamente mais tarde.', 429, 'FLASHCARD_AI_QUOTA');
     }
-    if (!response.ok) throw unavailable();
+    if (!response.ok) {
+      console.error('[Flashcard AI Error] HTTP', response.status, await response.text().catch(() => ''));
+      throw unavailable();
+    }
 
     const data = await response.json() as {
       candidates?: { finishReason?: string; content?: { parts?: { thought?: boolean; text?: string }[] } }[];
     };
     const candidate = data.candidates?.[0];
-    if (candidate?.finishReason !== 'STOP') throw unavailable();
+    if (candidate?.finishReason !== 'STOP') {
+      console.error('[Flashcard AI Error] finishReason:', candidate?.finishReason, JSON.stringify(data));
+      throw unavailable();
+    }
     const text = candidate.content?.parts?.filter((part) => !part.thought).map((part) => part.text ?? '').join('');
     return resultSchema.parse(JSON.parse(text ?? '')).cards;
   } catch (error) {
     if (error instanceof AppError) throw error;
+    console.error('[Flashcard AI Error] Exception:', error);
     throw unavailable();
   }
 }
