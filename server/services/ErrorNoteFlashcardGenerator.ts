@@ -2,7 +2,16 @@ import { z } from 'zod';
 import { MAX_FLASHCARDS_PER_ERROR_NOTE } from '../../src/db/types';
 import { AppError, DtoValidationError } from '../errors/AppError';
 
-const MODELS = ['gemini-4-hydrogen', 'gemini-3.8-flash', 'gemini-3.5-flash-lite'] as const;
+const MODELS = [
+  'gemini-4-hydrogen',
+  'gemini-4-neon',
+  'gemini-4-argon',
+  'gemini-3.8-flash',
+  'gemini-3.6-flash',
+  'gemini-3.5-flash-lite',
+  'gemini-2.5-flash',
+  'gemini-2.5-flash-lite',
+] as const;
 const inputSchema = z.object({
   explanation: z.string().trim().min(1).max(50_000),
   existingStatements: z.array(z.string().max(600)).max(MAX_FLASHCARDS_PER_ERROR_NOTE - 1),
@@ -62,26 +71,24 @@ export async function generateErrorNoteFlashcards(body: unknown, apiKey: string)
   const unavailable = () => new AppError('O Gemini não conseguiu gerar os flashcards. Tente novamente.', 502, 'FLASHCARD_AI_FAILED');
 
   try {
-    const requestInit: RequestInit = {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
-      signal: AbortSignal.timeout(45_000),
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: instructions }] },
-        contents: [{ parts: [{ text: JSON.stringify(input.data) }] }],
-        generationConfig: {
-          thinkingConfig: { thinkingLevel: 'LOW' },
-          responseMimeType: 'application/json',
-          responseJsonSchema: schema,
-        },
-      }),
+    const basePayload = {
+      systemInstruction: { parts: [{ text: instructions }] },
+      contents: [{ parts: [{ text: JSON.stringify(input.data) }] }],
     };
 
     let response: Response | undefined;
     for (const model of MODELS) {
-      response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, requestInit);
-      if (response.status !== 503) break;
-      console.error('[Flashcard AI Error] HTTP 503 on', model, await response.text().catch(() => ''));
+      const generationConfig = model.startsWith('gemini-2.5-')
+        ? { responseMimeType: 'application/json', responseJsonSchema: schema }
+        : { thinkingConfig: { thinkingLevel: 'LOW' }, responseMimeType: 'application/json', responseJsonSchema: schema };
+      response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+        signal: AbortSignal.timeout(45_000),
+        body: JSON.stringify({ ...basePayload, generationConfig }),
+      });
+      if (response.status !== 503 && response.status !== 404) break;
+      console.error(`[Flashcard AI Error] HTTP ${response.status} on ${model}`, await response.text().catch(() => ''));
     }
     if (!response) throw unavailable();
     if (response.status === 429) {
