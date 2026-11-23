@@ -39,8 +39,26 @@ export async function generateErrorNoteFlashcards(body: unknown, apiKey: string)
 
   const maxCards = MAX_FLASHCARDS_PER_ERROR_NOTE - input.data.existingStatements.length;
   const resultSchema = z.object({ cards: z.array(cardSchema).max(maxCards) });
-  const schema = z.toJSONSchema(resultSchema, { io: 'output' });
-  delete schema.$schema;
+  const schema = {
+    type: 'object',
+    properties: {
+      cards: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            statement: { type: 'string' },
+            answer: { type: 'string', enum: ['certo', 'errado'] },
+            explanation: { type: 'string' },
+          },
+          required: ['statement', 'answer', 'explanation'],
+          additionalProperties: false,
+        },
+      },
+    },
+    required: ['cards'],
+    additionalProperties: false,
+  };
   const unavailable = () => new AppError('O Gemini não conseguiu gerar os flashcards. Tente novamente.', 502, 'FLASHCARD_AI_FAILED');
 
   try {

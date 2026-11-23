@@ -38,6 +38,7 @@ describe('generateErrorNoteFlashcards', () => {
     expect(payload.systemInstruction.parts[0].text).toContain('exclusivamente a explicação da anotação de erro selecionada');
     expect(payload.generationConfig.responseMimeType).toBe('application/json');
     expect(payload.generationConfig.responseJsonSchema.properties.cards).toMatchObject({ type: 'array' });
+    expect(payload.generationConfig.responseJsonSchema.properties.cards.maxItems).toBeUndefined();
   });
 
   it('aceita zero cartões quando o modelo não encontra conteúdo novo', async () => {

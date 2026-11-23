@@ -34779,32 +34779,8 @@ var numberProcessor = (schema, ctx, _json, params) => {
 var booleanProcessor = (_schema, _ctx, json, _params) => {
 	json.type = "boolean";
 };
-var bigintProcessor = (schema, ctx, json, params) => {
-	handleUnrepresentable(schema, ctx, json, params, "BigInt cannot be represented in JSON Schema");
-};
-var symbolProcessor = (schema, ctx, json, params) => {
-	handleUnrepresentable(schema, ctx, json, params, "Symbols cannot be represented in JSON Schema");
-};
-var nullProcessor = (_schema, ctx, json, _params) => {
-	if (ctx.target === "openapi-3.0") {
-		json.type = "string";
-		json.nullable = true;
-		json.enum = [null];
-	} else json.type = "null";
-};
-var undefinedProcessor = (schema, ctx, json, params) => {
-	handleUnrepresentable(schema, ctx, json, params, "Undefined cannot be represented in JSON Schema");
-};
-var voidProcessor = (schema, ctx, json, params) => {
-	handleUnrepresentable(schema, ctx, json, params, "Void cannot be represented in JSON Schema");
-};
 var neverProcessor = (_schema, _ctx, json, _params) => {
 	json.not = {};
-};
-var anyProcessor = (_schema, _ctx, _json, _params) => {};
-var unknownProcessor = (_schema, _ctx, _json, _params) => {};
-var dateProcessor = (schema, ctx, json, params) => {
-	handleUnrepresentable(schema, ctx, json, params, "Date cannot be represented in JSON Schema");
 };
 var enumProcessor = (schema, _ctx, json, _params) => {
 	const def = schema._zod.def;
@@ -34843,46 +34819,11 @@ var literalProcessor = (schema, ctx, json, params) => {
 		json.enum = vals;
 	}
 };
-var nanProcessor = (schema, ctx, json, params) => {
-	handleUnrepresentable(schema, ctx, json, params, "NaN cannot be represented in JSON Schema");
-};
-var templateLiteralProcessor = (schema, _ctx, json, _params) => {
-	const _json = json;
-	const pattern = schema._zod.pattern;
-	if (!pattern) throw new Error("Pattern not found in template literal");
-	_json.type = "string";
-	_json.pattern = pattern.source;
-};
-var fileProcessor = (schema, _ctx, json, _params) => {
-	const _json = json;
-	_json.type = "string";
-	_json.format = "binary";
-	_json.contentEncoding = "binary";
-	const { minimum, maximum, mime } = aggregateChecks(schema);
-	if (minimum !== void 0) _json.minLength = minimum;
-	if (maximum !== void 0) _json.maxLength = maximum;
-	if (!mime) return;
-	if (mime.length === 0) _json.not = {};
-	else if (mime.length === 1) _json.contentMediaType = mime[0];
-	else _json.anyOf = mime.map((m) => ({ contentMediaType: m }));
-};
-var successProcessor = (_schema, _ctx, json, _params) => {
-	json.type = "boolean";
-};
 var customProcessor = (schema, ctx, json, params) => {
 	handleUnrepresentable(schema, ctx, json, params, "Custom types cannot be represented in JSON Schema");
 };
-var functionProcessor = (schema, ctx, json, params) => {
-	handleUnrepresentable(schema, ctx, json, params, "Function types cannot be represented in JSON Schema");
-};
 var transformProcessor = (schema, ctx, json, params) => {
 	handleUnrepresentable(schema, ctx, json, params, "Transforms cannot be represented in JSON Schema");
-};
-var mapProcessor = (schema, ctx, json, params) => {
-	handleUnrepresentable(schema, ctx, json, params, "Map cannot be represented in JSON Schema");
-};
-var setProcessor = (schema, ctx, json, params) => {
-	handleUnrepresentable(schema, ctx, json, params, "Set cannot be represented in JSON Schema");
 };
 var arrayProcessor = (schema, ctx, _json, params) => {
 	const json = _json;
@@ -34967,58 +34908,6 @@ var intersectionProcessor = (schema, ctx, json, params) => {
 	const allOf = [...isSimpleIntersection(a) ? a.allOf : [a], ...isSimpleIntersection(b) ? b.allOf : [b]];
 	json.allOf = allOf;
 	ctx.intersections.push(allOf);
-};
-var tupleProcessor = (schema, ctx, _json, params) => {
-	const json = _json;
-	const def = schema._zod.def;
-	json.type = "array";
-	const prefixPath = ctx.target === "draft-2020-12" ? "prefixItems" : "items";
-	const restPath = ctx.target === "draft-2020-12" ? "items" : ctx.target === "openapi-3.0" ? "items" : "additionalItems";
-	const prefixItems = def.items.map((x, i) => processSchema(x, ctx, {
-		...params,
-		path: [
-			...params.path,
-			prefixPath,
-			i
-		]
-	}));
-	const rest = def.rest ? processSchema(def.rest, ctx, {
-		...params,
-		path: [
-			...params.path,
-			restPath,
-			...ctx.target === "openapi-3.0" ? [def.items.length] : []
-		]
-	}) : null;
-	let minItems = def.items.length;
-	while (minItems > 0) {
-		const item = def.items[minItems - 1];
-		if (!(ctx.io === "input" ? inputOptin(item) !== void 0 : item._zod.optout === "optional")) break;
-		minItems--;
-	}
-	const maxItems = def.items.length;
-	const isClosed = !def.rest;
-	if (ctx.target === "draft-2020-12") {
-		json.prefixItems = prefixItems;
-		if (isClosed) json.items = false;
-		else if (rest) json.items = rest;
-		if (minItems > 0) json.minItems = minItems;
-		if (isClosed) json.maxItems = maxItems;
-	} else if (ctx.target === "openapi-3.0") {
-		json.items = { anyOf: prefixItems };
-		if (rest) json.items.anyOf.push(rest);
-		if (minItems > 0) json.minItems = minItems;
-		if (isClosed) json.maxItems = maxItems;
-	} else {
-		json.items = prefixItems;
-		if (isClosed) json.additionalItems = false;
-		else if (rest) json.additionalItems = rest;
-		if (minItems > 0) json.minItems = minItems;
-		if (isClosed) json.maxItems = maxItems;
-	}
-	const { minimum, maximum } = aggregateChecks(schema);
-	if (typeof minimum === "number") json.minItems = minimum;
-	if (typeof maximum === "number") json.maxItems = maximum;
 };
 /** JSON object keys are always strings, so a numeric record key schema is re-expressed over the
 * numeric-string form the record parser matches. Deferred to `finalize`, after the flatten: a key
@@ -35197,99 +35086,12 @@ var readonlyProcessor = (schema, ctx, json, params) => {
 	seen.ref = def.innerType;
 	json.readOnly = true;
 };
-var promiseProcessor = (schema, ctx, _json, params) => {
-	const def = schema._zod.def;
-	processSchema(def.innerType, ctx, params);
-	const seen = ctx.seen.get(schema);
-	seen.ref = def.innerType;
-};
 var optionalProcessor = (schema, ctx, _json, params) => {
 	const def = schema._zod.def;
 	processSchema(def.innerType, ctx, params);
 	const seen = ctx.seen.get(schema);
 	seen.ref = def.innerType;
 };
-var lazyProcessor = (schema, ctx, _json, params) => {
-	const innerType = schema._zod.innerType;
-	processSchema(innerType, ctx, params);
-	const seen = ctx.seen.get(schema);
-	seen.ref = innerType;
-};
-var allProcessors = {
-	string: stringProcessor,
-	number: numberProcessor,
-	boolean: booleanProcessor,
-	bigint: bigintProcessor,
-	symbol: symbolProcessor,
-	null: nullProcessor,
-	undefined: undefinedProcessor,
-	void: voidProcessor,
-	never: neverProcessor,
-	any: anyProcessor,
-	unknown: unknownProcessor,
-	date: dateProcessor,
-	enum: enumProcessor,
-	literal: literalProcessor,
-	nan: nanProcessor,
-	template_literal: templateLiteralProcessor,
-	file: fileProcessor,
-	success: successProcessor,
-	custom: customProcessor,
-	function: functionProcessor,
-	transform: transformProcessor,
-	map: mapProcessor,
-	set: setProcessor,
-	array: arrayProcessor,
-	object: objectProcessor,
-	union: unionProcessor,
-	intersection: intersectionProcessor,
-	tuple: tupleProcessor,
-	record: recordProcessor,
-	nullable: nullableProcessor,
-	nonoptional: nonoptionalProcessor,
-	default: defaultProcessor,
-	prefault: prefaultProcessor,
-	catch: catchProcessor,
-	pipe: pipeProcessor,
-	readonly: readonlyProcessor,
-	promise: promiseProcessor,
-	optional: optionalProcessor,
-	lazy: lazyProcessor
-};
-function toJSONSchema(input, params) {
-	if ("_idmap" in input) {
-		const registry = input;
-		const ctx = initializeContext({
-			...params,
-			processors: allProcessors
-		});
-		const defs = {};
-		for (const entry of registry._idmap.entries()) {
-			const [_, schema] = entry;
-			processSchema(schema, ctx);
-		}
-		const schemas = {};
-		ctx.external = {
-			registry,
-			uri: params?.uri,
-			defs
-		};
-		for (const entry of registry._idmap.entries()) {
-			const [key, schema] = entry;
-			extractDefs(ctx, schema);
-			assignProp(schemas, key, finalize(ctx, schema));
-		}
-		if (Object.keys(defs).length > 0) schemas.__shared = { [ctx.target === "draft-2020-12" ? "$defs" : "definitions"]: defs };
-		return { schemas };
-	}
-	const ctx = initializeContext({
-		...params,
-		processors: allProcessors
-	});
-	processSchema(input, ctx);
-	extractDefs(ctx, input);
-	return finalize(ctx, input);
-}
 // node_modules/zod/v4/classic/errors.js
 var _installedErrorProtos = /* @__PURE__ */ new WeakSet([Object.prototype, Error.prototype]);
 function _lazyMethod(proto, key, make) {
@@ -39903,8 +39705,31 @@ async function generateErrorNoteFlashcards(body, apiKey) {
 	if (!apiKey) throw new AppError("A geração com IA ainda não foi configurada no servidor.", 503, "FLASHCARD_AI_UNAVAILABLE");
 	const maxCards = 100 - input.data.existingStatements.length;
 	const resultSchema = object({ cards: array(cardSchema).max(maxCards) });
-	const schema = toJSONSchema(resultSchema, { io: "output" });
-	delete schema.$schema;
+	const schema = {
+		type: "object",
+		properties: { cards: {
+			type: "array",
+			items: {
+				type: "object",
+				properties: {
+					statement: { type: "string" },
+					answer: {
+						type: "string",
+						enum: ["certo", "errado"]
+					},
+					explanation: { type: "string" }
+				},
+				required: [
+					"statement",
+					"answer",
+					"explanation"
+				],
+				additionalProperties: false
+			}
+		} },
+		required: ["cards"],
+		additionalProperties: false
+	};
 	const unavailable = () => new AppError("O Gemini não conseguiu gerar os flashcards. Tente novamente.", 502, "FLASHCARD_AI_FAILED");
 	try {
 		const requestInit = {
