@@ -53,6 +53,18 @@ describe('generateErrorNoteFlashcards', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it('faz fallback para modelo alternativo quando o modelo primário retorna 503 por alta demanda', async () => {
+    const fetchMock = vi.fn<typeof fetch>()
+      .mockResolvedValueOnce(new Response('{"error":{"code":503,"status":"UNAVAILABLE"}}', { status: 503 }))
+      .mockResolvedValueOnce(geminiResponse([card]));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(generateErrorNoteFlashcards(input, 'test-key')).resolves.toEqual([card]);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[0][0]).toContain('/models/gemini-4-hydrogen:generateContent');
+    expect(fetchMock.mock.calls[1][0]).toContain('/models/gemini-3.8-flash:generateContent');
+  });
+
   it('rejeita lotes inválidos por inteiro e sinaliza a cota do provedor', async () => {
     const fetchMock = vi.fn<typeof fetch>()
       .mockResolvedValueOnce(geminiResponse([card, { ...card, answer: 'talvez' }]))

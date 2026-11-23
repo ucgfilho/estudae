@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { MAX_FLASHCARDS_PER_ERROR_NOTE } from '../../src/db/types';
 import { AppError, DtoValidationError } from '../errors/AppError';
 
-const MODEL = 'gemini-4-hydrogen';
+const MODELS = ['gemini-4-hydrogen', 'gemini-3.8-flash', 'gemini-3.5-flash-lite'] as const;
 const inputSchema = z.object({
   explanation: z.string().trim().min(1).max(50_000),
   existingStatements: z.array(z.string().max(600)).max(MAX_FLASHCARDS_PER_ERROR_NOTE - 1),
@@ -44,7 +44,7 @@ export async function generateErrorNoteFlashcards(body: unknown, apiKey: string)
   const unavailable = () => new AppError('O Gemini não conseguiu gerar os flashcards. Tente novamente.', 502, 'FLASHCARD_AI_FAILED');
 
   try {
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`, {
+    const requestInit: RequestInit = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
       signal: AbortSignal.timeout(45_000),
@@ -57,7 +57,15 @@ export async function generateErrorNoteFlashcards(body: unknown, apiKey: string)
           responseJsonSchema: schema,
         },
       }),
-    });
+    };
+
+    let response: Response | undefined;
+    for (const model of MODELS) {
+      response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, requestInit);
+      if (response.status !== 503) break;
+      console.error('[Flashcard AI Error] HTTP 503 on', model, await response.text().catch(() => ''));
+    }
+    if (!response) throw unavailable();
     if (response.status === 429) {
       throw new AppError('O Gemini atingiu o limite de uso. Tente novamente mais tarde.', 429, 'FLASHCARD_AI_QUOTA');
     }

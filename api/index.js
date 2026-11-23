@@ -39872,7 +39872,11 @@ function createAppContainer(overrides = {}) {
 	};
 }
 // server/services/ErrorNoteFlashcardGenerator.ts
-var MODEL = "gemini-4-hydrogen";
+var MODELS = [
+	"gemini-4-hydrogen",
+	"gemini-3.8-flash",
+	"gemini-3.5-flash-lite"
+];
 var inputSchema = object({
 	explanation: string().trim().min(1).max(5e4),
 	existingStatements: array(string().max(600)).max(99)
@@ -39903,7 +39907,7 @@ async function generateErrorNoteFlashcards(body, apiKey) {
 	delete schema.$schema;
 	const unavailable = () => new AppError("O Gemini não conseguiu gerar os flashcards. Tente novamente.", 502, "FLASHCARD_AI_FAILED");
 	try {
-		const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`, {
+		const requestInit = {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
@@ -39919,7 +39923,14 @@ async function generateErrorNoteFlashcards(body, apiKey) {
 					responseJsonSchema: schema
 				}
 			})
-		});
+		};
+		let response;
+		for (const model of MODELS) {
+			response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, requestInit);
+			if (response.status !== 503) break;
+			console.error("[Flashcard AI Error] HTTP 503 on", model, await response.text().catch(() => ""));
+		}
+		if (!response) throw unavailable();
 		if (response.status === 429) throw new AppError("O Gemini atingiu o limite de uso. Tente novamente mais tarde.", 429, "FLASHCARD_AI_QUOTA");
 		if (!response.ok) {
 			console.error("[Flashcard AI Error] HTTP", response.status, await response.text().catch(() => ""));
