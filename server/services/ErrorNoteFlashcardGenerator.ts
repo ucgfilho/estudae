@@ -5,9 +5,13 @@ import { AppError, DtoValidationError } from '../errors/AppError';
 const MODELS = [
   'gemini-4-hydrogen',
   'gemini-3.8-flash',
+  'gemini-3.7-flash',
+  'gemini-3.6-flash',
+  'gemini-3.5-flash',
   'gemini-3.5-flash-lite',
-  'gemini-2.5-flash',
-  'gemini-2.5-flash-lite',
+  'gemini-3.1-flash-lite',
+  'gemini-flash-latest',
+  'gemini-flash-lite-latest',
 ] as const;
 const inputSchema = z.object({
   explanation: z.string().trim().min(1).max(50_000),
@@ -75,14 +79,18 @@ export async function generateErrorNoteFlashcards(body: unknown, apiKey: string)
 
     let response: Response | undefined;
     for (const model of MODELS) {
-      const generationConfig = model.startsWith('gemini-2.5-')
-        ? { responseMimeType: 'application/json', responseJsonSchema: schema }
-        : { thinkingConfig: { thinkingLevel: 'LOW' }, responseMimeType: 'application/json', responseJsonSchema: schema };
       response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
         signal: AbortSignal.timeout(45_000),
-        body: JSON.stringify({ ...basePayload, generationConfig }),
+        body: JSON.stringify({
+          ...basePayload,
+          generationConfig: {
+            thinkingConfig: { thinkingLevel: 'LOW' },
+            responseMimeType: 'application/json',
+            responseJsonSchema: schema,
+          },
+        }),
       });
       if (response.ok) break;
       console.error(`[Flashcard AI Error] HTTP ${response.status} on ${model}`, await response.text().catch(() => ''));
