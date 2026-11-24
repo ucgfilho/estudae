@@ -200,7 +200,7 @@ export function CycleRecommendation({ showQueue = false }: { showQueue?: boolean
                   </div>
                   <div className="ml-auto flex items-center gap-1">
                     <IconButton
-                      className="text-success hover:bg-success-soft hover:text-success"
+                      className="action-button text-success hover:bg-success-soft hover:text-success active:bg-success-soft active:brightness-95"
                       size="sm"
                       disabled={completingKey === entryKey}
                       label={entry.kind === 'manual' ? `Concluir sessão planejada: ${title}` : `Concluir sessão ${entry.activity.position} de ${entry.activity.discipline.name}`}

@@ -59,6 +59,7 @@ describe('ciclo contínuo na visão geral', () => {
     expect(buttons[0]).toHaveAccessibleName('Concluir sessão planejada: Revisão manual');
     expect(buttons[1]).toHaveAccessibleName('Excluir sessão planejada: Revisão manual');
     expect(buttons[0].className).toContain('text-success');
+    expect(buttons[0].className).toContain('action-button');
 
     await userEvent.click(buttons[0]);
     await waitFor(() => expect(within(queue).queryByText('Revisão manual')).not.toBeInTheDocument());
