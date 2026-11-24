@@ -6,7 +6,7 @@ import { cycleCompletions, previewCycle, type CycleActivity } from '../domain/sc
 import { compareSessions } from '../domain/metrics';
 import { startCycleTimer } from '../services/timer';
 import { getSettings, updateSettings } from '../services/settings';
-import { deleteSession } from '../services/sessions';
+import { completeCycleActivity, deleteSession, setSessionStatus } from '../services/sessions';
 import type { StudySession } from '../db/types';
 import { formatDate, todayKey } from '../lib/dates';
 import { errorMessage } from '../lib/utils';
@@ -29,10 +29,12 @@ export function CycleRecommendation({ showQueue = false }: { showQueue?: boolean
   const [minutes, setMinutes] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [removalError, setRemovalError] = useState<string | null>(null);
+  const [completionError, setCompletionError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [pendingRemoval, setPendingRemoval] = useState<QueueEntry | null>(null);
   const [removing, setRemoving] = useState(false);
+  const [completingKey, setCompletingKey] = useState<string | null>(null);
   if (!settings) return null;
   const input = { disciplines, topics, sessions, questionLogs: [], errorNotes: [], settings };
   const timeGoalsDisabled = settings.dailyGoalMinutes === 0 && settings.weeklyGoalMinutes === 0;
@@ -51,6 +53,22 @@ export function CycleRecommendation({ showQueue = false }: { showQueue?: boolean
     ...queue.map(activity => ({ kind: 'automatic' as const, activity })),
   ];
 
+  async function completeEntry(entry: QueueEntry, entryKey: string) {
+    if (completingKey) return;
+    setCompletingKey(entryKey);
+    setCompletionError(null);
+    try {
+      if (entry.kind === 'manual') {
+        await setSessionStatus(entry.session.id, 'concluida', entry.session.plannedMinutes);
+      } else {
+        await completeCycleActivity(entry.activity);
+      }
+    } catch (err) {
+      setCompletionError(errorMessage(err));
+    } finally {
+      setCompletingKey(null);
+    }
+  }
   async function removeActivity() {
     if (!pendingRemoval || removing) return;
     setRemoving(true);
@@ -137,6 +155,7 @@ export function CycleRecommendation({ showQueue = false }: { showQueue?: boolean
       </div>
     </>}
     {removalError && <Alert tone="danger" title="Não foi possível excluir a sessão" onClose={() => setRemovalError(null)}>{removalError}</Alert>}
+    {completionError && <Alert tone="danger" title="Não foi possível concluir a sessão" onClose={() => setCompletionError(null)}>{completionError}</Alert>}
     {showQueue && (next || planned.length > 0) && <Card title="Na sequência" description="Aqui você encontra as próximas atividades do ciclo e, na visualização completa, suas sessões planejadas.">
       <div id="cycle-queue">
         {entries.length > 0 && <ol
@@ -147,6 +166,7 @@ export function CycleRecommendation({ showQueue = false }: { showQueue?: boolean
             : 'grid grid-flow-col auto-cols-[minmax(13rem,1fr)] gap-4 overflow-x-auto overscroll-x-contain snap-x snap-proximity rounded-lg pb-3'}
         >
           {entries.map(entry => {
+            const entryKey = entry.kind === 'manual' ? `manual-${entry.session.id}` : `cycle-${entry.activity.position}`;
             const session = entry.kind === 'manual' ? entry.session : null;
             const activity = entry.kind === 'automatic' ? entry.activity : null;
             const discipline = activity?.discipline ?? disciplines.find(item => item.id === session?.disciplineId);
@@ -154,7 +174,7 @@ export function CycleRecommendation({ showQueue = false }: { showQueue?: boolean
               (session?.objective || 'Estudo da disciplina');
             const minutes = session?.plannedMinutes ?? activity?.minutes;
             return (
-              <li key={entry.kind === 'manual' ? `manual-${entry.session.id}` : `cycle-${entry.activity.position}`} className="flex min-w-0 snap-start flex-col gap-4 rounded-xl bg-surface-muted p-4">
+              <li key={entryKey} className="flex min-w-0 snap-start flex-col gap-4 rounded-xl bg-surface-muted p-4">
                 <div className="flex min-h-9 items-center">
                   {entry.kind === 'manual' ? <Badge tone="info">Criada por você</Badge> : (
                     <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-sm font-semibold tabular-nums text-primary">
@@ -178,13 +198,23 @@ export function CycleRecommendation({ showQueue = false }: { showQueue?: boolean
                     ) : <span>{discipline?.kind === 'technical' ? 'Específicos' : 'Básicos'}</span>}
                     {(session || !timeGoalsDisabled) && <span className="inline-flex items-center gap-1 whitespace-nowrap"><Clock3 className="size-3.5" aria-hidden />{minutes} min</span>}
                   </div>
-                  <IconButton
-                    className="ml-auto hover:bg-danger-soft hover:text-danger"
-                    size="sm"
-                    label={entry.kind === 'manual' ? `Excluir sessão planejada: ${title}` : `Excluir sessão ${entry.activity.position} de ${entry.activity.discipline.name}`}
-                    icon={<Trash2 className="size-4" />}
-                    onClick={() => setPendingRemoval(entry)}
-                  />
+                  <div className="ml-auto flex items-center gap-1">
+                    <IconButton
+                      className="text-success hover:bg-success-soft hover:text-success"
+                      size="sm"
+                      disabled={completingKey === entryKey}
+                      label={entry.kind === 'manual' ? `Concluir sessão planejada: ${title}` : `Concluir sessão ${entry.activity.position} de ${entry.activity.discipline.name}`}
+                      icon={<CheckCircle2 className="size-4" />}
+                      onClick={() => void completeEntry(entry, entryKey)}
+                    />
+                    <IconButton
+                      className="hover:bg-danger-soft hover:text-danger"
+                      size="sm"
+                      label={entry.kind === 'manual' ? `Excluir sessão planejada: ${title}` : `Excluir sessão ${entry.activity.position} de ${entry.activity.discipline.name}`}
+                      icon={<Trash2 className="size-4" />}
+                      onClick={() => setPendingRemoval(entry)}
+                    />
+                  </div>
                 </div>
               </li>
             );

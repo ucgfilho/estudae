@@ -46,6 +46,35 @@ describe('ciclo contínuo na visão geral', () => {
     expect(await db.sessions.get(session.id)).toBeUndefined();
   });
 
+  it('conclui sessão planejada e sessão do ciclo pela fila contabilizando o tempo previsto', async () => {
+    const activity = next()!;
+    const manual = await createSession({ date: todayKey(), disciplineId: activity.discipline.id, topicId: null,
+      plannedStart: '19:30', plannedMinutes: 20, objective: 'Revisão manual', notes: '' });
+    render(<MemoryRouter><ScheduleScreen /></MemoryRouter>);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Ver ciclo completo' }));
+    const queue = screen.getByRole('list', { name: 'Próximos estudos do ciclo' });
+    const plannedCard = within(queue).getByText('Criada por você').closest('li')!;
+    const buttons = within(plannedCard).getAllByRole('button');
+    expect(buttons[0]).toHaveAccessibleName('Concluir sessão planejada: Revisão manual');
+    expect(buttons[1]).toHaveAccessibleName('Excluir sessão planejada: Revisão manual');
+    expect(buttons[0].className).toContain('text-success');
+
+    await userEvent.click(buttons[0]);
+    await waitFor(() => expect(within(queue).queryByText('Revisão manual')).not.toBeInTheDocument());
+    const savedManual = await db.sessions.get(manual.id);
+    expect(savedManual?.status).toBe('concluida');
+    expect(savedManual?.actualSeconds).toBe(20 * 60);
+
+    const completeCycleBtn = within(queue).getAllByRole('button', { name: /^Concluir sessão \d/ })[0];
+    await userEvent.click(completeCycleBtn);
+    await waitFor(() => expect(cycleCompletions(db.sessions.toArraySync())).toHaveLength(1));
+    const [cycleDone] = cycleCompletions(db.sessions.toArraySync());
+    expect(cycleDone.status).toBe('concluida');
+    expect(cycleDone.actualSeconds).toBe(cycleDone.plannedMinutes * 60);
+    expect(cycleDone.actualSeconds).toBe(activity.minutes * 60);
+  });
+
   it('prioriza o ciclo mesmo com sessão manual planejada e inicia o cronômetro do ciclo', async () => {
     const expected = next()!;
     await createSession({ date: todayKey(), disciplineId: expected.discipline.id, topicId: null,

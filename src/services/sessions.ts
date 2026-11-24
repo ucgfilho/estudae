@@ -1,7 +1,8 @@
 import { db } from '../db/db';
 import type { SessionHistoryEntry, SessionStatus, StudySession } from '../db/types';
 import { SESSION_STATUS_LABELS } from '../db/types';
-import { formatDate, isValidDateKey, isValidTime, type DateKey } from '../lib/dates';
+import { CYCLE_COMPLETION, type CycleActivity } from '../domain/schedule';
+import { formatDate, isValidDateKey, isValidTime, todayKey, type DateKey } from '../lib/dates';
 import { createId, nowIso } from '../lib/utils';
 import { saveTopicWithStatus } from './topicStatus';
 
@@ -289,6 +290,37 @@ export async function setSessionStatus(id: string, status: SessionStatus, actual
     });
     if (status === 'concluida') await syncTopicStatusAfterSession(current.topicId);
   });
+}
+
+export async function completeCycleActivity(
+  activity: Pick<CycleActivity, 'discipline' | 'topic' | 'minutes'>,
+): Promise<StudySession> {
+  const now = nowIso();
+  const minutes = Math.max(1, Math.min(MAX_SESSION_MINUTES, Math.round(activity.minutes)));
+  const session: StudySession = {
+    id: createId(),
+    date: todayKey(),
+    disciplineId: activity.discipline.id,
+    topicId: activity.topic?.id ?? null,
+    plannedStart: null,
+    plannedMinutes: minutes,
+    actualSeconds: minutes * 60,
+    status: 'concluida',
+    objective: activity.topic?.title ?? activity.discipline.name,
+    notes: '',
+    origin: 'avulsa',
+    startedAt: now,
+    endedAt: now,
+    recoveredFromId: null,
+    history: [entry('executada', CYCLE_COMPLETION)],
+    createdAt: now,
+    updatedAt: now,
+  };
+  await db.transaction('rw', db.sessions, db.topics, async () => {
+    await db.sessions.add(session);
+    await syncTopicStatusAfterSession(session.topicId);
+  });
+  return session;
 }
 
 export async function deleteSession(id: string): Promise<void> {
