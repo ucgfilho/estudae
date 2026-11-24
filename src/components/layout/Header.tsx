@@ -140,7 +140,7 @@ export function Header({
                 <RankIcon className={cn('size-3.5', rankIconColor)} strokeWidth={2.5} aria-hidden="true" />
               </span>
               <Avatar name={authUser.name || authUser.email} src={authUser.avatarUrl} size="xs" />
-              <span className="hidden md:inline-block max-w-24 wrap-anywhere font-medium text-fg">
+              <span className="hidden max-w-36 truncate font-medium text-fg md:block">
                 {authUser.name}
               </span>
               <Pencil className="hidden sm:block size-3 text-fg-subtle shrink-0" aria-hidden="true" />

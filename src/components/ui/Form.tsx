@@ -35,7 +35,7 @@ export function Field({ label, hint, error, required, className, children }: Fie
     : children;
   return (
     <div className={cn('flex min-w-0 flex-col gap-1.5', className)}>
-      <label htmlFor={id} className="text-sm font-medium text-fg">
+      <label htmlFor={id} className="text-sm font-medium wrap-anywhere text-fg">
         {label}
         {required && (
           <span className="text-danger" aria-hidden>
@@ -123,7 +123,7 @@ export function Checkbox({ label, description, className, id: customId, ...rest 
       >
         <Check className="size-3 stroke-[3] opacity-0 transition-opacity" />
       </div>
-      <div className="text-sm text-fg">
+      <div className="min-w-0 text-sm wrap-anywhere text-fg">
         <span className="font-medium text-fg">{label}</span>
         {description && <span className="block text-xs leading-relaxed text-fg-muted mt-1">{description}</span>}
       </div>
@@ -159,7 +159,7 @@ export function Radio({ label, description, className, id: customId, ...rest }: 
       >
         <span className="size-2 rounded-full bg-primary opacity-0 scale-0 transition-all" />
       </div>
-      <div className="text-sm text-fg">
+      <div className="min-w-0 text-sm wrap-anywhere text-fg">
         <span className="font-medium text-fg">{label}</span>
         {description && <span className="block text-xs leading-relaxed text-fg-muted mt-1">{description}</span>}
       </div>

@@ -37,7 +37,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       disabled={disabled || loading}
       aria-busy={loading || undefined}
       className={cn(
-        'action-button inline-flex max-w-full shrink-0 items-center justify-center rounded-lg font-medium leading-5 text-center transition-colors',
+        'action-button inline-flex min-w-0 max-w-full shrink-0 items-center justify-center rounded-lg py-1.5 text-center leading-5 font-medium wrap-anywhere transition-colors',
         'disabled:cursor-not-allowed disabled:opacity-55',
         variants[variant],
         sizes[size],

@@ -141,7 +141,7 @@ export function OverviewScreen() {
   };
 
   return (
-    <div className="page-stack">
+    <div className="page-stack @container">
       <PageHeader
         title="Visão geral"
         description={
@@ -196,9 +196,10 @@ export function OverviewScreen() {
       />
 
       {/* Prioridades #4 e #5: Revisões realmente pendentes e Pendências importantes do calendário */}
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+      <div className="grid gap-5 @min-[48rem]:grid-cols-2 @min-[48rem]:gap-y-0">
         {/* Revisões realmente pendentes (vencidas + hoje) */}
         <Card
+          className="@min-[48rem]:row-span-2 @min-[48rem]:grid @min-[48rem]:grid-rows-subgrid"
           title="Revisões pendentes"
           description={
             totalUrgentReviews > 0
@@ -267,7 +268,7 @@ export function OverviewScreen() {
               })}
             </ul>
           ) : (
-            <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-surface-muted/50 px-3.5 py-3 text-sm">
+            <div className="control-height-lg flex flex-wrap items-center justify-between gap-2 rounded-lg bg-surface-muted/50 px-3.5 py-3 text-sm">
               <span className="flex items-center gap-2 text-fg-muted">
                 <CheckCircle className="size-4 text-success shrink-0" aria-hidden="true" />
                 Nenhuma revisão pendente para hoje.
@@ -285,6 +286,7 @@ export function OverviewScreen() {
 
         {/* Pendências importantes do calendário */}
         <Card
+          className="@min-[48rem]:row-span-2 @min-[48rem]:grid @min-[48rem]:grid-rows-subgrid"
           title="Sessões planejadas no calendário"
           description={
             overdueSessionsInWeek.length > 0
@@ -336,7 +338,7 @@ export function OverviewScreen() {
               })}
             </ul>
           ) : (
-            <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-surface-muted/50 px-3.5 py-3 text-sm">
+            <div className="control-height-lg flex flex-wrap items-center justify-between gap-2 rounded-lg bg-surface-muted/50 px-3.5 py-3 text-sm">
               <span className="flex items-center gap-2 text-fg-muted">
                 <Calendar className="size-4 text-primary shrink-0" aria-hidden="true" />
                 {currentWeekMetrics.totalSessions > 0
@@ -346,7 +348,7 @@ export function OverviewScreen() {
               <button
                 type="button"
                 onClick={() => navigate('/calendario')}
-                className="text-xs font-medium text-fg-muted hover:text-fg shrink-0 max-lg:min-h-9 max-lg:px-2"
+                className="shrink-0 text-xs font-medium text-fg-muted hover:text-fg max-lg:py-2"
               >
                 Ver agenda
               </button>
@@ -356,7 +358,7 @@ export function OverviewScreen() {
       </div>
 
       {/* Resumo enxuto de ritmo e progresso (Informações Progressivas — sem gráficos pesados no painel de execução) */}
-      <div className="overview-metrics">
+      <div className="stats-grid">
         {weeklyGoalEnabled && <StatCard
           label="Ritmo na semana"
           value={formatMinutes(weekDoneMinutes)}
@@ -378,7 +380,7 @@ export function OverviewScreen() {
           hint={`${formatInteger(questionTotals.correct)} acertos em ${formatInteger(questionTotals.total)} resolvidas`}
           icon={<TrendingUp className="size-4" />}
         >
-          <div className="flex items-center justify-between text-xs text-fg-subtle">
+          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-fg-subtle">
             <span>Meta: {settings?.accuracyGoal ?? 80}%</span>
             <button
               type="button"
@@ -391,24 +393,22 @@ export function OverviewScreen() {
           </div>
         </StatCard>
 
-        <div className="topic-metrics">
-          <StatCard
-            label="Cobertura do edital"
-            value={formatPercent(topicsProg.percent)}
-            hint={<span title="Tópicos concluídos ou dominados">{topicsProg.completed} de {topicsProg.total} tópicos</span>}
-            icon={<BookOpenCheck className="size-4" />}
-          >
-            <ProgressBar value={topicsProg.completed} max={topicsProg.total || 1} label="Cobertura do edital" tone="success" className="mt-auto" />
-          </StatCard>
-          <StatCard
-            label="Tópicos em abordagem"
-            value={formatPercent(topicsProg.total ? approached / topicsProg.total * 100 : null)}
-            hint={<span title="Tópicos em andamento, concluídos ou dominados">{approached} de {topicsProg.total} tópicos</span>}
-            icon={<BookOpen className="size-4" />}
-          >
-            <ProgressBar value={approached} max={topicsProg.total || 1} label="Tópicos em abordagem" tone="success" className="mt-auto" />
-          </StatCard>
-        </div>
+        <StatCard
+          label="Cobertura do edital"
+          value={formatPercent(topicsProg.percent)}
+          hint={<span title="Tópicos concluídos ou dominados">{topicsProg.completed} de {topicsProg.total} tópicos</span>}
+          icon={<BookOpenCheck className="size-4" />}
+        >
+          <ProgressBar value={topicsProg.completed} max={topicsProg.total || 1} label="Cobertura do edital" tone="success" />
+        </StatCard>
+        <StatCard
+          label="Tópicos em abordagem"
+          value={formatPercent(topicsProg.total ? approached / topicsProg.total * 100 : null)}
+          hint={<span title="Tópicos em andamento, concluídos ou dominados">{approached} de {topicsProg.total} tópicos</span>}
+          icon={<BookOpen className="size-4" />}
+        >
+          <ProgressBar value={approached} max={topicsProg.total || 1} label="Tópicos em abordagem" tone="success" />
+        </StatCard>
       </div>
 
       {/* Gamificação em expansão progressiva para não competir com a execução do dia */}

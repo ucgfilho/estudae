@@ -9,6 +9,7 @@ import {
   Check,
   RotateCcw,
   Layers,
+  ChevronDown,
 } from 'lucide-react';
 import { Button, IconButton } from '../components/ui/Button';
 import { Card, PageHeader, EmptyState, DisciplineDot, Alert } from '../components/ui/Display';
@@ -302,16 +303,17 @@ export function ErrorNotebookScreen() {
             const pendingReviews = linkedReviews.filter((r) => r.status === 'pendente');
 
             return (
-              <details key={note.id} open={focusedNoteId === note.id || undefined} className="overflow-hidden rounded-xl bg-surface">
-                <summary className="cursor-pointer px-[var(--panel-padding)] py-4 text-fg focus-visible:outline-offset-[-2px]">
-                  <div className="inline-flex w-[calc(100%-1.5rem)] flex-col gap-2 align-middle">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
+              <details key={note.id} open={focusedNoteId === note.id || undefined} className="group overflow-hidden rounded-xl bg-surface">
+                <summary className="flex cursor-pointer items-start gap-3 px-(--panel-padding) py-4 text-fg [&::-webkit-details-marker]:hidden">
+                  <div className="flex min-w-0 flex-1 flex-col gap-2 wrap-anywhere">
+                    <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-1">
                       <span className="inline-flex min-w-0 items-center gap-2 text-sm font-semibold">{d && <DisciplineDot color={d.color} />}{d?.name ?? 'Disciplina'}</span>
                       <span className="text-xs font-medium text-fg-muted">{ERROR_STATUS_LABELS[note.status]}</span>
                     </div>
                     <span className="text-sm text-fg-muted">{t?.title || note.sourceReference || 'Anotação de estudo'}</span>
                     <span className="text-xs text-fg-subtle">{formatDate(note.errorDate)} · {pendingReviews.length > 0 ? `${pendingReviews.length} revisões pendentes` : 'Revisões em dia'}</span>
                   </div>
+                  <ChevronDown className="size-5 text-fg-muted group-open:rotate-180" aria-hidden />
                 </summary>
                 <div className="space-y-5 panel-padding">
                   <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-fg-muted">

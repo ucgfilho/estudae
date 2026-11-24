@@ -16,7 +16,7 @@ const toneClasses: Record<Tone, string> = {
 
 export function Badge({ tone = 'neutral', icon, children, className }: { tone?: Tone; icon?: ReactNode; children: ReactNode; className?: string }) {
   return (
-    <span className={cn('inline-flex max-w-full items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium leading-5 break-words', toneClasses[tone], className)}>
+    <span className={cn('inline-flex min-w-0 max-w-full items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium leading-5 wrap-anywhere', toneClasses[tone], className)}>
       {icon}
       {children}
     </span>
@@ -44,23 +44,22 @@ export function Card({
 }) {
   return (
     <Tag className={cn('relative min-w-0 rounded-xl bg-surface', className)}>
-      {(title || actions || onClose) && (
-        <header
-          className={cn(
-            'relative flex flex-wrap items-start justify-between gap-3 rounded-t-xl bg-surface-header px-[var(--panel-padding)] py-4',
-            onClose && 'pr-14',
-          )}
-        >
-          <div className="min-w-0 flex-1 basis-48">
-            {title && <h2 className="section-title">{title}</h2>}
-            {description && <p className="mt-1 max-w-prose text-sm leading-relaxed text-fg-muted">{description}</p>}
+      {(title || description || actions || onClose) && (
+        <header className="flex items-start gap-3 rounded-t-xl bg-surface-header px-(--panel-padding) py-4">
+          <div className="flex min-w-0 flex-1 flex-wrap items-start justify-between gap-3 self-center">
+            {(title || description) && (
+              <div className="min-w-0 flex-1 basis-48">
+                {title && <h2 className="section-title">{title}</h2>}
+                {description && <p className="mt-1 max-w-prose text-sm leading-relaxed text-fg-muted">{description}</p>}
+              </div>
+            )}
+            {actions && <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2">{actions}</div>}
           </div>
-          {actions && <div className="flex max-w-full flex-wrap items-center gap-2">{actions}</div>}
           {onClose && (
             <button
               type="button"
               onClick={onClose}
-              className="absolute top-3 right-3 max-lg:top-2 max-lg:right-2 inline-flex size-8 max-lg:size-11 shrink-0 items-center justify-center rounded-lg text-fg-muted hover:text-fg hover:bg-surface-muted transition-colors"
+              className="inline-flex size-8 max-lg:size-11 shrink-0 items-center justify-center rounded-lg text-fg-muted hover:text-fg hover:bg-surface-muted transition-colors"
               aria-label="Fechar"
               title="Fechar"
             >
@@ -238,7 +237,7 @@ export function Alert({
 
 export function PageHeader({ title, description, actions }: { title: string; description?: ReactNode; actions?: ReactNode }) {
   return (
-    <header className="flex flex-wrap items-start justify-between gap-4 pb-5">
+    <header className="flex flex-wrap items-start justify-between gap-4">
       <div className="min-w-0 flex-1 basis-72 space-y-2">
         <h1 className="text-2xl sm:text-[1.75rem] font-bold tracking-tight text-fg leading-tight">{title}</h1>
         {description && <p className="max-w-prose text-sm text-fg-muted leading-relaxed">{description}</p>}
@@ -265,13 +264,13 @@ export function StatCard({
 }) {
   return (
     <div className="panel-padding flex min-w-0 flex-col gap-3 rounded-xl bg-surface">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex items-start justify-between gap-2">
         <p className="text-xs font-medium text-fg-muted">{label}</p>
-        {icon && <span className="text-fg-subtle" aria-hidden="true">{icon}</span>}
+        {icon && <span className="shrink-0 text-fg-subtle" aria-hidden="true">{icon}</span>}
       </div>
-      <p className="text-2xl font-bold tracking-tight text-fg tabular-nums leading-tight break-words">{value}</p>
-      {hint && <div className="text-xs leading-relaxed text-fg-muted">{hint}</div>}
-      {children}
+      <p className="text-2xl font-bold tracking-tight text-fg tabular-nums leading-tight wrap-anywhere">{value}</p>
+      {hint && <div className="text-xs leading-relaxed wrap-anywhere text-fg-muted">{hint}</div>}
+      {children && <div className="mt-auto">{children}</div>}
     </div>
   );
 }

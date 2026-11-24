@@ -33,7 +33,7 @@ function QuestionRow({
       )}
     >
       <span className="w-6 sm:w-8 shrink-0 text-right text-sm font-semibold tabular-nums text-fg">{number}</span>
-      <div role="radiogroup" aria-label={`Questão ${number}`} className="flex flex-1 flex-wrap gap-1.5 sm:gap-2">
+      <div role="radiogroup" aria-label={`Questão ${number}`} className={cn('min-w-0 flex-1 gap-1.5 sm:gap-2', trueFalse ? 'flex flex-wrap' : 'grid max-w-60 auto-cols-fr grid-flow-col')}>
         {letters.map((letter) => {
           const labelText = optionLabel(letter, exam.optionCount);
           const ariaLabel = trueFalse
@@ -56,7 +56,7 @@ function QuestionRow({
                 className={cn(
                   trueFalse
                     ? 'flex h-10 items-center justify-center gap-1.5 rounded-full px-3.5 text-sm font-semibold transition-colors'
-                    : 'flex size-10 items-center justify-center rounded-full text-sm font-semibold transition-colors',
+                    : 'flex h-10 w-full max-w-10 items-center justify-center rounded-full text-sm font-semibold transition-colors',
                   'bg-surface text-fg-muted hover:bg-surface-muted',
                   'peer-checked:bg-brand peer-checked:text-primary-fg',
 
@@ -141,15 +141,15 @@ export function AnswerSheet({ exam, disciplines }: { exam: MockExam; disciplines
         {groups.map((group) => (
           <section key={group.key} aria-label={group.discipline ? group.discipline.name : undefined} className="flex flex-col gap-2">
             {group.discipline && (
-              <h3 className="flex items-center gap-2 text-sm font-semibold text-fg">
+              <h3 className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-sm font-semibold text-fg">
                 <DisciplineDot color={group.discipline.color} />
-                {group.discipline.name}
+                <span>{group.discipline.name}</span>
                 <span className="text-xs font-normal text-fg-subtle">
                   questões {group.questions[0]}–{group.questions[group.questions.length - 1]}
                 </span>
               </h3>
             )}
-            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,18rem),1fr))] gap-2">
               {group.questions.map((n) => (
                 <QuestionRow key={n} exam={exam} number={n} letters={letters} onMark={(q, l) => void mark(q, l)} />
               ))}

@@ -263,7 +263,7 @@ export function StudyNowScreen() {
   };
 
   return (
-    <div className="page-stack">
+    <div className="page-stack @container">
       <PageHeader
         title="Estudar agora"
         description="Inicie o cronômetro para registrar seu tempo de estudo com foco."
@@ -467,7 +467,7 @@ export function StudyNowScreen() {
           )}
 
           <CycleRecommendation />
-          <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
+          <div className="grid items-start gap-6 @min-[48rem]:grid-cols-2">
             {/* Option A: Start Planned Session (Prioritized when schedule exists — Decision Reduction) */}
             <Card
               title="Iniciar sessão planejada"
@@ -548,6 +548,7 @@ export function StudyNowScreen() {
             <Card
               title="Iniciar sessão avulsa"
               description="Estude livremente qualquer disciplina fora do planejamento do dia."
+              bodyClassName="@container"
             >
               <div className="space-y-4">
                 <Field label="Disciplina" required>
@@ -606,7 +607,7 @@ export function StudyNowScreen() {
                   )}
                 </div>
 
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+                <div className="grid gap-4 @min-[27rem]:grid-cols-2">
                   <div>
                     <Field label="Duração pretendida (min)" required>
                       <Input

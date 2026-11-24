@@ -325,7 +325,7 @@ export function QuestionsScreen() {
         title="Desempenho por disciplina"
         description="Selecione uma disciplina para filtrar os registros. Questões em branco não entram na taxa de acerto."
       >
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,13rem),1fr))] gap-3">
           {discAcc.map((d) => {
             const isSelected = filterDisciplineId === d.disciplineId;
             return (
@@ -337,23 +337,23 @@ export function QuestionsScreen() {
                   setFilterDisciplineId(isSelected ? '' : d.disciplineId);
                   setFilterTopicId('');
                 }}
-                className={`rounded-lg text-left p-3 space-y-1.5 transition-all ${
+                className={`flex min-w-0 flex-col justify-between gap-1.5 rounded-lg p-3 text-left transition-colors ${
                   isSelected
                     ? 'bg-primary-soft'
                     : 'bg-surface-muted hover:bg-primary-soft/50'
                 }`}
                 title={isSelected ? 'Clique para remover o filtro' : `Filtrar por ${d.name}`}
               >
-                <div className="flex items-center justify-between gap-2 text-xs font-medium">
-                  <span className="flex items-center gap-1.5 min-w-0 flex-1">
-                    <DisciplineDot color={d.color} />
+                <div className="flex w-full items-start justify-between gap-2 text-xs font-medium">
+                  <span className="flex min-w-0 flex-1 items-start gap-1.5">
+                    <DisciplineDot color={d.color} className="mt-1" />
                     <span className="wrap-anywhere">{d.name}</span>
                   </span>
                   <span className="font-bold tabular-nums shrink-0">
                     {d.accuracy !== null ? formatPercent(d.accuracy) : EMPTY_VALUE}
                   </span>
                 </div>
-                <div className="text-[11px] text-fg-subtle flex justify-between items-center">
+                <div className="flex w-full flex-wrap items-baseline justify-between gap-x-2 text-[11px] text-fg-subtle">
                   <span>{d.total} respondidas</span>
                   {isSelected ? (
                     <span className="font-semibold text-primary">Filtrado ✓</span>

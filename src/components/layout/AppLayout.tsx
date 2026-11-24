@@ -152,7 +152,7 @@ export function AppLayout({ onSwitchContestScreen }: AppLayoutProps) {
         {/* Barra inferior de acesso rápido em dispositivos Mobile */}
         <nav
           aria-label="Acesso rápido mobile"
-          className="lg:hidden fixed bottom-0 inset-x-0 z-20 flex items-stretch gap-1 bg-surface px-[max(0.5rem,env(safe-area-inset-left))] pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] shadow-[0_-4px_20px_rgb(15_23_42/0.04)]"
+          className="fixed inset-x-0 bottom-0 z-20 flex items-stretch gap-1 bg-surface pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] pl-[max(0.5rem,env(safe-area-inset-left))] pr-[max(0.5rem,env(safe-area-inset-right))] text-center shadow-[0_-4px_20px_rgb(15_23_42/0.04)] lg:hidden"
         >
           {mobileQuickLinks.map((item) => {
             const Icon = item.icon;

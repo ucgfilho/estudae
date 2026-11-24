@@ -173,14 +173,16 @@ export function ExamSetup({ disciplines, onCreated }: ExamSetupProps) {
             <div className="mt-3 flex flex-col gap-3">
               <p className="text-xs text-fg-subtle">Com isso, o resultado mostra seu desempenho em cada disciplina.</p>
               {ranges.map((r, i) => (
-                <div key={i} className="flex flex-wrap items-end gap-2">
-                  <Field label="Da questão" className="w-[calc(50%-0.25rem)] sm:w-28">
-                    <Input type="number" min={1} value={r.from} onChange={(e) => updateRange(i, { from: Number(e.target.value) })} />
-                  </Field>
-                  <Field label="Até a questão" className="w-[calc(50%-0.25rem)] sm:w-28">
-                    <Input type="number" min={1} value={r.to} onChange={(e) => updateRange(i, { to: Number(e.target.value) })} />
-                  </Field>
-                  <Field label="Disciplina" className="min-w-48 flex-1">
+                <div key={i} className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-2 md:grid-cols-[minmax(0,14rem)_minmax(0,1fr)_auto]">
+                  <div className="col-span-2 grid grid-cols-2 items-end gap-2 md:col-span-1">
+                    <Field label="Da questão">
+                      <Input type="number" min={1} value={r.from} onChange={(e) => updateRange(i, { from: Number(e.target.value) })} />
+                    </Field>
+                    <Field label="Até a questão">
+                      <Input type="number" min={1} value={r.to} onChange={(e) => updateRange(i, { to: Number(e.target.value) })} />
+                    </Field>
+                  </div>
+                  <Field label="Disciplina">
                     <Select value={r.disciplineId} onChange={(e) => updateRange(i, { disciplineId: e.target.value })}>
                       {disciplines.map((d) => (
                         <option key={d.id} value={d.id}>

@@ -241,8 +241,9 @@ export function SettingsScreen() {
           </div>
         }
         description="Defina as metas que acompanham seu progresso."
+        bodyClassName="@container"
       >
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 @min-[27rem]:grid-cols-2 @min-[44rem]:grid-cols-3 [&>div]:row-span-3 [&>div]:grid [&>div]:grid-rows-subgrid">
           <Field label="Meta diária de estudo (min)" hint="Opcional. Use 0 para estudar sem uma meta de tempo.">
             <Input
               type="number"

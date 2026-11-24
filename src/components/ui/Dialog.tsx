@@ -66,8 +66,8 @@ export function Dialog({ open, onClose, title, description, children, footer, si
       {render && (
         <div className="flex max-h-[calc(100dvh-2rem)] max-sm:max-h-[92dvh] flex-col">
           <span aria-hidden className="mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-border-strong sm:hidden" />
-          <div className="relative shrink-0 flex items-start justify-between gap-4 rounded-t-xl bg-surface-header px-[var(--panel-padding)] py-4 pr-16 max-sm:pt-2">
-            <div className="min-w-0">
+          <div className="flex shrink-0 items-start justify-between gap-3 rounded-t-xl bg-surface-header px-(--panel-padding) py-3 max-sm:pt-2">
+            <div className="min-w-0 self-center wrap-anywhere">
               <h2 id={titleId} className="section-title">
                 {title}
               </h2>
@@ -82,12 +82,11 @@ export function Dialog({ open, onClose, title, description, children, footer, si
               icon={<X className="size-4" />}
               onClick={onClose}
               size="sm"
-              className="absolute top-3.5 right-3.5 max-sm:top-1 max-sm:right-2"
             />
           </div>
           <div className={cn('panel-padding min-h-0 overflow-y-auto overscroll-contain', !footer && 'max-sm:pb-[max(1rem,env(safe-area-inset-bottom))]')}>{children}</div>
           {footer && (
-            <div className="flex shrink-0 flex-wrap justify-end gap-2 rounded-b-xl bg-surface-header px-[var(--panel-padding)] py-4 max-sm:rounded-b-none max-sm:pb-[calc(1rem+env(safe-area-inset-bottom))] max-sm:[&>*]:flex-1">
+            <div className="flex shrink-0 flex-wrap justify-end gap-2 rounded-b-xl bg-surface-header px-(--panel-padding) py-4 max-sm:rounded-b-none max-sm:pb-[calc(1rem+env(safe-area-inset-bottom))] max-sm:[&>*]:flex-auto">
               {footer}
             </div>
           )}

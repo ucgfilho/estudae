@@ -154,7 +154,7 @@ export function ReportsScreen() {
   };
 
   return (
-    <div className="page-stack">
+    <div className="page-stack @container">
       <PageHeader
         title="Relatórios"
         description="Acompanhe suas horas estudadas, constância e taxa de acerto por matéria."
@@ -244,10 +244,10 @@ export function ReportsScreen() {
         </div>
       </div>
 
-      {/* Charts Grid: Stacked up to lg, side-by-side on wide desktop (xl+) */}
-      <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-2">
+      <div className="grid gap-6 @min-[52rem]:grid-cols-2 @min-[52rem]:gap-y-0">
         {/* Chart 1: Planned vs Done Time */}
         <Card
+          className="@min-[52rem]:row-span-2 @min-[52rem]:grid @min-[52rem]:grid-rows-subgrid"
           title="Tempo planejado e realizado"
           description="Compare o tempo planejado e o estudado, em minutos."
         >
@@ -281,6 +281,7 @@ export function ReportsScreen() {
             </div>
           ) : (
             <EmptyState
+              className="h-full"
               icon={<Clock className="size-8" />}
               title="Sem dados de tempo para o período selecionado"
               description="Os dados aparecerão à medida que você estudar com o cronômetro ou agendar sessões."
@@ -290,6 +291,7 @@ export function ReportsScreen() {
 
         {/* Chart 2: Accuracy Evolution */}
         <Card
+          className="@min-[52rem]:row-span-2 @min-[52rem]:grid @min-[52rem]:grid-rows-subgrid"
           title="Evolução da taxa de acerto"
           description="Acompanhe a taxa de acerto no período selecionado."
         >
@@ -317,6 +319,7 @@ export function ReportsScreen() {
             </div>
           ) : (
             <EmptyState
+              className="h-full"
               icon={<CheckCircle className="size-8" />}
               title="Sem dados de acerto no período selecionado"
               description="Cadastre questões respondidas para visualizar sua curva de evolução."
@@ -326,7 +329,7 @@ export function ReportsScreen() {
       </div>
 
       {/* Two columns: Accuracy by Discipline & Worst Performing Topics */}
-      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
+      <div className="grid items-start gap-6 @min-[48rem]:grid-cols-2">
         {/* Disciplines Accuracy */}
         <Card
           title="Desempenho por disciplina"
@@ -387,8 +390,8 @@ export function ReportsScreen() {
                     key={item.topicId}
                     className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2.5 rounded-lg bg-danger-soft/10 text-xs"
                   >
-                    <div>
-                      <div className="font-semibold text-fg flex items-center gap-1.5">
+                    <div className="min-w-0 wrap-anywhere">
+                      <div className="flex items-start gap-1.5 font-semibold text-fg">
                         <AlertTriangle className="size-3.5 text-danger shrink-0" />
                         <span>{item.title}</span>
                       </div>

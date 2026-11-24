@@ -221,7 +221,7 @@ export function AuthScreen({ onAuthenticated }: AuthScreenProps) {
           </div>
 
           <div role="tabpanel" id={`${accessId}-panel`} aria-labelledby={`${accessId}-${mode}`}>
-            <form onSubmit={handleSubmit} className="auth-form">
+            <form onSubmit={handleSubmit} className="auth-form @container">
               {isRegister && (
                 <Field label="Seu nome completo" required>
                   <InputWithIcon
@@ -249,7 +249,7 @@ export function AuthScreen({ onAuthenticated }: AuthScreenProps) {
                 />
               </Field>
 
-              <div className={isRegister ? 'grid grid-cols-1 gap-4 sm:grid-cols-2' : undefined}>
+              <div className={isRegister ? 'grid gap-4 @min-[23rem]:grid-cols-2' : undefined}>
                 <Field
                   label="Senha"
                   required

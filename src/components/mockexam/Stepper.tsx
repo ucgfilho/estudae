@@ -9,13 +9,13 @@ const STEPS = ['Enviar arquivos', 'Marcar respostas', 'Ver resultado'] as const;
 export function Stepper({ current }: { current: ExamStep }) {
   return (
     <nav aria-label="Etapas do simulado">
-      <ol className="flex items-center gap-2">
+      <ol className="grid grid-cols-3 gap-2">
         {STEPS.map((label, idx) => {
           const step = (idx + 1) as ExamStep;
           const done = step < current;
           const active = step === current;
           return (
-            <li key={label} className="flex min-w-0 flex-1 items-center gap-1.5 sm:gap-2" aria-current={active ? 'step' : undefined}>
+            <li key={label} className="flex min-w-0 flex-col items-center gap-1.5 text-center sm:flex-row sm:gap-2 sm:text-left" aria-current={active ? 'step' : undefined}>
               <span
                 className={cn(
                   'flex size-6 sm:size-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold',

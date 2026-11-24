@@ -352,7 +352,7 @@ export function DisciplinesScreen() {
           )}
 
           {/* Topics and Subtopics Tree */}
-          <div className="space-y-2" data-sort-group="topics">
+          <div className="@container space-y-2" data-sort-group="topics">
             {filteredDisciplineTopics.length > 0 ? (
               filteredDisciplineTopics.map((topic) => {
                 const subtopics = subtopicsByParent.get(topic.id) ?? [];
@@ -369,7 +369,7 @@ export function DisciplinesScreen() {
                     )}
                   >
                     {/* Main Topic Row */}
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5">
+                    <div className="flex flex-col justify-between gap-3 p-3.5 @min-[39rem]:flex-row @min-[39rem]:items-center">
                       <div className="flex items-center gap-2 min-w-0 flex-1">
                         <span title="Arrastar para reordenar" className="cursor-grab touch-none" data-drag-handle>
                           <GripVertical className="size-4 text-fg-subtle shrink-0" />
@@ -389,7 +389,7 @@ export function DisciplinesScreen() {
                             )}
                           </button>
                         ) : (
-                          <span className="size-6 max-sm:hidden shrink-0" />
+                          <span className="size-6 shrink-0 max-lg:size-9" aria-hidden />
                         )}
 
                         <div className="min-w-0 flex-1">
@@ -416,8 +416,8 @@ export function DisciplinesScreen() {
                       </div>
 
                       {/* Topic Actions */}
-                      <div className="flex flex-wrap items-center justify-between gap-2 w-full sm:w-auto sm:flex-nowrap sm:justify-end sm:gap-1 shrink-0 self-stretch sm:self-center pt-2 sm:pt-0">
-                        <div className="w-full sm:w-32">
+                      <div className="flex min-w-0 flex-wrap items-center justify-end gap-2 @min-[39rem]:shrink-0 @min-[39rem]:flex-nowrap">
+                        <div className="min-w-32 flex-1 @min-[39rem]:w-32">
                           <Select
                             size="sm"
                             value={topic.status}
@@ -432,7 +432,7 @@ export function DisciplinesScreen() {
                           </Select>
                         </div>
 
-                        <div className="flex items-center justify-end gap-1 max-sm:w-full">
+                        <div className="flex flex-wrap items-center justify-end gap-1">
                           <IconButton
                             label="Adicionar subtópico"
                             icon={<Plus className="size-3.5" />}
@@ -492,7 +492,7 @@ export function DisciplinesScreen() {
                             key={sub.id}
                             data-sort-id={sub.id}
                             onPointerDown={(e) => handleSortPointerDown(e, sub.id, `sub-${topic.id}`)}
-                            className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-surface p-2.5 sm:p-2 rounded-lg text-xs"
+                            className="flex flex-col justify-between gap-2 rounded-lg bg-surface p-2.5 text-xs @min-[39rem]:flex-row @min-[39rem]:items-center"
                           >
                             <div className="flex flex-wrap items-center gap-2 min-w-0">
                               <span className="touch-none" data-drag-handle><GripVertical className="size-3 text-fg-subtle cursor-grab shrink-0" /></span>
@@ -511,8 +511,8 @@ export function DisciplinesScreen() {
                               </Badge>
                             </div>
 
-                            <div className="flex flex-wrap items-center justify-between gap-2 w-full sm:w-auto sm:flex-nowrap sm:justify-end sm:gap-1 shrink-0 self-stretch sm:self-center pt-1.5 sm:pt-0">
-                              <div className="w-full sm:w-32">
+                            <div className="flex min-w-0 flex-wrap items-center justify-end gap-2 @min-[39rem]:shrink-0 @min-[39rem]:flex-nowrap">
+                              <div className="min-w-32 flex-1 @min-[39rem]:w-32">
                                 <Select
                                   size="sm"
                                   value={sub.status}
@@ -527,7 +527,7 @@ export function DisciplinesScreen() {
                                 </Select>
                               </div>
 
-                              <div className="flex items-center justify-end gap-1 max-sm:w-full">
+                              <div className="flex flex-wrap items-center justify-end gap-1">
                                 <IconButton
                                   label="Mover para cima"
                                   icon={<ArrowUp className="size-3" />}

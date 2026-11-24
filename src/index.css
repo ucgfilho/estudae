@@ -307,6 +307,14 @@ details[open]::details-content { opacity: 1; }
     /* Evita o "pulo" lateral quando a barra de rolagem aparece ou some. */
     scrollbar-gutter: stable;
   }
+  html:has(#main-content) {
+    scrollbar-gutter: auto;
+  }
+  @media (width >= 64rem) {
+    #main-content {
+      scrollbar-gutter: stable;
+    }
+  }
   /* Barra de rolagem na cor principal da paleta com 50% de transparência. */
   * {
     scrollbar-width: thin;
@@ -663,20 +671,6 @@ input[type='number']::-webkit-outer-spin-button {
 }
 
 [data-theme='dark'] .contest-selector-glow { opacity: 0.25; }
-
-.topic-metrics {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: clamp(0.5rem, 1vw, 1rem);
-}
-
-.overview-metrics {
-  display: grid;
-  gap: 1rem;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
-  align-items: stretch;
-}
-
 
 .nav-selected { background: white; color: #1e3a8a; }
 [data-theme='dark'] .nav-selected { background: var(--primary-soft); color: var(--primary); }

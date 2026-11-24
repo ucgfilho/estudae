@@ -274,15 +274,15 @@ export function FlashcardDeck({ reviews, notes, disciplines, onComplete }: Props
           <div inert={!!picked} className={cn(face, 'bg-surface')}>
             <div className="flex flex-wrap items-center gap-2">
               {d && <DisciplineDot color={d.color} />}
-              <span className="text-sm font-semibold text-fg">{d?.name}</span>
+              <span className="min-w-0 text-sm font-semibold wrap-anywhere text-fg">{d?.name}</span>
               <Badge tone="neutral">Ciclo de {current.intervalDays}d</Badge>
               <span className="text-xs text-fg-muted wrap-anywhere">{displayTitle}</span>
             </div>
-            <div className="my-4 flex-1 overflow-y-auto">
+            <div className="my-4 min-h-0 flex-1 overflow-y-auto">
               {card ? (
                 <FormattedText text={card.statement} className="text-lg leading-relaxed" />
               ) : (
-                <div className="flex h-full flex-col items-center justify-center gap-3 text-center text-sm text-fg-muted">
+                <div className="flex min-h-full flex-col items-center justify-center gap-3 text-center text-sm text-fg-muted">
                   <Layers className="size-8 text-fg-subtle" />
                   <p>
                     {note
@@ -330,7 +330,7 @@ export function FlashcardDeck({ reviews, notes, disciplines, onComplete }: Props
               {correct ? <CheckCircle2 className="size-6" /> : <XCircle className="size-6" />}
               {correct ? 'Você acertou!' : 'Você errou'}
             </div>
-            <div className="my-4 flex-1 space-y-3 overflow-y-auto">
+            <div className="my-4 min-h-0 flex-1 space-y-3 overflow-y-auto">
               <p className="text-base">
                 <strong>Gabarito:</strong> {card?.answer === 'certo' ? 'Certo' : 'Errado'}
               </p>

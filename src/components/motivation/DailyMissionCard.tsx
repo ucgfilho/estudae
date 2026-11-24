@@ -64,10 +64,11 @@ export function DailyMissionCard({
       title="Missão de hoje"
       description={progressFraming(p.studiedMinutes, p.goalMinutes)}
       className="shadow-2xs"
+      bodyClassName="@container"
     >
       <div className="space-y-6">
-        <div className="grid items-stretch gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] lg:gap-6">
-          <section className="flex min-w-0 flex-col rounded-xl bg-primary-soft/60 p-5 max-sm:p-4 sm:p-6" aria-label="Sua próxima sessão">
+        <div className="grid gap-4 @min-[42rem]:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] @min-[42rem]:gap-6">
+          <section className="panel-padding flex min-w-0 flex-col gap-5 rounded-xl bg-primary-soft/60" aria-label="Sua próxima sessão">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <p className="flex items-center gap-2 text-sm font-semibold text-primary">
                 <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-brand text-primary-fg">
@@ -78,14 +79,14 @@ export function DailyMissionCard({
               {!timer && next && <Badge tone="primary">Sessão {next.position}</Badge>}
             </div>
 
-            <div className="my-6 max-sm:my-4 space-y-3">
-              <div className="flex items-start gap-2.5">
-                {(timer || next) && <span className="mt-2.5 shrink-0"><DisciplineDot color={timer ? activeDiscipline?.color ?? '#1E40AF' : next.discipline.color} className="size-3" /></span>}
-                <h3 className="min-w-0 text-2xl font-semibold leading-tight tracking-tight text-fg sm:text-3xl">
+            <div className="space-y-3">
+              <h3 className="flex items-start gap-2.5 text-2xl font-semibold leading-tight tracking-tight text-fg sm:text-3xl">
+                {(timer || next) && <span className="grid h-[1lh] shrink-0 place-items-center"><DisciplineDot color={timer ? activeDiscipline?.color ?? '#1E40AF' : next.discipline.color} className="size-3" /></span>}
+                <span className="min-w-0">
                   {timer ? nameOf(timer.disciplineId) : next?.discipline.name ??
                     (hasActiveDiscipline ? 'Nenhum tópico pendente no ciclo' : 'Seu ciclo começa com uma disciplina')}
-                </h3>
-              </div>
+                </span>
+              </h3>
               <p className="text-base leading-relaxed text-fg-muted">
                 {timer ? timer.objective || 'Continue sua sessão de estudo.'
                   : next ? next.topic?.title ?? 'Estude a disciplina ou cadastre um assunto para orientar a sessão.'
@@ -101,7 +102,7 @@ export function DailyMissionCard({
               </div>}
             </div>
 
-            <div className="mt-auto pt-5">
+            <div className="mt-auto space-y-3">
               <Button
                 variant="primary"
                 size="lg"
@@ -113,19 +114,19 @@ export function DailyMissionCard({
               >
                 {timer ? 'Retomar sessão em andamento' : next ? 'Iniciar estudo do ciclo' : 'Configurar disciplinas'}
               </Button>
-              <p className="mt-3 flex items-start gap-1.5 text-xs leading-relaxed text-fg-muted">
+              <p className="flex items-start gap-1.5 text-xs leading-relaxed text-fg-muted">
                 <Repeat2 className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
                 Continue de onde parou. Sua posição no ciclo fica salva.
               </p>
             </div>
           </section>
 
-          <section className="min-w-0 rounded-xl bg-surface-muted p-5 max-sm:p-4 sm:p-6" aria-labelledby="mission-progress-title">
+          <section className="panel-padding flex min-w-0 flex-col gap-5 rounded-xl bg-surface-muted" aria-labelledby="mission-progress-title">
             <h3 id="mission-progress-title" className="flex items-center gap-2 text-sm font-semibold text-fg">
-              <Target className="size-4 text-primary" aria-hidden="true" />
+              <span className="grid size-8 shrink-0 place-items-center"><Target className="size-4 text-primary" aria-hidden="true" /></span>
               Seu progresso hoje
             </h3>
-            <div className="my-5 flex items-center gap-4">
+            <div className="flex items-center gap-4">
               {!timeGoalsDisabled && p.goalMinutes > 0 && <ProgressRing
                 value={p.studiedMinutes}
                 max={p.goalMinutes}
@@ -142,8 +143,8 @@ export function DailyMissionCard({
               </div>
             </div>
 
-            <div className="space-y-2 pt-4">
-              <div className="flex items-baseline justify-between gap-2">
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <h4 className="text-sm font-medium text-fg">Questões hoje</h4>
                 <span className="text-sm font-semibold tabular-nums text-fg">
                   {formatInteger(p.questionsToday)}
@@ -166,7 +167,7 @@ export function DailyMissionCard({
               )}
             </div>
 
-            <div className="mt-5 space-y-3 rounded-lg bg-surface-inset p-3.5">
+            <div className="mt-auto space-y-3 rounded-lg bg-surface-inset p-3.5">
               <div className="flex items-start gap-2.5">
                 <CheckCircle2 className={cn('mt-0.5 size-4 shrink-0', completedToday > 0 ? 'text-success' : 'text-fg-muted')} aria-hidden="true" />
                 <p className="text-xs font-medium leading-relaxed text-fg">
@@ -186,7 +187,7 @@ export function DailyMissionCard({
           </section>
         </div>
 
-        <section className="pt-5" aria-labelledby="mission-queue-title">
+        <section aria-labelledby="mission-queue-title">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
             <div>
               <h3 id="mission-queue-title" className="text-sm font-semibold text-fg">Na sequência do ciclo</h3>
@@ -196,7 +197,7 @@ export function DailyMissionCard({
               Ver ciclo de estudos <ArrowRight className="size-4" aria-hidden="true" />
             </button>
           </div>
-          {next ? <ol className="grid gap-3 md:grid-cols-3" aria-label="Próximas atividades do ciclo">
+          {next ? <ol className="grid gap-3 @min-[36rem]:grid-cols-3" aria-label="Próximas atividades do ciclo">
             {queue.slice(queueOffset, queueOffset + 3).map((activity) => <li key={activity.position} className="flex min-w-0 items-start gap-3 rounded-lg bg-surface-muted p-4">
               <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-surface text-xs font-semibold tabular-nums text-fg-muted">{activity.position}</span>
               <div className="min-w-0 space-y-1.5">

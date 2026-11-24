@@ -249,7 +249,7 @@ export function CalendarScreen() {
         <div className="space-y-4">
           <div className="overflow-hidden rounded-xl bg-surface">
             {/* Weekday headers */}
-            <div className="grid grid-cols-7 bg-surface-muted/50 text-center text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-fg-subtle">
+            <div className="grid grid-cols-7 gap-1 bg-surface-muted/50 px-1 text-center text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-fg-subtle">
               {WEEKDAY_LABELS.map((w) => (
                 <div key={w} className="py-2 sm:py-2.5">
                   <span className="sm:hidden">{w.slice(0, 1)}</span>
@@ -274,12 +274,12 @@ export function CalendarScreen() {
                     key={dayKey}
                     onClick={() => setCurrentDate(dayKey)}
                     className={cn(
-                      'min-h-14 md:min-h-[105px] xl:min-h-[118px] p-1 md:p-1.5 xl:p-2 transition-colors flex flex-col justify-between group rounded-md max-md:cursor-pointer',
+                      'group flex min-w-0 min-h-14 flex-col gap-1 rounded-md p-1 transition-colors md:min-h-26 md:p-1.5 xl:min-h-30 xl:p-2 max-md:cursor-pointer',
                       isToday ? 'bg-primary-soft' : isCurMonth ? 'bg-surface-muted' : 'bg-surface text-fg-subtle',
                       isSelectedDay && 'max-md:bg-primary-soft'
                     )}
                   >
-                    <div className="flex items-center justify-center md:justify-between text-xs mb-0.5 md:mb-1">
+                    <div className="grid justify-items-center text-xs md:grid-cols-[minmax(0,1fr)_auto] md:items-center md:justify-items-start">
                       <span
                         className={cn(
                           'flex size-6 items-center justify-center rounded-full font-medium',
@@ -294,7 +294,7 @@ export function CalendarScreen() {
                       {studiedMin > 0 && (
                         <span
                           className={cn(
-                            'hidden md:inline-block text-[10px] font-semibold tabular-nums px-1 rounded',
+                            'hidden md:col-span-2 md:row-start-2 md:inline-block wrap-anywhere text-[10px] font-semibold tabular-nums px-1 rounded',
                             !timeGoalsDisabled && studiedMin >= dailyGoal ? 'text-success bg-success-soft' : 'text-fg-subtle'
                           )}
                           title={timeGoalsDisabled ? undefined : `Estudado: ${formatMinutes(studiedMin)} / Meta: ${formatMinutes(dailyGoal)}`}
@@ -307,7 +307,7 @@ export function CalendarScreen() {
                         label={`Adicionar sessão em ${formatDate(dayKey)}`}
                         icon={<Plus className="size-3" />}
                         size="xs"
-                        className="hidden md:inline-flex opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="hidden md:col-start-2 md:row-start-1 md:inline-flex opacity-0 group-hover:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity"
                         onClick={(e) => {
                           e.stopPropagation();
                           openNewSession(dayKey);
@@ -317,7 +317,7 @@ export function CalendarScreen() {
 
                     {/* Mobile compact indicators (< md) */}
                     {daySessions.length > 0 && (
-                      <div className="flex md:hidden items-center justify-center gap-0.5 py-0.5 flex-wrap">
+                      <div className="mt-auto flex md:hidden items-center justify-center gap-0.5 py-0.5 flex-wrap">
                         {daySessions.slice(0, 3).map((s) => {
                           const d = discMap.get(s.disciplineId);
                           const dotColor =
