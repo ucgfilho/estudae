@@ -219,6 +219,14 @@ export interface WeeklyPlan {
 
 export const SETTINGS_ID = 'settings';
 
+export interface TopicProgressSnapshot {
+  date: DateKey;
+  total: number;
+  completed: number;
+  inProgress: number;
+  source?: 'backup';
+}
+
 export interface Settings {
   id: typeof SETTINGS_ID;
   dailyGoalMinutes: number;
@@ -249,6 +257,7 @@ export interface Settings {
   celebrationsEnabled?: boolean;
   reportTimeGranularity?: 'day' | 'week' | 'month';
   reportPeriodDays?: '30' | '60' | '90' | 'all';
+  topicProgressHistory?: TopicProgressSnapshot[];
   flashcardDraft?: { date: DateKey; progress: string };
   skippedCycleActivities?: { position: number; disciplineId: string; topicId: string | null }[];
   contestExamBoard?: string;

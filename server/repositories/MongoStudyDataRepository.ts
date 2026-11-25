@@ -2,6 +2,8 @@ import type { ClientSession, Db } from 'mongodb';
 import { CONTEST_LIMIT_MESSAGE, MAX_USER_CONTESTS } from '../../src/domain/contestLimit';
 import { canReuseCompletion, findReusableCompletions, type ContestSyllabus } from '../../src/domain/topicCompletion';
 import { mergeWorkspaceTopics } from '../../src/domain/duplicateTopics';
+import { recordTopicProgress, topicProgress } from '../../src/domain/metrics';
+import { toDateKey } from '../../src/lib/dates';
 import { ConflictError, NotFoundError } from '../errors/AppError';
 import { DEFAULT_DISCIPLINES, DEFAULT_SETTINGS } from '../../src/db/seed';
 import {
@@ -311,8 +313,14 @@ export class MongoStudyDataRepository implements IStudyDataRepository {
       const workspace = mergeWorkspaceTopics(stored);
       const now = new Date().toISOString();
       const completedTopics = await this.reuseTopicCompletions(workspace, doc._id, ownerId, now);
-      if (workspace === stored && completedTopics === workspace.topics) return workspace;
+      const settings = workspace.settings[0];
+      const history = settings?.topicProgressHistory;
+      const recorded = settings && !settings.contestHidden
+        ? recordTopicProgress(history, topicProgress(completedTopics), toDateKey(now))
+        : history;
+      if (workspace === stored && completedTopics === workspace.topics && recorded === history) return workspace;
       workspace.topics = completedTopics;
+      if (settings && recorded !== history) settings.topicProgressHistory = recorded;
       const result = await this.collection().updateOne(
         { ...filter, encryptedPayload: doc.encryptedPayload },
         { $set: { encryptedPayload: this.serializeAndEncryptWorkspace(ownerId, workspace), updatedAt: now } },
@@ -456,6 +464,7 @@ export class MongoStudyDataRepository implements IStudyDataRepository {
       const workspace = this.decryptAndDeserializeWorkspace(ctx.ownerId, doc.encryptedPayload);
 
       if (workspace.settings[0]?.contestHidden) throw new NotFoundError('Concurso não encontrado.');
+      const history = workspace.settings[0]?.topicProgressHistory;
 
       for (const op of operations) {
         if (op.action === 'patch') {
@@ -485,11 +494,18 @@ export class MongoStudyDataRepository implements IStudyDataRepository {
         }
       }
 
+      const now = new Date().toISOString();
+      const settings = workspace.settings[0];
+      if (settings) {
+        settings.topicProgressHistory = operations.some((op) => op.table === 'topics')
+          ? recordTopicProgress(history, topicProgress(workspace.topics), toDateKey(now))
+          : history;
+      }
       const result = await this.collection().updateOne(
         { ...filter, encryptedPayload: doc.encryptedPayload },
         { $set: {
           encryptedPayload: this.serializeAndEncryptWorkspace(ctx.ownerId, workspace),
-          updatedAt: new Date().toISOString(),
+          updatedAt: now,
         } },
       );
       if (result.matchedCount === 1) return;

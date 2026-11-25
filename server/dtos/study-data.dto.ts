@@ -183,7 +183,7 @@ export const settingsDtoSchema = z.object({
   ...workspacePreferenceFields,
 });
 
-const settingsPatchSchema = settingsDtoSchema.omit({ id: true, theme: true }).partial().strict();
+const settingsPatchSchema = settingsDtoSchema.omit({ id: true, theme: true, topicProgressHistory: true }).partial().strict();
 
 const questionNumberKey = z.string().regex(/^(?:[1-9]\d?|[1-4]\d{2}|500)$/, 'Chave de questão inválida (esperado 1..500).');
 const answerKeyValueSchema = z.enum(['A', 'B', 'C', 'D', 'E', 'X']);

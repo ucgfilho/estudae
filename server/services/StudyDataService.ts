@@ -9,12 +9,14 @@ import {
 import { DtoValidationError } from '../errors/AppError';
 import type { IStudyDataRepository } from '../interfaces/IStudyDataRepository';
 import type { IStudyDataService } from '../interfaces/IStudyDataService';
+import { loadTopicProgressBackups, withTopicProgressBackups } from './topicProgressBackups';
 
 /**
  * Serviço de domínio para gerenciamento dos dados de estudo do usuário (SRP, OCP & DIP).
  */
 export class StudyDataService implements IStudyDataService {
   private readonly repository: IStudyDataRepository;
+  private readonly topicProgressBackups = loadTopicProgressBackups(process.env.TOPIC_PROGRESS_BACKUP_FILE);
 
   constructor(repository: IStudyDataRepository) {
     this.repository = repository;
@@ -29,7 +31,8 @@ export class StudyDataService implements IStudyDataService {
   }
 
   public async getWorkspace(userId: string): Promise<StudyWorkspaceDto> {
-    return this.repository.getWorkspace(userId);
+    const workspace = await this.repository.getWorkspace(userId);
+    return withTopicProgressBackups(workspace, this.topicProgressBackups.get(userId));
   }
 
   public async isContestActive(userId: string): Promise<boolean> {
@@ -43,7 +46,7 @@ export class StudyDataService implements IStudyDataService {
   public async executeBatch(userId: string, rawBody: unknown): Promise<StudyWorkspaceDto> {
     const dto = parseBatchRequestDto(rawBody);
     await this.repository.applyBatch(userId, dto.operations);
-    return this.repository.getWorkspace(userId);
+    return this.getWorkspace(userId);
   }
 
   public async mutateTable(userId: string, tableParam: string, rawBody: unknown): Promise<void> {

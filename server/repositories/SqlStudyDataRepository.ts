@@ -1,6 +1,8 @@
 import { CONTEST_LIMIT_MESSAGE, MAX_USER_CONTESTS } from '../../src/domain/contestLimit';
 import { canReuseCompletion, findReusableCompletions, type ContestSyllabus } from '../../src/domain/topicCompletion';
 import { mergeWorkspaceTopics } from '../../src/domain/duplicateTopics';
+import { recordTopicProgress, topicProgress } from '../../src/domain/metrics';
+import { todayKey } from '../../src/lib/dates';
 import { ConflictError, NotFoundError } from '../errors/AppError';
 import { parseTenantScope } from '../security/MongoRlsGuard';
 import { DEFAULT_DISCIPLINES, DEFAULT_SETTINGS } from '../../src/db/seed';
@@ -110,6 +112,7 @@ export class SqlStudyDataRepository implements IStudyDataRepository {
         this.deleteFromTableInternal(userId, 'topics', stored.topics.filter(({ id }) => !remaining.has(id)).map(({ id }) => id));
       }
       workspace.topics = this.reuseTopicCompletions(userId, workspace);
+      this.saveTopicProgress(userId, workspace.settings[0], workspace.topics);
       return workspace;
     });
   }
@@ -223,29 +226,30 @@ export class SqlStudyDataRepository implements IStudyDataRepository {
           this.upsertTableInternal(userId, op.table, validated);
         }
       }
+      if (operations.some((op) => op.table === 'topics')) {
+        this.saveTopicProgress(userId, this.getSettingsList(userId)[0], this.getTopics(userId));
+      }
     });
+  }
+
+  private saveTopicProgress(userId: string, settings: Settings | undefined, topics: Topic[]): void {
+    if (!settings || settings.contestHidden) return;
+    const history = recordTopicProgress(settings.topicProgressHistory, topicProgress(topics), todayKey());
+    if (history === settings.topicProgressHistory) return;
+    settings.topicProgressHistory = history;
+    this.upsertSettings(userId, [settings]);
   }
 
   public upsertTable(userId: string, table: DataTableName, records: readonly unknown[]): void {
-    const validated = validateTableRecords(table, records);
-    this.db.transaction(() => {
-      this.assertContestNotHidden(userId);
-      this.upsertTableInternal(userId, table, validated);
-    });
+    this.applyBatch(userId, [{ action: 'upsert', table, records: [...records] }]);
   }
 
   public deleteFromTable(userId: string, table: DataTableName, ids: readonly string[]): void {
-    this.db.transaction(() => {
-      this.assertContestNotHidden(userId);
-      this.deleteFromTableInternal(userId, table, ids);
-    });
+    this.applyBatch(userId, [{ action: 'delete', table, ids: [...ids] }]);
   }
 
   public clearTable(userId: string, table: DataTableName): void {
-    this.db.transaction(() => {
-      this.assertContestNotHidden(userId);
-      this.clearTableInternal(userId, table);
-    });
+    this.applyBatch(userId, [{ action: 'clear', table }]);
   }
 
   /* ----------------------- Métodos Internos de Escrita ----------------------- */
@@ -278,10 +282,14 @@ export class SqlStudyDataRepository implements IStudyDataRepository {
         this.upsertWeeklyPlans(userId, records as WeeklyPlan[]);
         break;
       case 'settings':
-        this.upsertSettings(userId, (records as Settings[]).map((item) => ({
-          ...this.getSettingsList(userId)[0],
-          ...item,
-        })));
+        {
+          const current = this.getSettingsList(userId)[0];
+          this.upsertSettings(userId, (records as Settings[]).map((item) => ({
+            ...current,
+            ...item,
+            topicProgressHistory: current?.topicProgressHistory,
+          })));
+        }
         break;
       case 'mockExams':
         this.upsertMockExams(userId, records as MockExam[]);

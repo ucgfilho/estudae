@@ -4,11 +4,33 @@ import {
   sumQuestions,
   studyStreak,
   topicProgress,
+  topicProgressSeries,
   worstTopics,
   accuracyByDiscipline,
   weekScheduleMetrics,
 } from '../../domain/metrics';
 import type { QuestionLog, StudySession, Topic, Discipline } from '../../db/types';
+
+it('shows recovered progress only in its backup period and carries forward recorded progress', () => {
+  const current = { total: 10, completed: 3, inProgress: 2, mastered: 0, percent: 30, approachedPercent: 50 };
+  const history = [
+    { date: '2026-11-01', total: 8, completed: 1, inProgress: 2, source: 'backup' as const },
+    { date: '2026-11-03', total: 10, completed: 2, inProgress: 2 },
+  ];
+  const data = topicProgressSeries(history, current, '2026-10-01', '2026-11-05', 'day');
+  expect(data.map(({ key, coverage, approached, backupCoverage, backupApproached }) =>
+    [key, coverage, approached, backupCoverage, backupApproached],
+  )).toEqual([
+    ['2026-11-01', null, null, 12.5, 37.5],
+    ['2026-11-02', null, null, null, null],
+    ['2026-11-03', 20, 40, null, null],
+    ['2026-11-04', 20, 40, null, null],
+    ['2026-11-05', 30, 50, null, null],
+  ]);
+
+  const weekly = topicProgressSeries(history, current, '2026-11-01', '2026-11-05', 'week');
+  expect(weekly).toMatchObject([{ coverage: 30, approached: 50, backupCoverage: null }]);
+});
 
 describe('domain/metrics - accuracy calculations', () => {
   it('calculates accuracy formula: correct / (correct + incorrect) * 100', () => {

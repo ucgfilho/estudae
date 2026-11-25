@@ -12,6 +12,7 @@ services:
       - PORT=80
       - DB_PATH=/app/data/bnb_estudos.sqlite
       - SEED_FILE_PATH=/app/data/initial-workspace.seed.json
+      - TOPIC_PROGRESS_BACKUP_FILE=/app/data/topic-progress-backup.json
       - JWT_SECRET=${JWT_SECRET:-}
       - DATA_ENCRYPTION_KEY=${DATA_ENCRYPTION_KEY:-${JWT_SECRET:-}}
       - MONGODB_URI=${MONGODB_URI:-}

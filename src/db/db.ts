@@ -306,8 +306,22 @@ export class AppDatabase {
   private syncMutations(operations: readonly RemoteTableMutation[]): void {
     const version = this.versionCounter;
     const scope = getActiveContestScopeId();
-    void syncBatchMutationsToApi(operations, scope, ({ topics }) => {
-      if (!Array.isArray(topics) || version !== this.versionCounter || scope !== getActiveContestScopeId()) return;
+    void syncBatchMutationsToApi(operations, scope, ({ topics, settings }) => {
+      if (scope !== getActiveContestScopeId()) return;
+      const current = this.settings.getSync(SETTINGS_ID);
+      const history = (settings?.[0] as Settings | undefined)?.topicProgressHistory;
+      const historyChanged = current && history &&
+        JSON.stringify(current.topicProgressHistory) !== JSON.stringify(history);
+
+      if (historyChanged) this.settings.replaceAllSilent([{ ...current, topicProgressHistory: history }]);
+      const canApplyTopics = Array.isArray(topics) && version === this.versionCounter;
+      if (!canApplyTopics) {
+        if (historyChanged) {
+          this.persistLocalWorkspaceCache();
+          this.notifyListeners();
+        }
+        return;
+      }
 
       const completed = new Map((topics as Topic[])
         .filter((topic) => topic.status === 'concluido')
@@ -320,9 +334,11 @@ export class AppDatabase {
         changed = true;
         return { ...topic, status: remote.status, updatedAt: remote.updatedAt };
       });
-      if (!changed) return;
-      this.topics.replaceAllSilent(rows);
-      this.versionCounter++;
+      if (!changed && !historyChanged) return;
+      if (changed) {
+        this.topics.replaceAllSilent(rows);
+        this.versionCounter++;
+      }
       this.persistLocalWorkspaceCache();
       this.notifyListeners();
     });

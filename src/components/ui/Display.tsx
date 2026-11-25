@@ -255,22 +255,30 @@ export function StatCard({
   hint,
   icon,
   children,
+  footer,
+  alignRows = false,
 }: {
   label: string;
   value: ReactNode;
   hint?: ReactNode;
   icon?: ReactNode;
   children?: ReactNode;
+  footer?: ReactNode;
+  alignRows?: boolean;
 }) {
   return (
-    <div className="panel-padding flex min-w-0 flex-col gap-3 rounded-xl bg-surface">
-      <div className="flex items-start justify-between gap-2">
+    <div className={cn(
+      'panel-padding flex min-w-0 flex-col gap-3 rounded-xl bg-surface',
+      alignRows && 'min-[22rem]:row-span-5 min-[22rem]:grid min-[22rem]:grid-rows-subgrid',
+    )}>
+      <div className="row-start-1 flex items-start justify-between gap-2">
         <p className="text-xs font-medium text-fg-muted">{label}</p>
         {icon && <span className="shrink-0 text-fg-subtle" aria-hidden="true">{icon}</span>}
       </div>
-      <p className="text-2xl font-bold tracking-tight text-fg tabular-nums leading-tight wrap-anywhere">{value}</p>
-      {hint && <div className="text-xs leading-relaxed wrap-anywhere text-fg-muted">{hint}</div>}
-      {children && <div className="mt-auto">{children}</div>}
+      <p className="row-start-2 text-2xl font-bold tracking-tight text-fg tabular-nums leading-tight wrap-anywhere">{value}</p>
+      {hint && <div className="row-start-3 text-xs leading-relaxed wrap-anywhere text-fg-muted">{hint}</div>}
+      {children && <div className="row-start-4 mt-auto">{children}</div>}
+      {footer && <div className="row-start-5 mt-auto">{footer}</div>}
     </div>
   );
 }

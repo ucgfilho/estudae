@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   Clock,
   CheckCircle,
@@ -13,6 +13,7 @@ import {
   Trophy,
 } from 'lucide-react';
 import { Button } from '../components/ui/Button';
+import { TOPIC_PROGRESS_REPORTS } from '../components/reports/topicProgressReports';
 import {
   Card,
   PageHeader,
@@ -52,6 +53,23 @@ import { startCycleTimer, startPlannedTimer } from '../services/timer';
 import { resolveReviewDisplayTitle } from '../services/performance';
 import { errorMessage } from '../lib/utils';
 import { useSuccessToast } from '../components/ui/Toast';
+
+const reportActionClass = 'flex w-fit min-h-9 items-center gap-1 rounded text-xs font-medium text-primary hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 max-lg:px-2';
+
+function TopicProgressLink({ metric }: { metric: keyof typeof TOPIC_PROGRESS_REPORTS }) {
+  const { id, label } = TOPIC_PROGRESS_REPORTS[metric];
+  const actionLabel = 'Acompanhar evolução';
+  return (
+    <Link
+      to={`/relatorios#${id}`}
+      aria-label={`${actionLabel} — ${label}`}
+      className={`ms-auto ${reportActionClass}`}
+    >
+      <BarChart3 className="size-3" aria-hidden="true" />
+      {actionLabel}
+    </Link>
+  );
+}
 
 export function OverviewScreen() {
   const navigate = useNavigate();
@@ -364,6 +382,7 @@ export function OverviewScreen() {
           value={formatMinutes(weekDoneMinutes)}
           hint={`Meta: ${formatMinutes(weeklyGoal)} · Planejado: ${formatMinutes(weekPlannedMinutes)}`}
           icon={<Clock className="size-4" />}
+          alignRows
         >
           <ProgressBar
             value={weekDoneMinutes}
@@ -379,33 +398,39 @@ export function OverviewScreen() {
           value={formatPercent(questionTotals.accuracy)}
           hint={`${formatInteger(questionTotals.correct)} acertos em ${formatInteger(questionTotals.total)} resolvidas`}
           icon={<TrendingUp className="size-4" />}
-        >
-          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-fg-subtle">
-            <span>Meta: {settings?.accuracyGoal ?? 80}%</span>
-            <button
-              type="button"
-              onClick={() => navigate('/relatorios')}
-              className="font-medium text-primary hover:underline inline-flex items-center gap-1 max-lg:min-h-9 max-lg:px-2"
-            >
-              <BarChart3 className="size-3" aria-hidden="true" />
-              Ver gráficos
-            </button>
-          </div>
-        </StatCard>
+          alignRows
+          footer={
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-fg-subtle">
+              <span>Meta: {settings?.accuracyGoal ?? 80}%</span>
+              <button
+                type="button"
+                onClick={() => navigate('/relatorios')}
+                className={`ms-auto ${reportActionClass}`}
+              >
+                <BarChart3 className="size-3" aria-hidden="true" />
+                Ver gráficos
+              </button>
+            </div>
+          }
+        />
 
         <StatCard
           label="Cobertura do edital"
           value={formatPercent(topicsProg.percent)}
           hint={<span title="Tópicos concluídos ou dominados">{topicsProg.completed} de {topicsProg.total} tópicos</span>}
           icon={<BookOpenCheck className="size-4" />}
+          alignRows
+          footer={<TopicProgressLink metric="coverage" />}
         >
           <ProgressBar value={topicsProg.completed} max={topicsProg.total || 1} label="Cobertura do edital" tone="success" />
         </StatCard>
         <StatCard
           label="Tópicos em abordagem"
-          value={formatPercent(topicsProg.total ? approached / topicsProg.total * 100 : null)}
+          value={formatPercent(topicsProg.approachedPercent)}
           hint={<span title="Tópicos em andamento, concluídos ou dominados">{approached} de {topicsProg.total} tópicos</span>}
           icon={<BookOpen className="size-4" />}
+          alignRows
+          footer={<TopicProgressLink metric="approached" />}
         >
           <ProgressBar value={approached} max={topicsProg.total || 1} label="Tópicos em abordagem" tone="success" />
         </StatCard>

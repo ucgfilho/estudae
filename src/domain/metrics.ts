@@ -16,7 +16,7 @@ import {
   zonedDateTimeToEpoch,
   type DateKey,
 } from '../lib/dates';
-import type { Discipline, QuestionLog, ReviewTask, StudySession, Topic } from '../db/types';
+import type { Discipline, QuestionLog, ReviewTask, StudySession, Topic, TopicProgressSnapshot } from '../db/types';
 
 /** Percentual de acerto = acertos / (acertos + erros) * 100. Em branco não entra. */
 export function accuracy(correct: number, incorrect: number): number | null {
@@ -308,6 +308,11 @@ export interface TopicProgress {
   mastered: number;
   inProgress: number;
   percent: number | null;
+  approachedPercent: number | null;
+}
+
+function topicPercent(count: number, total: number): number | null {
+  return total > 0 ? (count / total) * 100 : null;
 }
 
 /** Progresso dos tópicos ativos (concluído ou dominado contam como finalizados). */
@@ -321,8 +326,60 @@ export function topicProgress(topics: readonly Topic[]): TopicProgress {
     completed,
     mastered,
     inProgress,
-    percent: active.length > 0 ? (completed / active.length) * 100 : null,
+    percent: topicPercent(completed, active.length),
+    approachedPercent: topicPercent(completed + inProgress, active.length),
   };
+}
+
+export function recordTopicProgress(
+  history: TopicProgressSnapshot[] | undefined,
+  progress: Pick<TopicProgress, 'total' | 'completed' | 'inProgress'>,
+  date: DateKey,
+): TopicProgressSnapshot[] | undefined {
+  const previous = history?.at(-1);
+  const { total, completed, inProgress } = progress;
+  if (!previous && total === 0) return history;
+  if (previous && (previous.date > date ||
+    (previous.source !== 'backup' && previous.total === total &&
+      previous.completed === completed && previous.inProgress === inProgress))) {
+    return history;
+  }
+  const snapshot = { date, total, completed, inProgress };
+  return [...(history?.slice(0, previous?.date === date ? -1 : undefined) ?? []), snapshot];
+}
+
+export function topicProgressSeries(
+  history: readonly TopicProgressSnapshot[],
+  current: TopicProgress,
+  start: DateKey,
+  end: DateKey,
+  granularity: Granularity,
+) {
+  // Sempre mostra o estado atual, inclusive enquanto a última alteração está sincronizando.
+  const snapshots: TopicProgressSnapshot[] = [...history.filter((point) => point.date < end), { ...current, date: end }]
+    .sort((a, b) => a.date.localeCompare(b.date));
+  const firstDate = snapshots[0].date;
+  const startDate = start < firstDate ? firstDate : start;
+  let index = 0;
+  let recorded: TopicProgressSnapshot | undefined;
+  return bucketsInRange(startDate, end, granularity).map((key, position, keys) => {
+    const nextKey = keys[position + 1];
+    let backup: TopicProgressSnapshot | undefined;
+    while (index < snapshots.length && (!nextKey || snapshots[index].date < nextKey)) {
+      const snapshot = snapshots[index++];
+      if (snapshot.source !== 'backup') recorded = snapshot;
+      else if (snapshot.date >= startDate) backup = snapshot;
+    }
+    return {
+      key,
+      label: bucketLabel(key, granularity),
+      coverage: recorded ? topicPercent(recorded.completed, recorded.total) : null,
+      approached: recorded ? topicPercent(recorded.completed + recorded.inProgress, recorded.total) : null,
+      backupCoverage: !recorded && backup ? topicPercent(backup.completed, backup.total) : null,
+      backupApproached: !recorded && backup ? topicPercent(backup.completed + backup.inProgress, backup.total) : null,
+      backupDate: !recorded ? backup?.date : undefined,
+    };
+  });
 }
 
 function sessionSortValue(s: StudySession): number {

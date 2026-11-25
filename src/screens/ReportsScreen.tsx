@@ -32,6 +32,7 @@ import {
   useToday,
 } from '../hooks/useData';
 import { RankCard } from '../components/motivation/RankCard';
+import { TopicProgressCharts } from '../components/reports/TopicProgressCharts';
 import {
   sumQuestions,
   accuracyByDiscipline,
@@ -39,6 +40,7 @@ import {
   studyTimeSeries,
   accuracySeries,
   topicProgress,
+  topicProgressSeries,
   reviewBuckets,
   type Granularity,
 } from '../domain/metrics';
@@ -101,6 +103,11 @@ export function ReportsScreen() {
   // General Totals
   const questionTotals = useMemo(() => sumQuestions(questionLogs), [questionLogs]);
   const topicsProg = useMemo(() => topicProgress(topics), [topics]);
+  const history = settings?.topicProgressHistory;
+  const topicData = useMemo(
+    () => topicProgressSeries(history ?? [], topicsProg, startDate, today, timeGranularity),
+    [history, topicsProg, startDate, today, timeGranularity],
+  );
   const revBuckets = useMemo(() => reviewBuckets(reviews, today), [reviews, today]);
 
   // Study time comparison series
@@ -157,7 +164,7 @@ export function ReportsScreen() {
     <div className="page-stack @container">
       <PageHeader
         title="Relatórios"
-        description="Acompanhe suas horas estudadas, constância e taxa de acerto por matéria."
+        description="Acompanhe seu progresso no edital, suas horas de estudo e sua taxa de acerto por matéria."
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Button
@@ -328,8 +335,10 @@ export function ReportsScreen() {
         </Card>
       </div>
 
+      <TopicProgressCharts data={topicData} />
+
       {/* Two columns: Accuracy by Discipline & Worst Performing Topics */}
-      <div className="grid items-start gap-6 @min-[48rem]:grid-cols-2">
+      <div className="grid gap-6 @min-[48rem]:grid-cols-2">
         {/* Disciplines Accuracy */}
         <Card
           title="Desempenho por disciplina"
@@ -380,6 +389,8 @@ export function ReportsScreen() {
         <Card
           title="Conteúdos para reforçar"
           description="Priorize os tópicos com menor taxa de acerto."
+          className="@min-[48rem]:grid @min-[48rem]:grid-rows-[auto_minmax(0,1fr)] @min-[48rem]:[contain:size]"
+          bodyClassName="@min-[48rem]:overflow-y-auto"
         >
           {worstPerforming.length > 0 ? (
             <div className="space-y-3">
