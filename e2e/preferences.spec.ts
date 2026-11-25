@@ -84,6 +84,20 @@ test('backup inválido apresenta erro e mantém os dados', async ({ workspace: p
 
 test('valida metas, persiste preferências e mantém celebrações ativas', async ({ workspace: page }) => {
   await navigate(page, 'Configurações');
+  const dateInput = page.getByLabel('Data da prova');
+  await expect(dateInput).toBeVisible();
+  const [qBox, tBox, dBox, calBox] = await Promise.all([
+    page.getByLabel('Meta diária de questões').boundingBox(),
+    page.getByLabel('Meta de conclusão do edital (%)').boundingBox(),
+    dateInput.boundingBox(),
+    page.getByRole('button', { name: 'Abrir calendário' }).boundingBox(),
+  ]);
+  expect(dBox?.y).toBeCloseTo(qBox!.y, 0);
+  expect(dBox?.height).toBeCloseTo(qBox!.height, 0);
+  expect(dBox?.y).toBeCloseTo(tBox!.y, 0);
+  expect(dBox?.height).toBeCloseTo(tBox!.height, 0);
+  expect(calBox?.y).toBeCloseTo(dBox!.y, 0);
+  expect(calBox?.height).toBeCloseTo(dBox!.height, 0);
   await page.getByLabel('Meta de acerto (%)').fill('110');
   await button(page, 'Salvar alterações').click();
   await expect(page.getByRole('alert')).toContainText('entre 1% e 100%');

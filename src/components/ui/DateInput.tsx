@@ -145,7 +145,7 @@ export function DateInput({ className, disabled, min, max, value, onChange, onBl
           if (text !== '' && parseDisplay(text) === null) setText(toDisplay(value ?? ''));
           onBlur?.(e);
         }}
-        className={cn('input-base control-height pr-10 max-lg:pr-11', className)}
+        className={cn('input-base control-height h-full pr-10 max-lg:pr-11', className)}
         {...rest}
       />
       <button
