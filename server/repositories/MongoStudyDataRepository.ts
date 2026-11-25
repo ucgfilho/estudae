@@ -29,6 +29,7 @@ import {
 } from '../dtos/study-data.dto';
 import type { ISensitiveDataCipher } from '../interfaces/ISensitiveDataCipher';
 import type { IStudyDataRepository } from '../interfaces/IStudyDataRepository';
+import { withTopicProgressBackups, type WorkspaceBackups } from '../services/topicProgressBackups';
 import {
   applyWorkspacesCollectionValidator,
   assertWorkspaceDocumentOwnership,
@@ -326,6 +327,36 @@ export class MongoStudyDataRepository implements IStudyDataRepository {
         { $set: { encryptedPayload: this.serializeAndEncryptWorkspace(ownerId, workspace), updatedAt: now } },
       );
       if (result.matchedCount === 1) return workspace;
+    }
+    throw new ConflictError('Dados alterados em outro dispositivo. Tente novamente.');
+  }
+
+  public async restoreTopicProgressBackups(
+    userId: string,
+    backups: WorkspaceBackups,
+    apply: boolean,
+  ): Promise<number> {
+    const filter = buildWorkspaceRlsFilter(userId);
+    for (let attempt = 0; attempt < 10; attempt++) {
+      const doc = await this.collection().findOne(filter);
+      if (!doc) throw new NotFoundError('Concurso do backup não encontrado.');
+      const { ownerId } = assertWorkspaceDocumentOwnership(doc, userId);
+      const workspace = this.decryptAndDeserializeWorkspace(ownerId, doc.encryptedPayload);
+      const settings = workspace.settings[0];
+      const history = settings?.topicProgressHistory ?? [];
+      const firstRecorded = history.find(({ source }) => source !== 'backup')?.date;
+      if (settings?.contestHidden || firstRecorded !== backups.firstRecordedDate) {
+        throw new ConflictError('O primeiro registro do concurso não corresponde ao backup.');
+      }
+
+      const restored = withTopicProgressBackups(workspace, backups);
+      const added = (restored.settings[0].topicProgressHistory?.length ?? 0) - history.length;
+      if (!apply || added === 0) return added;
+      const result = await this.collection().updateOne(
+        { ...filter, encryptedPayload: doc.encryptedPayload },
+        { $set: { encryptedPayload: this.serializeAndEncryptWorkspace(ownerId, restored), updatedAt: new Date().toISOString() } },
+      );
+      if (result.matchedCount === 1) return added;
     }
     throw new ConflictError('Dados alterados em outro dispositivo. Tente novamente.');
   }

@@ -10,7 +10,7 @@ const workspaceBackupsSchema = z.object({
   points: z.array(topicProgressSnapshotSchema),
 });
 const backupsSchema = z.record(z.string().min(1), workspaceBackupsSchema);
-type WorkspaceBackups = z.infer<typeof workspaceBackupsSchema>;
+export type WorkspaceBackups = z.infer<typeof workspaceBackupsSchema>;
 
 export function loadTopicProgressBackups(path: string | undefined): Map<string, WorkspaceBackups> {
   if (!path || !existsSync(path)) return new Map();
