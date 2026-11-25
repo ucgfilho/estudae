@@ -120,7 +120,7 @@ export function DateInput({ className, disabled, min, max, value, onChange, onBl
   const isOutOfRange = (k: string) => (!!min && k < String(min)) || (!!max && k > String(max));
 
   return (
-    <div ref={wrapRef} className="relative min-w-0">
+    <div ref={wrapRef} className="relative min-w-0 w-full">
       <input
         ref={inputRef}
         type="text"
