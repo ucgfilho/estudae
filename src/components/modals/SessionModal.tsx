@@ -4,6 +4,7 @@ import { Button } from '../ui/Button';
 import { Alert } from '../ui/Display';
 import { Field, Input, Select, Textarea } from '../ui/Form';
 import { useDisciplines, useTopics } from '../../hooks/useData';
+import { availableTopics } from '../../domain/schedule';
 import { createSession, updateSession, type SessionInput } from '../../services/sessions';
 import type { StudySession } from '../../db/types';
 import { todayKey } from '../../lib/dates';
@@ -72,9 +73,7 @@ export function SessionModal({
     setError(null);
   }, [open, sessionToEdit, defaultDate, defaultDisciplineId, disciplines]);
 
-  const filteredTopics = topics.filter(
-    (t) => t.disciplineId === disciplineId && t.active && !t.parentTopicId
-  );
+  const filteredTopics = availableTopics(topics, disciplineId);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();

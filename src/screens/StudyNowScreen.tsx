@@ -41,6 +41,7 @@ import {
 } from '../services/timer';
 import { elapsedSeconds, hasReachedGoal } from '../domain/timer';
 import { studyStreak } from '../domain/metrics';
+import { availableTopics } from '../domain/schedule';
 import { dailyProgress, nextPendingToday } from '../domain/motivation';
 import { formatMinutes } from '../lib/format';
 import type { StudySession } from '../db/types';
@@ -105,9 +106,7 @@ export function StudyNowScreen() {
     : null;
 
   const filteredTopics = useMemo(() => {
-    return topics.filter(
-      (t) => t.disciplineId === adHocDisciplineId && t.active && !t.parentTopicId
-    );
+    return availableTopics(topics, adHocDisciplineId);
   }, [topics, adHocDisciplineId]);
 
   // Preselect today's planned session if available

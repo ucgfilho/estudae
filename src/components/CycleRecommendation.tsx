@@ -2,8 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Play, Clock3, ArrowRight, BookOpen, Repeat2, CheckCircle2, Trash2 } from 'lucide-react';
 import { useDisciplines, useTopics, useSessions, useSettings, useReviews, useActiveTimer } from '../hooks/useData';
-import { cycleCompletions, previewCycle, type CycleActivity } from '../domain/schedule';
-import { compareSessions } from '../domain/metrics';
+import { cycleCompletions, manualPlannedSessions, previewCycle, type CycleActivity } from '../domain/schedule';
 import { startCycleTimer } from '../services/timer';
 import { getSettings, updateSettings } from '../services/settings';
 import { completeCycleActivity, deleteSession, setSessionStatus } from '../services/sessions';
@@ -45,11 +44,9 @@ export function CycleRecommendation({ showQueue = false }: { showQueue?: boolean
   const hasBothAreas = technical > 0 && general > 0;
   const rotationSize = hasBothAreas ? 5 * Math.max(Math.ceil(technical / 4), general) : technical + general;
   const [next, ...queue] = previewCycle(input, showQueue ? (expanded ? Math.max(10, rotationSize) + 1 : 6) : 1);
-  const planned = showQueue ? sessions.filter(session => session.status === 'planejada' &&
-    (session.isManual ?? session.history.some(entry => entry.type === 'criada' && entry.description === 'Sessão planejada criada pelo usuário.')))
-    .sort(compareSessions) : [];
+  const planned = showQueue ? manualPlannedSessions(sessions) : [];
   const entries: QueueEntry[] = [
-    ...(expanded ? planned.map(session => ({ kind: 'manual' as const, session })) : []),
+    ...planned.map(session => ({ kind: 'manual' as const, session })),
     ...queue.map(activity => ({ kind: 'automatic' as const, activity })),
   ];
 
@@ -197,7 +194,7 @@ export function CycleRecommendation({ showQueue = false }: { showQueue?: boolean
     </>}
     {removalError && <Alert tone="danger" title="Não foi possível excluir a sessão" onClose={() => setRemovalError(null)}>{removalError}</Alert>}
     {completionError && <Alert tone="danger" title="Não foi possível concluir a sessão" onClose={() => setCompletionError(null)}>{completionError}</Alert>}
-    {showQueue && (next || planned.length > 0) && <Card title="Na sequência" description="Aqui você encontra as próximas atividades do ciclo e, na visualização completa, suas sessões planejadas.">
+    {showQueue && (next || planned.length > 0) && <Card title="Na sequência" description="Aqui você encontra suas sessões planejadas e as próximas atividades do ciclo.">
       <div id="cycle-queue">
         {entries.length > 0 && <ol
           aria-label="Próximos estudos do ciclo"

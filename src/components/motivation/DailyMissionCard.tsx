@@ -4,7 +4,7 @@ import { Card, DisciplineDot, ProgressBar, Badge } from '../ui/Display';
 import { Button } from '../ui/Button';
 import { ProgressRing } from './ProgressRing';
 import { dailyProgress, progressFraming } from '../../domain/motivation';
-import { cycleCompletions, previewCycle } from '../../domain/schedule';
+import { cycleCompletions, manualPlannedSessions, previewCycle } from '../../domain/schedule';
 import type { Discipline, QuestionLog, Settings, StudySession, Topic, TimerState } from '../../db/types';
 import { formatInteger, formatMinutes } from '../../lib/format';
 import { cn } from '../../lib/utils';
@@ -46,14 +46,21 @@ export function DailyMissionCard({
   const p = useMemo(() => dailyProgress(sessions, logs, settings, today), [sessions, logs, settings, today]);
   const queue = useMemo(() => settings ? previewCycle({ disciplines, topics, sessions,
     settings, questionLogs: logs, errorNotes: [] }, 4) : [], [disciplines, topics, sessions, settings, logs]);
+  const planned = useMemo(() => manualPlannedSessions(sessions), [sessions]);
   const next = queue[0];
   const hasActiveDiscipline = disciplines.some(discipline => discipline.active);
   const timeGoalsDisabled = settings?.dailyGoalMinutes === 0 && settings?.weeklyGoalMinutes === 0;
   const queueOffset = timer && !timer.cycleStudy ? 0 : 1;
+  const upcomingEntries = useMemo(() => {
+    const manualItems = planned.map(session => ({ kind: 'manual' as const, session }));
+    const autoItems = queue.slice(queueOffset).map(activity => ({ kind: 'automatic' as const, activity }));
+    return [...manualItems, ...autoItems].slice(0, 3);
+  }, [planned, queue, queueOffset]);
   const completed = useMemo(() => cycleCompletions(sessions), [sessions]);
   const completedToday = completed.filter(s => s.date === today).length;
   const activeDiscipline = timer ? disciplines.find(d => d.id === timer.disciplineId) : null;
   const discMap = useMemo(() => new Map(disciplines.map((d) => [d.id, d])), [disciplines]);
+  const topicMap = useMemo(() => new Map(topics.map((t) => [t.id, t])), [topics]);
 
   const pct = Math.round(p.ratio * 100);
   const goalDone = p.goalMinutes > 0 && p.ratio >= 1;
@@ -197,17 +204,40 @@ export function DailyMissionCard({
               Ver ciclo de estudos <ArrowRight className="size-4" aria-hidden="true" />
             </button>
           </div>
-          {next ? <ol className="grid gap-3 @min-[36rem]:grid-cols-3" aria-label="Próximas atividades do ciclo">
-            {queue.slice(queueOffset, queueOffset + 3).map((activity) => <li key={activity.position} className="flex min-w-0 items-start gap-3 rounded-lg bg-surface-muted p-4">
-              <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-surface text-xs font-semibold tabular-nums text-fg-muted">{activity.position}</span>
-              <div className="min-w-0 space-y-1.5">
-                <p className="flex items-start gap-2 text-sm font-semibold leading-snug text-fg">
-                  <span className="mt-1 shrink-0"><DisciplineDot color={activity.discipline.color} /></span>
-                  {activity.discipline.name}
-                </p>
-                {activity.topic && <p className="text-xs leading-relaxed text-fg-muted">{activity.topic.title}</p>}
-              </div>
-            </li>)}
+          {(next || upcomingEntries.length > 0) ? <ol className="grid gap-3 @min-[36rem]:grid-cols-3" aria-label="Próximas atividades do ciclo">
+            {upcomingEntries.map((entry) => {
+              if (entry.kind === 'manual') {
+                const { session } = entry;
+                const disc = discMap.get(session.disciplineId);
+                const topicTitle = session.topicId ? topicMap.get(session.topicId)?.title : null;
+                const subtitle = topicTitle ?? (session.objective || 'Estudo da disciplina');
+                return (
+                  <li key={`manual-${session.id}`} className="flex min-w-0 items-start gap-3 rounded-lg bg-surface-muted p-4">
+                    <Badge tone="info" className="shrink-0">Criada por você</Badge>
+                    <div className="min-w-0 space-y-1.5">
+                      <p className="flex items-start gap-2 text-sm font-semibold leading-snug text-fg">
+                        {disc && <span className="mt-1 shrink-0"><DisciplineDot color={disc.color} /></span>}
+                        {disc?.name ?? (session.disciplineId === 'simulado' ? 'Simulado Geral BNB' : 'Sessão de estudo')}
+                      </p>
+                      {subtitle && <p className="text-xs leading-relaxed text-fg-muted">{subtitle}</p>}
+                    </div>
+                  </li>
+                );
+              }
+              const { activity } = entry;
+              return (
+                <li key={`cycle-${activity.position}`} className="flex min-w-0 items-start gap-3 rounded-lg bg-surface-muted p-4">
+                  <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-surface text-xs font-semibold tabular-nums text-fg-muted">{activity.position}</span>
+                  <div className="min-w-0 space-y-1.5">
+                    <p className="flex items-start gap-2 text-sm font-semibold leading-snug text-fg">
+                      <span className="mt-1 shrink-0"><DisciplineDot color={activity.discipline.color} /></span>
+                      {activity.discipline.name}
+                    </p>
+                    {activity.topic && <p className="text-xs leading-relaxed text-fg-muted">{activity.topic.title}</p>}
+                  </div>
+                </li>
+              );
+            })}
           </ol> : <p className="rounded-lg bg-surface-muted p-4 text-sm text-fg-muted">
             {hasActiveDiscipline ? 'Nenhuma atividade automática pendente.' : 'Ao ativar suas disciplinas, as próximas atividades aparecem aqui.'}
           </p>}

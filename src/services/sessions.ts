@@ -102,6 +102,9 @@ export async function updateSession(id: string, input: SessionInput): Promise<vo
       history,
       updatedAt: nowIso(),
     });
+    if (current.status === 'concluida') {
+      await syncTopicStatusAfterSession(input.topicId);
+    }
   });
 }
 

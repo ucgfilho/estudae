@@ -26,21 +26,20 @@ function renderOverview() {
 beforeEach(async () => { await resetDatabase(); });
 
 describe('ciclo contínuo na visão geral', () => {
-  it('mostra e exclui a sessão planejada na mesma fila do ciclo completo', async () => {
+  it('mostra e exclui a sessão planejada logo após a atividade atual na fila do ciclo', async () => {
     const activity = next()!;
     const session = await createSession({ date: todayKey(), disciplineId: activity.discipline.id, topicId: null,
       plannedStart: '19:30', plannedMinutes: 35, objective: 'Compromisso manual', notes: '' });
     await db.sessions.update(session.id, { isManual: undefined });
     render(<MemoryRouter><ScheduleScreen /></MemoryRouter>);
 
-    expect(screen.queryByText('Compromisso manual')).not.toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: 'Ver ciclo completo' }));
     const queue = screen.getByRole('list', { name: 'Próximos estudos do ciclo' });
-    const planned = within(queue).getByText('Criada por você').closest('li')!;
+    const firstItem = within(queue).getAllByRole('listitem')[0];
+    expect(within(firstItem).getByText('Criada por você')).toBeInTheDocument();
+    expect(within(firstItem).getByText('Compromisso manual')).toBeInTheDocument();
+    expect(within(firstItem).getByText(/19:30/)).toBeInTheDocument();
     expect(within(queue).getAllByRole('button', { name: /^Excluir sessão \d/ }).length).toBeGreaterThan(0);
-    expect(within(planned).getByText('Compromisso manual')).toBeInTheDocument();
-    expect(within(planned).getByText(/19:30/)).toBeInTheDocument();
-    await userEvent.click(within(planned).getByRole('button', { name: 'Excluir sessão planejada: Compromisso manual' }));
+    await userEvent.click(within(firstItem).getByRole('button', { name: 'Excluir sessão planejada: Compromisso manual' }));
     await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Excluir sessão' }));
     await waitFor(() => expect(within(queue).queryByText('Compromisso manual')).not.toBeInTheDocument());
     expect(await db.sessions.get(session.id)).toBeUndefined();
@@ -98,14 +97,18 @@ describe('ciclo contínuo na visão geral', () => {
     await waitFor(() => expect(within(nextCard).getByText('Sessão 3')).toBeInTheDocument());
   });
 
-  it('prioriza o ciclo mesmo com sessão manual planejada e inicia o cronômetro do ciclo', async () => {
+  it('prioriza o ciclo mesmo com sessão manual planejada, exibe a sessão manual logo após a atual na Missão de hoje e inicia o cronômetro do ciclo', async () => {
     const expected = next()!;
     await createSession({ date: todayKey(), disciplineId: expected.discipline.id, topicId: null,
       plannedStart: null, plannedMinutes: 15, objective: 'Compromisso manual', notes: '' });
     renderOverview();
     expect(screen.getByText('Próxima atividade do ciclo')).toBeInTheDocument();
     expect(screen.queryByText('Blocos de hoje')).not.toBeInTheDocument();
-    expect(screen.getByRole('list', { name: 'Próximas atividades do ciclo' }).children).toHaveLength(3);
+    const queue = screen.getByRole('list', { name: 'Próximas atividades do ciclo' });
+    expect(queue.children).toHaveLength(3);
+    const firstUpcoming = within(queue).getAllByRole('listitem')[0];
+    expect(within(firstUpcoming).getByText('Criada por você')).toBeInTheDocument();
+    expect(within(firstUpcoming).getByText('Compromisso manual')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Iniciar estudo do ciclo' }));
     expect(await screen.findByText('Cronômetro aberto')).toBeInTheDocument();
     const timer = await db.timer.get('active');

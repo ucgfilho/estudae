@@ -1,5 +1,6 @@
 /** O histórico de execução e as exclusões determinam a posição no ciclo contínuo. */
 import type { Discipline, Topic, StudySession, QuestionLog, ErrorNote, Settings } from '../db/types';
+import { compareSessions, supersededSessionIds } from './metrics';
 
 export const SIMULADO_DISCIPLINE_ID = 'simulado';
 export const CYCLE_COMPLETION = 'Sessão do ciclo concluída.';
@@ -18,10 +19,46 @@ export interface CycleActivity {
   minutes: number;
   reason: string;
 }
+export function isManualSession(session: StudySession): boolean {
+  return session.isManual ?? session.history.some(
+    entry => entry.type === 'criada' && entry.description === 'Sessão planejada criada pelo usuário.',
+  );
+}
+export function manualPlannedSessions(sessions: readonly StudySession[]): StudySession[] {
+  const superseded = supersededSessionIds(sessions);
+  return sessions
+    .filter(session => session.status === 'planejada' && !superseded.has(session.id) && isManualSession(session))
+    .sort(compareSessions);
+}
 export function cycleCompletions(sessions: readonly StudySession[]): StudySession[] {
   return sessions.filter(s => s.status === 'concluida' && s.actualSeconds > 0
     && s.history.some(h => h.type === 'executada' && h.description === CYCLE_COMPLETION))
     .sort((a, b) => (a.endedAt ?? a.createdAt).localeCompare(b.endedAt ?? b.createdAt) || a.id.localeCompare(b.id));
+}
+export function completedTopicsSet(topics: readonly Topic[], sessions: readonly StudySession[]): Set<string> {
+  const completed = new Set<string>();
+  const topicIds = new Set<string>();
+  for (const t of topics) {
+    topicIds.add(t.id);
+    if (t.status === 'concluido' || t.status === 'dominado') completed.add(t.id);
+  }
+  const pendingWithSessions = new Set<string>();
+  for (const s of sessions) {
+    if (s.topicId && s.status === 'planejada') pendingWithSessions.add(s.topicId);
+  }
+  for (const s of sessions) {
+    if (s.topicId && s.status === 'concluida' && s.actualSeconds > 0 && !pendingWithSessions.has(s.topicId)) {
+      if (!topicIds.has(s.topicId)) {
+        completed.add(s.topicId);
+      } else {
+        const isSimulatedPreview = s.id.startsWith('preview-');
+        if (!isSimulatedPreview) {
+          completed.add(s.topicId);
+        }
+      }
+    }
+  }
+  return completed;
 }
 /** Ignora também descendentes de tópicos inativos, órfãos ou com hierarquia circular. */
 export function availableTopics(topics: readonly Topic[], disciplineId: string): Topic[] {
@@ -41,7 +78,13 @@ export function availableTopics(topics: readonly Topic[], disciplineId: string):
 /** Quatro posições para específicos e uma para básicos em cada bloco de cinco. */
 export function nextCycleActivity(input: CycleInput): CycleActivity | null {
   const done = cycleCompletions(input.sessions);
-  const consumed = [...done.map(({ disciplineId, topicId }) => ({ disciplineId, topicId }))];
+  const completedNonCycle = input.sessions.filter(
+    s => s.status === 'concluida' && s.actualSeconds > 0 && s.topicId !== null && !done.some(d => d.id === s.id),
+  );
+  const consumed = [
+    ...done.map(({ disciplineId, topicId }) => ({ disciplineId, topicId })),
+    ...completedNonCycle.map(({ disciplineId, topicId }) => ({ disciplineId, topicId })),
+  ];
   let position = done.length + 1;
   const skipped = new Map(input.settings.skippedCycleActivities?.map(activity => [activity.position, activity]));
   for (const activity of [...skipped.values()].sort((a, b) => a.position - b.position)) {
@@ -49,10 +92,11 @@ export function nextCycleActivity(input: CycleInput): CycleActivity | null {
     consumed.push(activity);
     position += 1;
   }
+  const doneTopics = completedTopicsSet(input.topics, input.sessions);
   const ordered = input.disciplines.filter(d => d.active)
     .map(discipline => {
       const available = availableTopics(input.topics, discipline.id);
-      const pending = available.filter(topic => topic.status !== 'concluido' && topic.status !== 'dominado');
+      const pending = available.filter(topic => !doneTopics.has(topic.id));
       return { discipline, available, pending };
     })
     .filter(({ available, pending }) => !available.length || pending.length > 0);

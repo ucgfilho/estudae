@@ -72,6 +72,28 @@ describe('ciclo contínuo por área do edital', () => {
     expect(previewCycle(data, 6).map(activity => activity.topic?.id)).toEqual(Array(6).fill('pending'));
     expect(nextCycleActivity({ ...data, topics: data.topics.slice(0, 2) })).toBeNull();
   });
+  it('não gera novas sessões para tópicos que já têm sessão concluída (avulsa ou planejada pelo usuário)', () => {
+    const data = input();
+    const first = nextCycleActivity(data)!;
+    const completedTopicId = first.topic!.id;
+    // Simula sessão criada/concluída pelo usuário para esse assunto, mesmo que o status do tópico não tenha sido alterado manualmente
+    const manualDone = {
+      id: 'manual-done-1',
+      disciplineId: first.discipline.id,
+      topicId: completedTopicId,
+      actualSeconds: 1800,
+      status: 'concluida',
+      origin: 'planejada',
+      isManual: true,
+      createdAt: '2026-11-25T10:00:00Z',
+      endedAt: '2026-11-25T10:30:00Z',
+      history: [{ type: 'criada', at: '2026-11-25T09:00:00Z', description: 'Sessão planejada criada pelo usuário.' }],
+    } as StudySession;
+    data.sessions = [manualDone];
+
+    const preview = previewCycle(data, 15);
+    expect(preview.some(a => a.topic?.id === completedTopicId)).toBe(false);
+  });
   it('reserva 80% para específicos e 20% para básicos, independentemente do desempenho', () => {
     const data = input();
     data.disciplines = DEFAULT_DISCIPLINES;
