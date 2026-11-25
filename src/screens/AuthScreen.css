@@ -202,7 +202,7 @@
   box-shadow: 0 6px 16px #213fa52e;
   font-size: 0.9375rem;
   font-weight: 700;
-  transition: translate var(--auth-motion), box-shadow var(--auth-motion), filter var(--auth-motion);
+  transition: box-shadow var(--auth-motion), filter var(--auth-motion);
 }
 
 .auth-submit-arrow {

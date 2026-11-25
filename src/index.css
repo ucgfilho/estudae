@@ -14,23 +14,13 @@
 .study-timer-progress::-webkit-progress-value { background: var(--primary); border-radius: 9999px; }
 .study-timer-progress::-moz-progress-bar { background: var(--primary); border-radius: 9999px; }
 
-/* Linhas, abas e opções mantêm a geometria durante a interação. */
+/* Controles interativos mantêm a geometria durante a interação. */
 :where(button, a[href], summary, select, [role='button'], [role='option'], [role='tab'],
   label:has(input:is([type='checkbox'], [type='radio'])),
   input:is([type='button'], [type='submit'], [type='reset'], [type='checkbox'], [type='radio'])) {
-  transition-property: color, background-color, border-color, box-shadow, opacity, filter, translate;
+  transition-property: color, background-color, border-color, box-shadow, opacity, filter;
   transition-duration: 180ms;
   transition-timing-function: var(--ease-emphasized);
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .action-button:enabled:hover {
-    translate: 0 -1px;
-  }
-  .action-button:enabled:active {
-    translate: 0 0;
-    transition-duration: 90ms;
-  }
 }
 
 @media (hover: hover) and (pointer: fine) {
