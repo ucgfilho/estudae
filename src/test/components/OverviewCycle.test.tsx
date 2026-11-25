@@ -76,6 +76,28 @@ describe('ciclo contínuo na visão geral', () => {
     expect(cycleDone.actualSeconds).toBe(activity.minutes * 60);
   });
 
+  it('conclui e exclui a próxima atividade do ciclo pelo próprio card principal', async () => {
+    const first = next()!;
+    render(<MemoryRouter><ScheduleScreen /></MemoryRouter>);
+
+    const nextCard = screen.getByRole('heading', { name: 'Próxima atividade do ciclo' }).closest('section')!;
+    const completeBtn = within(nextCard).getByRole('button', { name: `Concluir sessão ${first.position} de ${first.discipline.name}` });
+    const deleteBtn = within(nextCard).getByRole('button', { name: `Excluir sessão ${first.position} de ${first.discipline.name}` });
+    expect(completeBtn.className).toContain('text-success');
+    expect(completeBtn.className).toContain('action-button');
+    expect(deleteBtn).toBeInTheDocument();
+
+    await userEvent.click(completeBtn);
+    await waitFor(() => expect(within(nextCard).getByText('Sessão 2')).toBeInTheDocument());
+    expect(cycleCompletions(db.sessions.toArraySync())).toHaveLength(1);
+    expect(cycleCompletions(db.sessions.toArraySync())[0].actualSeconds).toBe(first.minutes * 60);
+
+    const second = next()!;
+    await userEvent.click(within(nextCard).getByRole('button', { name: `Excluir sessão ${second.position} de ${second.discipline.name}` }));
+    await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Excluir sessão' }));
+    await waitFor(() => expect(within(nextCard).getByText('Sessão 3')).toBeInTheDocument());
+  });
+
   it('prioriza o ciclo mesmo com sessão manual planejada e inicia o cronômetro do ciclo', async () => {
     const expected = next()!;
     await createSession({ date: todayKey(), disciplineId: expected.discipline.id, topicId: null,

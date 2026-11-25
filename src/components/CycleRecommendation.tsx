@@ -153,10 +153,33 @@ export function CycleRecommendation({ showQueue = false }: { showQueue?: boolean
               <Button variant="primary" size="lg" className="w-full sm:w-auto" icon={<Play className="size-4" aria-hidden />} onClick={() => timer ? navigate('/estudar-agora') : void start()} loading={loading}>
                 {timer ? 'Retomar sessão em andamento' : 'Iniciar estudo do ciclo'}
               </Button>
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-2 @min-[32rem]:col-span-2">
               <p className="flex items-start gap-2 text-xs leading-relaxed text-fg-muted">
                 <Repeat2 className="mt-0.5 size-4" aria-hidden />
                 <span>Ao finalizar, a próxima sessão fica disponível. Sua posição fica salva.</span>
               </p>
+              <div className="ml-auto flex items-center gap-1">
+                <IconButton
+                  className="action-button text-success hover:bg-success-soft hover:text-success active:bg-success-soft active:brightness-95"
+                  size="sm"
+                  disabled={completingKey === `cycle-${next.position}`}
+                  label={`Concluir sessão ${next.position} de ${next.discipline.name}`}
+                  icon={<CheckCircle2 className="size-4" />}
+                  onClick={() => {
+                    const parsedMinutes = minutes === '' ? next.minutes : Number(minutes);
+                    const nextMinutes = Number.isFinite(parsedMinutes) && parsedMinutes >= 1 ? parsedMinutes : next.minutes;
+                    void completeEntry({ kind: 'automatic', activity: { ...next, minutes: nextMinutes } }, `cycle-${next.position}`);
+                  }}
+                />
+                <IconButton
+                  className="action-button hover:bg-danger-soft hover:text-danger"
+                  size="sm"
+                  label={`Excluir sessão ${next.position} de ${next.discipline.name}`}
+                  icon={<Trash2 className="size-4" />}
+                  onClick={() => setPendingRemoval({ kind: 'automatic', activity: next })}
+                />
+              </div>
             </div>
           </div>
         </section>
@@ -243,17 +266,17 @@ export function CycleRecommendation({ showQueue = false }: { showQueue?: boolean
         {expanded ? 'Recolher ciclo completo' : 'Ver ciclo completo'}
         <ArrowRight className="size-4" aria-hidden />
       </Button>
-      <ConfirmModal
-        open={pendingRemoval !== null}
-        title={pendingRemoval?.kind === 'manual' ? 'Excluir sessão planejada?' : 'Excluir sessão do ciclo?'}
-        message={pendingRemoval?.kind === 'manual'
-          ? 'A sessão será removida do planejamento e do calendário.'
-          : pendingRemoval && `A sessão ${pendingRemoval.activity.position} de ${pendingRemoval.activity.discipline.name} será pulada nesta passagem do ciclo.`}
-        confirmLabel="Excluir sessão"
-        loading={removing}
-        onClose={() => { if (!removing) setPendingRemoval(null); }}
-        onConfirm={removeActivity}
-      />
     </Card>}
+    <ConfirmModal
+      open={pendingRemoval !== null}
+      title={pendingRemoval?.kind === 'manual' ? 'Excluir sessão planejada?' : 'Excluir sessão do ciclo?'}
+      message={pendingRemoval?.kind === 'manual'
+        ? 'A sessão será removida do planejamento e do calendário.'
+        : pendingRemoval && `A sessão ${pendingRemoval.activity.position} de ${pendingRemoval.activity.discipline.name} será pulada nesta passagem do ciclo.`}
+      confirmLabel="Excluir sessão"
+      loading={removing}
+      onClose={() => { if (!removing) setPendingRemoval(null); }}
+      onConfirm={removeActivity}
+    />
   </div>;
 }
