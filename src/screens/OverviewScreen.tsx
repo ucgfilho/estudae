@@ -408,7 +408,7 @@ export function OverviewScreen() {
                 className={`ms-auto ${reportActionClass}`}
               >
                 <BarChart3 className="size-3" aria-hidden="true" />
-                Ver gráficos
+                Acompanhar evolução
               </button>
             </div>
           }
