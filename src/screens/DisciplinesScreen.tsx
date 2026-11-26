@@ -41,6 +41,16 @@ import { formatPercent } from '../lib/format';
 import { errorMessage, cn } from '../lib/utils';
 import { useSuccessToast } from '../components/ui/Toast';
 
+const topicStatusColor = (status: string) => {
+  switch (status) {
+    case 'concluido':
+    case 'dominado': return 'bg-success-soft text-success';
+    case 'em-andamento': return 'bg-warning-soft text-warning';
+    case 'nao-iniciado': return 'bg-surface-muted text-fg-muted';
+    default: return undefined;
+  }
+};
+
 export function DisciplinesScreen() {
   const disciplines = useDisciplines();
   const topics = useTopics();
@@ -420,6 +430,7 @@ export function DisciplinesScreen() {
                         <div className="min-w-32 flex-1 @min-[39rem]:w-32">
                           <Select
                             size="sm"
+                            valueClassName={topicStatusColor}
                             value={topic.status}
                             onChange={(e) => handleStatusChange(topic.id, e.target.value as TopicStatus)}
                             aria-label={`Status de ${topic.title}`}
@@ -515,6 +526,7 @@ export function DisciplinesScreen() {
                               <div className="min-w-32 flex-1 @min-[39rem]:w-32">
                                 <Select
                                   size="sm"
+                                  valueClassName={topicStatusColor}
                                   value={sub.status}
                                   onChange={(e) => handleStatusChange(sub.id, e.target.value as TopicStatus)}
                                   aria-label={`Status de ${sub.title}`}

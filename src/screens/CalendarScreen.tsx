@@ -82,6 +82,11 @@ export function CalendarScreen() {
 
   const discMap = useMemo(() => new Map(disciplines.map((d) => [d.id, d])), [disciplines]);
   const topicMap = useMemo(() => new Map(topics.map((t) => [t.id, t])), [topics]);
+  const sessionSubject = (session: StudySession) => {
+    const topic = session.topicId ? topicMap.get(session.topicId) : null;
+    return topic?.title || session.objective || discMap.get(session.disciplineId)?.name ||
+      (session.disciplineId === 'simulado' ? 'Simulado Geral BNB' : 'Sessão');
+  };
   const secondsByDate = useMemo(() => studiedSecondsByDate(sessions), [sessions]);
 
   // Navigation handlers
@@ -345,7 +350,6 @@ export function CalendarScreen() {
                     {/* Desktop day session chips (md+) */}
                     <div className="hidden md:block space-y-1 overflow-y-auto max-h-24 pr-0.5">
                       {daySessions.slice(0, 3).map((s) => {
-                        const d = discMap.get(s.disciplineId);
                         return (
                           <button
                             key={s.id}
@@ -364,7 +368,7 @@ export function CalendarScreen() {
                             )}
                           >
                             <span className="font-semibold mr-1">{s.plannedMinutes}m</span>
-                            <span>{d?.name ?? (s.disciplineId === 'simulado' ? 'Simulado Geral BNB' : 'Sessão')}</span>
+                            <span>{sessionSubject(s)}</span>
                           </button>
                         );
                       })}
@@ -411,7 +415,7 @@ export function CalendarScreen() {
                           <div className="flex items-center gap-1.5 font-semibold text-fg">
                             <DisciplineDot color={d?.color ?? '#1E40AF'} />
                             <span className="wrap-anywhere">
-                              {d?.name ?? (s.disciplineId === 'simulado' ? 'Simulado Geral BNB' : 'Sessão')}
+                              {sessionSubject(s)}
                             </span>
                           </div>
                           {s.objective && (
@@ -508,7 +512,7 @@ export function CalendarScreen() {
                               ) : s.disciplineId === 'simulado' ? (
                                 <DisciplineDot color="#1E40AF" />
                               ) : null}
-                              <span>{d?.name ?? (s.disciplineId === 'simulado' ? 'Simulado Geral BNB' : 'Sessão')}</span>
+                              <span>{sessionSubject(s)}</span>
                             </span>
                             <span className="font-semibold text-fg-muted shrink-0">{s.plannedMinutes}m</span>
                           </div>
@@ -563,7 +567,7 @@ export function CalendarScreen() {
                           <DisciplineDot color="#1E40AF" />
                         ) : null}
                         <span className="font-semibold text-fg">
-                          {d?.name ?? (s.disciplineId === 'simulado' ? 'Simulado Geral BNB' : 'Sessão')}
+                          {sessionSubject(selectedSessionDetail)}
                         </span>
                         {t && <Badge tone="neutral">{t.title}</Badge>}
                         <Badge

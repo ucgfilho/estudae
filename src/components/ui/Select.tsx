@@ -30,6 +30,7 @@ export interface SelectProps extends Omit<SelectHTMLAttributes<HTMLSelectElement
   searchPlaceholder?: string;
   options?: SelectOption[];
   onValueChange?: (value: string) => void;
+  valueClassName?: (value: string) => string | undefined;
 }
 
 function normalizeSearch(text: string) {
@@ -96,6 +97,7 @@ export function Select({
   defaultValue,
   onChange,
   onValueChange,
+  valueClassName,
   placeholder,
   searchPlaceholder,
   size = 'md',
@@ -386,13 +388,14 @@ export function Select({
         className={cn(
           'input-base flex w-full items-center justify-between text-left cursor-pointer select-none',
           sizeClasses[size],
+          valueClassName?.(currentValue),
           className
         )}
       >
         <span
           className={cn(
             'min-w-0 whitespace-normal wrap-anywhere mr-2',
-            isPlaceholderSelected ? 'text-field-hint font-normal' : 'text-fg font-medium'
+            isPlaceholderSelected ? 'text-field-hint font-normal' : cn('font-medium', valueClassName?.(currentValue) ?? 'text-fg')
           )}
         >
           {displayText}
@@ -482,12 +485,12 @@ export function Select({
                       size === 'sm' ? 'px-2 py-1 text-xs' : 'px-2.5 py-1.5 text-sm',
                       'max-lg:min-h-11 max-lg:px-3 max-lg:text-sm',
                       isSelected
-                        ? 'bg-primary/15 text-primary font-medium'
+                        ? cn('font-medium', valueClassName?.(opt.value) ?? 'bg-primary/15 text-primary')
                         : isHighlighted
-                        ? 'bg-surface-muted text-fg'
+                        ? cn('bg-surface-muted text-fg', valueClassName?.(opt.value))
                         : isItemPlaceholder
                         ? 'text-fg-subtle italic'
-                        : 'text-fg hover:bg-surface-muted',
+                        : cn('hover:brightness-95', valueClassName?.(opt.value) ?? 'text-fg'),
                       opt.disabled && 'opacity-40 cursor-not-allowed pointer-events-none'
                     )}
                   >
