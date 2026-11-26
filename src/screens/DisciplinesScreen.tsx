@@ -424,6 +424,7 @@ export function DisciplinesScreen() {
                           <Select
                             size="sm"
                             valueClassName={topicStatusColor}
+                            valueIndicatorClassName={(status) => status === 'dominado' ? 'text-status-fg' : undefined}
                             value={topic.status}
                             onChange={(e) => handleStatusChange(topic.id, e.target.value as TopicStatus)}
                             aria-label={`Status de ${topic.title}`}
@@ -511,6 +512,7 @@ export function DisciplinesScreen() {
                                 <Select
                                   size="sm"
                                   valueClassName={topicStatusColor}
+                                  valueIndicatorClassName={(status) => status === 'dominado' ? 'text-status-fg' : undefined}
                                   value={sub.status}
                                   onChange={(e) => handleStatusChange(sub.id, e.target.value as TopicStatus)}
                                   aria-label={`Status de ${sub.title}`}

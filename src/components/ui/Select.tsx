@@ -31,6 +31,7 @@ export interface SelectProps extends Omit<SelectHTMLAttributes<HTMLSelectElement
   options?: SelectOption[];
   onValueChange?: (value: string) => void;
   valueClassName?: (value: string) => string | undefined;
+  valueIndicatorClassName?: (value: string) => string | undefined;
 }
 
 function normalizeSearch(text: string) {
@@ -98,6 +99,7 @@ export function Select({
   onChange,
   onValueChange,
   valueClassName,
+  valueIndicatorClassName,
   placeholder,
   searchPlaceholder,
   size = 'md',
@@ -404,7 +406,8 @@ export function Select({
           className={cn(
             'shrink-0 text-fg-subtle transition-transform duration-200',
             size === 'sm' ? 'size-3.5' : 'size-4',
-            isOpen && 'rotate-180 text-primary'
+            isOpen && 'rotate-180',
+            valueIndicatorClassName?.(currentValue) ?? (isOpen && 'text-primary')
           )}
           aria-hidden="true"
         />
