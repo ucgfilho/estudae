@@ -163,7 +163,7 @@ export function ReportsScreen() {
   return (
     <div className="page-stack @container">
       <PageHeader
-        title="Relatórios"
+        title="Desempenho"
         description="Acompanhe seu progresso no edital, suas horas de estudo e sua taxa de acerto por matéria."
         actions={
           <div className="flex flex-wrap items-center gap-2">

@@ -45,7 +45,7 @@ export const NAV_ITEMS = [
   { to: '/revisoes', label: 'Revisões', icon: RotateCcw },
   { to: '/simulados', label: 'Simulados', icon: ClipboardList },
   { to: '/disciplinas', label: 'Disciplinas e conteúdos', shortLabel: 'Edital', icon: BookMarked, section: 'Base e acompanhamento' },
-  { to: '/relatorios', label: 'Relatórios', icon: BarChart3 },
+  { to: '/relatorios', label: 'Desempenho', icon: BarChart3 },
   { to: '/configuracoes', label: 'Configurações', icon: Settings },
 ];
 

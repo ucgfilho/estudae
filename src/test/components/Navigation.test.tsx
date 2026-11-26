@@ -84,7 +84,7 @@ describe('App Navigation, Auth Gate and Screen Integration', () => {
     expect(screen.getByRole('link', { name: /revisões/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /simulados/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /disciplinas/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /relatórios/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /desempenho/i })).toBeInTheDocument();
     expect(within(screen.getByRole('navigation', { name: 'Menu principal' })).getByRole('link', { name: /configurações/i })).toBeInTheDocument();
 
     const disciplines = await db.disciplines.toArray();
@@ -150,10 +150,10 @@ describe('App Navigation, Auth Gate and Screen Integration', () => {
       expect(screen.getAllByText('Raciocínio Lógico e Quantitativo').length).toBeGreaterThanOrEqual(1);
     });
 
-    // 8. Relatórios
-    await user.click(screen.getByRole('link', { name: /relatórios/i }));
+    // 8. Desempenho
+    await user.click(screen.getByRole('link', { name: /desempenho/i }));
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: /relatórios/i })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /desempenho/i })).toBeInTheDocument();
     });
 
     // 9. Configurações
