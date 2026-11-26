@@ -44,7 +44,9 @@ import { useSuccessToast } from '../components/ui/Toast';
 const topicStatusColor = (status: string) => {
   switch (status) {
     case 'concluido':
-    case 'dominado': return 'bg-success-soft text-success';
+      return 'bg-success-soft text-success';
+    case 'dominado':
+      return 'bg-success text-status-fg';
     case 'em-andamento': return 'bg-warning-soft text-warning';
     case 'nao-iniciado': return 'bg-surface-muted text-fg-muted';
     default: return undefined;
@@ -405,16 +407,7 @@ export function DisciplinesScreen() {
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-2">
                             <span className="font-semibold text-sm text-fg wrap-anywhere">{topic.title}</span>
-                            <Badge
-                              tone={
-                                topic.status === 'concluido' || topic.status === 'dominado'
-                                  ? 'success'
-                                  : topic.status === 'em-andamento'
-                                  ? 'warning'
-                                  : 'neutral'
-                              }
-                              className="text-[11px]"
-                            >
+                            <Badge tone="neutral" className={cn('text-[11px]', topicStatusColor(topic.status))}>
                               {TOPIC_STATUS_LABELS[topic.status]}
                             </Badge>
                             {!topic.active && <Badge tone="danger">Desativado</Badge>}
@@ -508,16 +501,7 @@ export function DisciplinesScreen() {
                             <div className="flex flex-wrap items-center gap-2 min-w-0">
                               <span className="touch-none" data-drag-handle><GripVertical className="size-3 text-fg-subtle cursor-grab shrink-0" /></span>
                               <span className="font-medium text-fg wrap-anywhere">{sub.title}</span>
-                              <Badge
-                                tone={
-                                  sub.status === 'concluido' || sub.status === 'dominado'
-                                    ? 'success'
-                                    : sub.status === 'em-andamento'
-                                    ? 'warning'
-                                    : 'neutral'
-                                }
-                                className="text-[10px]"
-                              >
+                              <Badge tone="neutral" className={cn('text-[10px]', topicStatusColor(sub.status))}>
                                 {TOPIC_STATUS_LABELS[sub.status]}
                               </Badge>
                             </div>
