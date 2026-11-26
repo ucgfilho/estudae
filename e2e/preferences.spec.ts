@@ -2,11 +2,11 @@ import { readFile } from 'node:fs/promises';
 import { button, expect, navigate, test } from './workspace';
 
 test('relatórios mantêm filtros ao navegar e exportam sessões e questões', async ({ workspace: page }) => {
-  await navigate(page, 'Relatórios');
+  await navigate(page, 'Desempenho');
   await button(page, 'Diário').click();
   await button(page, '30 dias').click();
   await navigate(page, 'Calendário');
-  await navigate(page, 'Relatórios');
+  await navigate(page, 'Desempenho');
   for (const label of ['Diário', '30 dias']) {
     await expect(button(page, label)).toHaveAttribute('aria-pressed', 'true');
   }
@@ -107,7 +107,7 @@ test('valida metas, persiste preferências e mantém celebrações ativas', asyn
   await expect(page.getByText('Animações de celebração ao concluir metas')).toHaveCount(0);
   await button(page, 'Salvar alterações').click();
   await expect(page.getByText('Configurações e metas salvas.')).toBeVisible();
-  await navigate(page, 'Relatórios');
+  await navigate(page, 'Desempenho');
   await navigate(page, 'Configurações');
   await expect(page.getByLabel('Data da prova')).toHaveValue('17/08/2030');
   await expect(page.getByLabel('Intervalos de revisão (dias)')).toHaveValue('1,4,12');

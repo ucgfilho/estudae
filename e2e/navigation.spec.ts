@@ -26,7 +26,7 @@ test('menu principal abre todas as telas e identifica o destino ativo', async ({
     ['Estudar agora', 'Estudar agora'], ['Questões', 'Banco de questões'],
     ['Caderno de erros', 'Caderno de erros'], ['Revisões', 'Revisões espaçadas'],
     ['Simulados', 'Simulados'], ['Disciplinas e conteúdos', 'Disciplinas e conteúdos'],
-    ['Relatórios', 'Relatórios'], ['Configurações', 'Configurações e metas'], ['Visão geral', 'Visão geral'],
+    ['Desempenho', 'Desempenho'], ['Configurações', 'Configurações e metas'], ['Visão geral', 'Visão geral'],
   ]) {
     await navigate(page, label);
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(heading);

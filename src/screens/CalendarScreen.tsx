@@ -553,7 +553,7 @@ export function CalendarScreen() {
             <div className="space-y-3">
               {sessionsByDate.get(currentDate)!.map((s) => {
                 const d = discMap.get(s.disciplineId);
-                const t = s.topicId ? topicMap.get(s.topicId) : null;
+                const subject = sessionSubject(s);
                 return (
                   <div
                     key={s.id}
@@ -567,9 +567,8 @@ export function CalendarScreen() {
                           <DisciplineDot color="#1E40AF" />
                         ) : null}
                         <span className="font-semibold text-fg">
-                          {sessionSubject(selectedSessionDetail)}
+                          {subject}
                         </span>
-                        {t && <Badge tone="neutral">{t.title}</Badge>}
                         <Badge
                           tone={
                             s.status === 'concluida'
@@ -586,7 +585,9 @@ export function CalendarScreen() {
                             : 'Planejada'}
                         </Badge>
                       </div>
-                      <p className="text-sm text-fg-muted">{s.objective || 'Sem objetivo registrado'}</p>
+                      {s.objective && s.objective !== subject && (
+                        <p className="text-sm text-fg-muted">{s.objective}</p>
+                      )}
                       <div className="text-xs text-fg-subtle flex flex-wrap items-center gap-x-3 gap-y-1">
                         <span>Planejado: {s.plannedMinutes} min</span>
                         {s.actualSeconds > 0 && (

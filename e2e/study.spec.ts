@@ -137,7 +137,7 @@ test('sessão avulsa, anotações, retorno pelo cabeçalho e descarte', async ({
   await button(page, '90 min').click();
   await button(page, 'Começar a estudar').click();
   await page.getByLabel('Notas rápidas durante o estudo').fill('Retomar capítulo 3');
-  await navigate(page, 'Relatórios');
+  await navigate(page, 'Desempenho');
   await page.getByRole('button', { name: /^Em foco/ }).click();
   await expect(page.getByLabel('Notas rápidas durante o estudo')).toHaveValue('Retomar capítulo 3');
   await button(page, 'Descartar').click();

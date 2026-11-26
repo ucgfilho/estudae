@@ -14,4 +14,4 @@
 - [Revisões](https://estudaeconcursos.vercel.app/#/revisoes): Fila de revisões espaçadas.
 - [Simulados](https://estudaeconcursos.vercel.app/#/simulados): Registro e análise de simulados completos.
 - [Disciplinas](https://estudaeconcursos.vercel.app/#/disciplinas): Gestão de disciplinas, tópicos e progresso no edital.
-- [Relatórios](https://estudaeconcursos.vercel.app/#/relatorios): Análises e gráficos de evolução nos estudos.
+- [Desempenho](https://estudaeconcursos.vercel.app/#/relatorios): Análises e gráficos de evolução nos estudos.
